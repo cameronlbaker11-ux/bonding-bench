@@ -5444,15 +5444,15 @@ function learnMode(on){
   if(on){
     if(!L3.on) set3D(true);
     /* your own bench comes back, just as it was, when you leave */
-    LEARN.keep = {spin:L3.spin, step:STEP.on, temp:P.temp, snap:JSON.stringify(l3Snap())};
-    L3.spin = false; L3.menu = null;
+    LEARN.keep = {step:STEP.on, temp:P.temp, snap:JSON.stringify(l3Snap())};
+    L3.menu = null;
     LEARN.on = true; LEARN.phase = 'pick'; LEARN.topic = null; LEARN.paused = false;
     document.body.classList.add('learning');
     stepMode(true, true);
   } else {
     LEARN.on = false;
     document.body.classList.remove('learning');
-    if(LEARN.keep){ L3.spin = LEARN.keep.spin; if(!LEARN.keep.step) stepMode(false, true);
+    if(LEARN.keep){ if(!LEARN.keep.step) stepMode(false, true);
       try{ l3Restore(JSON.parse(LEARN.keep.snap)); }catch(e){}
       setSlider('temp', LEARN.keep.temp); try{ renderLeft3D(); }catch(e){} }
     L3.shiftX = 0;
@@ -5467,7 +5467,7 @@ function learnStart(k){
   const t = LEARN_TOPICS.find(x=>x.k === k); if(!t) return;
   if(!LEARN.on) learnMode(true);
   l3Scene({k:'learn-'+k, label:t.title, note:CONCEPTS[t.c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box, temp:t.temp});
-  L3.spin = false; L3.menu = null; l3Build();
+  L3.menu = null; l3Build();
   Object.assign(LEARN, {topic:t, phase:'intro', ticks:t.expect.map(()=>false), startId:logId, paused:false, lastEvt:performance.now()});
   stepMode(true, true);
   renderLearnDock();
@@ -10754,7 +10754,7 @@ function frameBench(maxZ){
    the angles VSEPR predicts, with lone pairs taking room of their own. So
    methane folds into a real tetrahedron, ammonia into a pyramid and water
    bends to about 104.5 degrees. Units are picometres and the bench temperature. */
-const L3 = {on:false, atoms:[], bonds:[], seq:900001, yaw:0.6, pitch:-0.35, dist:2050, spin:true,
+const L3 = {on:false, atoms:[], bonds:[], seq:900001, yaw:0.6, pitch:-0.35, dist:2050, spin:false,
             sel:null, drag:null, box:540, upg:0, dirty:true, readT:0,
             flashes:[], ledger:[], Tkin:0, gear:[], photons:[], volts:40, nm:254, lampClock:0,
             tool:'move', pend:null, measure:[], neutrons:[], cats:[], field:null, nClock:0, fusions:0, fissions:0, decays:0,
@@ -11944,7 +11944,6 @@ function l3Step(dt){
   l3GearStep(dt);
   L3.simT = (L3.simT||0) + dt;
   l3Gauge(dt);
-  if(L3.spin && !L3.drag) L3.yaw += dt*0.18;
 }
 
 /* ---------- the equipment the 3D bench has ----------
@@ -13785,7 +13784,7 @@ function l3Build(){
   const dispMenu = L3.menu === 'disp' ? '<div class="l3-pop" data-pop="disp">'+
       '<span class="eyebrow">Style</span><div class="l3-seg">'+Object.keys(L3_VIEWS).map(k=>'<button type="button" data-l3view="'+k+'"'+((L3.view||'ball') === k ? ' class="on"' : '')+'>'+L3_VIEWS[k]+'</button>').join('')+'</div>'+
       '<span class="eyebrow">Show</span>'+
-      tg('spin', L3.spin, 'Turn slowly')+tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+
+      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+
     '</div>' : '';
   const moreMenu = L3.menu === 'more' ? '<div class="l3-pop right" data-pop="more">'+
       '<button type="button" class="l3-item" data-l3="water">Add 12 waters</button>'+
@@ -13813,7 +13812,6 @@ function l3Build(){
     else if(b.dataset.l3 === 'exit') set3D(false);
     else if(b.dataset.l3 === 'send2d') sendTo2D();
     else if(b.dataset.l3 === 'clear'){ L3.menu = null; l3Clear(); l3Build(); }
-    else if(b.dataset.l3 === 'spin'){ L3.spin = !L3.spin; l3Build(); }
     else if(b.dataset.l3 === 'q'){ L3.showQ = !L3.showQ; l3Build(); }
     else if(b.dataset.l3 === 'view'){ const ks = Object.keys(L3_VIEWS); L3.view = ks[(ks.indexOf(L3.view||'ball')+1)%ks.length]; l3Build(); }
     else if(b.dataset.l3view){ L3.view = b.dataset.l3view; l3Build(); }
@@ -14359,8 +14357,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 98;
+const VERSION = 99;
 const CHANGELOG = [
+  [99, 'The 3D bench no longer turns by itself: it stays where you leave it, and you turn it by dragging. The Turn slowly switch is gone from the Display menu.'],
   [98, 'Learn mode, from the header or the Guide. The side panels and bench controls step aside, the 3D view fills the window, and one panel on the right does all the explaining, with the molecules shifted clear of it. Pick one of twelve reactions (an acid meets water, neutralisation, a Lewis adduct, water round a metal ion, sodium in chlorine, zinc and copper ions, magnesium in acid, sodium and water, bromine and ethene, Markovnikov\u2019s rule, making an ester, splitting one): each sets out just the molecules it needs at a set temperature and waits, paused, on an introduction saying what to watch for. Start runs it slowly, stops at every step to explain it in the panel, ticks off the checklist as things happen, offers a nudge if the molecules are slow to meet, and ends on a summary with the equations, the total \u0394H, the key idea and the next topic. Esc or Exit gives you back your own bench exactly as it was. Outside Learn mode the step-through card now sits in the top-right corner, out of the way. Watch it in 3D on a Guide card opens that reaction in Learn mode.'],
   [97, 'A tidier screen. The 3D bar is one row, clear of the tools: Send to 2D, a Display menu (style, turning, \u03b4 charges, lone pairs, names, as switches), Step through, Speed, and a \u22ef menu for adding water, snapshots and clearing. The 3D left panel keeps the periodic table, the Build box and Temperature in view and folds everything else into sections that remember how you left them; the reactions are sorted into acids and bases, Lewis acids and metal ions, metals and redox, organic and solutions, on both benches. On the flat bench, atoms in molecules no longer carry their full names (lone atoms, a small bench, or the atom under the pointer still do), the lab table is a thin ledge until something is put on it, the note, bench size and diagram buttons fold into a \u22ef menu so the bottom bar no longer overlaps itself, and the how-to line on the 3D view fades once you have used it.'],
   [96, 'Step through reactions. Turn it on from the 3D bar, the flat bench\u2019s bottom bar or the Notebook, or press Watch it on any Guide card. The bench runs slowly (0.25\u00d7, 0.5\u00d7 or 1\u00d7, your choice) until a reaction step happens, plays that step in slow motion so you can see the proton or electron cross, rings the atoms involved, then stops with a card: what happened, the equation, \u0394H and why. Next step (or the N key) lets it run on to the next one. The lessons are fixed: starting one from the 3D bench now takes you to the flat bench where it runs, each task ticks itself off as soon as you have done it, and two steps that could not be finished now can (the chlorine atoms that never met on a big bench, and the waters that scattered when heated). The lessons are also listed at the top of the Guide.'],
