@@ -10850,7 +10850,15 @@ const l3Metal = a => { const e = EL[a.e]; if(e._metal === undefined) e._metal = 
 /* The Morse minimum sits a little past the metallic diameter: every pair in reach
    pulls, second neighbours too, and together they squeeze the crystal in to the
    real spacing (372 pm between neighbours in sodium) */
-const l3LenM = (a, b) => ((METAL_R[EL[a.e].sym]||EL[a.e].rc) + (METAL_R[EL[b.e].sym]||EL[b.e].rc))*1.08;
+const l3LenM = (a, b) => ((METAL_R[EL[a.e].sym]||EL[a.e].rc) + (METAL_R[EL[b.e].sym]||EL[b.e].rc))*(l3CP(a) && l3CP(b) ? 1 : 1.08);
+/* Close-packed metals (face-centred and hexagonal) get a shorter-ranged well,
+   centred right on the real spacing (286 pm in aluminium). A long-ranged pair
+   well favours a disordered, glassy lump over close packing, so aluminium and
+   copper lost their crystal order at half their melting point while staying in
+   one piece. Body-centred metals keep the longer range: their angle term holds
+   the lattice, and second neighbours pull it in to the right spacing. */
+const l3CP = a => METAL_STRUCT[EL[a.e].sym] === 'fcc' || METAL_STRUCT[EL[a.e].sym] === 'hcp';
+const l3Rho = (a, b) => l3CP(a) && l3CP(b) ? 7 : 4.5;
 /* cohesive energy, kJ/mol: what it takes to pull a mole of the metal apart into
    atoms. It sets each pair's well, and so the melting point: real metals melt at
    about 3% of E_coh/R, so mercury is a liquid on the bench and tungsten hardly
@@ -10891,7 +10899,14 @@ const l3Look = a => METAL_LOOK[EL[a.e].sym] || '#B3B9C1';
    cohesive energy: how firmly a crystal holds its shape against heat is what
    the bench shows, and the Lindemann picture ties that to the well depth. The
    scale is pinned so sodium's well is a tenth of its cohesive energy. */
-const l3Coh = (a, b) => 0.0288*Math.sqrt(l3MP(a)*l3MP(b));
+/* How deep each metal's wells are, beyond its melting point, depends on how it
+   packs: the shorter-ranged close-packed well (l3Rho) needs a deeper well to
+   melt as late. Measured so a crystal of about 130 atoms keeps its lattice to
+   about 0.9 of its melting point and has lost it by about 1.3, whichever way
+   it packs (a crystal this small melts over a range, not at one temperature). */
+const STRUCT_WELL = {fcc:1.2, hcp:1.2, bcc:1.0};
+const l3WellF = a => STRUCT_WELL[METAL_STRUCT[EL[a.e].sym]] || 1;
+const l3Coh = (a, b) => 0.0288*Math.sqrt(l3MP(a)*l3MP(b)*l3WellF(a)*l3WellF(b));
 /* the mass that moves: an isotope's own, so D and T really are heavier than H */
 const l3Mass = a => { const e = EL[a.e], s0 = Math.round(e.mass); return a.A && a.A !== s0 ? e.mass + (a.A - s0) : e.mass; };
 /* Zero-point energy: even at absolute zero a bond vibrates, with energy hv/2 sitting
@@ -11117,12 +11132,13 @@ function l3MetalCrystal(sym){
       all.push([(i + 0.5*(((j%2)+2)%2))*nn + off[0], L*c2, j*nn*Math.sqrt(3)/2 + off[1]]);
     }
   }
-  /* ...cut to whole shells of neighbours, about thirty atoms: a round little
-     crystal whose middle atoms have their full set of neighbours (fifty-one for
-     body-centred, forty-odd for the close-packed ones) */
+  /* ...cut to whole shells of neighbours: a round little crystal with a real
+     inside, whose middle atoms have their full set of neighbours */
   all.sort((u,v)=>Math.hypot(...u) - Math.hypot(...v));
-  /* body-centred needs a bigger block before its inner atoms have all fourteen */
-  let n = st === 'bcc' ? 40 : 27; while(n < all.length && Math.hypot(...all[n]) < Math.hypot(...all[n-1])*1.02) n++;
+  /* about 130 atoms: a crystal of thirty is nearly all surface, and surface
+     atoms wander long before the inside melts, so it lost its shape far below
+     the melting point */
+  let n = 130; while(n < all.length && Math.hypot(...all[n]) < Math.hypot(...all[n-1])*1.02) n++;
   const pts = all.slice(0, n);
   const cx = pts.reduce((t,p)=>t+p[0],0)/pts.length, cy = pts.reduce((t,p)=>t+p[1],0)/pts.length, cz = pts.reduce((t,p)=>t+p[2],0)/pts.length;
   const ext = Math.max(...pts.map(p=>Math.max(Math.abs(p[0]-cx), Math.abs(p[1]-cy), Math.abs(p[2]-cz))));
@@ -11654,10 +11670,10 @@ function l3Step(dt){
          a metal into a close-packed crystal. The 'bonds' drawn are just the pairs
          that are touching right now. */
       if(l3Metal(p) && l3Metal(q)){
-        const r0 = l3LenM(p, q);
+        const r0 = l3LenM(p, q), rho = l3Rho(p, q);
         if(d < r0*2.1){
-          const x = 4.5*(d - r0)/r0, ex = Math.exp(-x);
-          const f = 2*l3Coh(p, q)*L3_KJ*(4.5/r0)*ex*(1 - ex);
+          const x = rho*(d - r0)/r0, ex = Math.exp(-x);
+          const f = 2*l3Coh(p, q)*L3_KJ*(rho/r0)*ex*(1 - ex);
           p.fx += f*dx/d; p.fy += f*dy/d; p.fz += f*dz/d; q.fx -= f*dx/d; q.fy -= f*dy/d; q.fz -= f*dz/d;
           if(s===0 && d < r0*1.18 && !nb.get(p.id).includes(q)){ l3Bond(p, q, 1, 'metallic'); nb.get(p.id).push(q); nb.get(q.id).push(p); }
         }
@@ -11763,19 +11779,31 @@ function l3Step(dt){
        atom, any two nearest neighbours squeezed below 70.5 degrees are pushed apart. */
     if(!L3.noBcc) for(const a of A){
       if(!l3Metal(a) || METAL_STRUCT[EL[a.e].sym] !== 'bcc') continue;
-      const R0 = 2*(METAL_R[EL[a.e].sym] || EL[a.e].rc)*1.1;
-      const ns = nb.get(a.id).filter(o=>l3Metal(o) && METAL_STRUCT[EL[o.e].sym] === 'bcc' && Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z) < R0);
+      /* who counts as a nearest neighbour fades in and out smoothly between R1
+         and R2, and the fade's own pull is included: a hard cutoff switched the
+         force on and off as atoms crossed it, and each jump fed the crystal a
+         little heat, so iron and tungsten ran hundreds of kelvin hotter than the
+         bath and melted early */
+      const d0 = 2*(METAL_R[EL[a.e].sym] || EL[a.e].rc), R1 = d0*1.09, R2 = d0*1.16;   /* between the first shell and the second (at 1.15) */
+      const ns = nb.get(a.id).filter(o=>l3Metal(o) && METAL_STRUCT[EL[o.e].sym] === 'bcc' && Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z) < R2);
       if(ns.length < 2) continue;
       const kA = L3_BCC.k*l3Coh(a, a)*L3_KJ, th0 = 70.53*Math.PI/180;
+      const sw = r => r <= R1 ? 1 : r >= R2 ? 0 : 0.5*(1 + Math.cos(Math.PI*(r - R1)/(R2 - R1)));
+      const dsw = r => r <= R1 || r >= R2 ? 0 : -0.5*Math.PI/(R2 - R1)*Math.sin(Math.PI*(r - R1)/(R2 - R1));
       for(let i=0;i<ns.length;i++) for(let j=i+1;j<ns.length;j++){
         const p = ns[i], q = ns[j];
         const ux=p.x-a.x, uy=p.y-a.y, uz=p.z-a.z, vx=q.x-a.x, vy=q.y-a.y, vz=q.z-a.z;
         const lu = Math.hypot(ux,uy,uz)||1, lv = Math.hypot(vx,vy,vz)||1;
         const c = clamp((ux*vx+uy*vy+uz*vz)/(lu*lv), -0.9999, 0.9999), th = Math.acos(c);
         if(th >= th0) continue;
-        const sn = Math.max(0.08, Math.sqrt(1-c*c)), k = -kA*(th - th0);
-        const fpx = k*(c*ux/lu - vx/lv)/(lu*sn), fpy = k*(c*uy/lu - vy/lv)/(lu*sn), fpz = k*(c*uz/lu - vz/lv)/(lu*sn);
-        const fqx = k*(c*vx/lv - ux/lu)/(lv*sn), fqy = k*(c*vy/lv - uy/lu)/(lv*sn), fqz = k*(c*vz/lv - uz/lu)/(lv*sn);
+        const wu = sw(lu), wv = sw(lv), w = wu*wv; if(w <= 0) continue;
+        /* E = kA/2 (th - th0)^2 wu wv: the angle part, weighted, plus the pull of each weight */
+        const E = 0.5*kA*(th - th0)*(th - th0);
+        const sn = Math.max(0.08, Math.sqrt(1-c*c)), k = -kA*(th - th0)*w;
+        let fpx = k*(c*ux/lu - vx/lv)/(lu*sn), fpy = k*(c*uy/lu - vy/lv)/(lu*sn), fpz = k*(c*uz/lu - vz/lv)/(lu*sn);
+        let fqx = k*(c*vx/lv - ux/lu)/(lv*sn), fqy = k*(c*vy/lv - uy/lu)/(lv*sn), fqz = k*(c*vz/lv - uz/lu)/(lv*sn);
+        const gu = -E*dsw(lu)*wv/lu, gv = -E*dsw(lv)*wu/lv;
+        fpx += gu*ux; fpy += gu*uy; fpz += gu*uz; fqx += gv*vx; fqy += gv*vy; fqz += gv*vz;
         p.fx += fpx; p.fy += fpy; p.fz += fpz; q.fx += fqx; q.fy += fqy; q.fz += fqz;
         a.fx -= fpx+fqx; a.fy -= fpy+fqy; a.fz -= fpz+fqz;
       }
@@ -13259,7 +13287,10 @@ function l3Draw(){
   g.fillStyle = vg; g.fillRect(0, 0, W3, H3);
   /* the readout, a few times a second */
   const now = performance.now();
-  if(L3.dirty || now - L3.readT > 500){ L3.readT = now; L3.dirty = false; l3Readout(); renderPanel3D(); }
+  /* at most five times a second: in a big metal crystal a bond at the edge
+     forms or lets go nearly every frame, and rebuilding the panel each time
+     cost more than the physics */
+  if((L3.dirty && now - L3.readT > 200) || now - L3.readT > 500){ L3.readT = now; L3.dirty = false; l3Readout(); renderPanel3D(); }
 }
 function shade3(col, amt){
   const m = col[0]==='#' ? [parseInt(col.slice(1,3),16), parseInt(col.slice(3,5),16), parseInt(col.slice(5,7),16)] : (col.match(/\d+/g)||[128,128,128]).map(Number);
@@ -14371,8 +14402,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 101;
+const VERSION = 102;
 const CHANGELOG = [
+  [102, 'Metal crystals keep their structure until they melt. Aluminium, copper and the other close-packed metals were losing their crystal order at about half their melting point, turning into a glassy lump (and being read as body-centred), because the metal well reached too far: a long-ranged pair force favours a disordered cluster over close packing. Close-packed metals now have a shorter-ranged well centred on the real spacing (286 pm in aluminium, where it was 310), so they stay ordered to about 0.9 of their melting point and have melted by about 1.3. Metal crystals are about 130 atoms instead of 30, so they have a real inside rather than being almost all surface. Iron, tungsten and the other body-centred metals ran hundreds of kelvin hotter than the bench, which melted them early: the force that keeps them body-centred switched on and off abruptly, and now fades in smoothly. The side panel no longer rebuilds every frame for a big metal crystal, so they run smoothly.'],
   [101, 'Hydronium ions no longer seem to toss protons about. A proton passing from H\u2083O\u207a to the water beside it is real (the Grotthuss mechanism, every picosecond or so in real water), but it was drawn with the same flying H\u207a as a real reaction and happened every couple of seconds, which looked like a glitch. It is now rare, not drawn, and switched off while stepping through reactions or in Learn mode, and the acid\u2013base card in the Guide explains it.'],
   [100, 'Learn mode fixes. Sodium burns in chlorine could stall: a sodium that reacted in the first moment after the scene was set out was not reported, so the checklist waited for a step that had already happened, and one transfer could be counted twice (as redox and as ionisation) so the topic finished half done. Every electron transfer is now reported exactly once, and only building a molecule or crystal is kept quiet. The scene has two chlorine molecules so the second sodium always has one to meet. Neutralisation has water to carry the proton, so it no longer waits on HCl meeting hydroxide head on, and magnesium in acid counts the hydrogen freed from water too.'],
   [99, 'The 3D bench no longer turns by itself: it stays where you leave it, and you turn it by dragging. The Turn slowly switch is gone from the Display menu.'],
