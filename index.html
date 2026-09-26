@@ -5008,7 +5008,7 @@ const CONCEPTS = {
     what:['In the Brønsted–Lowry picture, an acid is a proton donor and a base a proton acceptor. The acid’s H leaves its electrons behind, and the base catches the bare proton with a lone pair. What is left of the acid is its conjugate base, and the base becomes its conjugate acid.',
           'In water, an acid gives its proton to water to make hydronium, H₃O⁺. The more hydronium there is, the lower the pH.'],
     sim:'The bench knows the pKa of each acidic hydrogen and of the acid each base would become. A proton goes from donor to acceptor at hydrogen-bond distance. It moves fast when downhill and is slowed by a factor of 10 for every pKa unit uphill, so the equilibria settle where the real pKa values say. A small H⁺ flies across so you can see it go.',
-    look:'Watch the charges appear: the donor keeps the electrons and turns negative, and the acceptor turns positive.',
+    look:'Watch the charges appear: the donor keeps the electrons and turns negative, and the acceptor turns positive. Now and then a hydronium quietly passes its extra proton on to the water next to it, which becomes the new H\u2083O\u207a. In real water that hop happens about every picosecond (the Grotthuss mechanism), which is why acids conduct electricity so well; the bench shows it only occasionally, and not at all while stepping through.',
     nums:[['HCl','pKa −7'],['H₂SO₄','pKa −3'],['H₃O⁺','pKa −1.7'],['NH₄⁺','pKa 9.2']],
     eq:'HCl + H₂O → Cl⁻ + H₃O⁺',
     tr:{scene:'hclaq'}, rel:['pka','neutral','lewis']},
@@ -5423,7 +5423,7 @@ function stepRing(g, x, y, r, now){
    was expected as it happens, and ends with a summary. */
 const LEARN_TOPICS = [
   {k:'acid',   c:'acidbase',   title:'An acid meets water',            mols:[['HCl',1],['water',5]],                       box:360, temp:12, expect:[['acidbase','HCl gives its proton to a water molecule, making H₃O⁺ and Cl⁻']]},
-  {k:'neut',   c:'neutral',    title:'Neutralisation',                 mols:[['[Na+].[OH-]',1],['HCl',1],['water',2]],      box:320, temp:12, expect:[['neutral','Hydroxide takes a proton, from HCl or from H\u2083O\u207a, and becomes water']]},
+  {k:'neut',   c:'neutral',    title:'Neutralisation',                 mols:[['[Na+].[OH-]',1],['HCl',1],['water',2]],      box:290, temp:14, expect:[['neutral','Hydroxide takes a proton, from HCl or from H\u2083O\u207a, and becomes water']]},
   {k:'lewis',  c:'lewis',      title:'A Lewis adduct',                 mols:[['FB(F)F',1],['ammonia',1]],                   box:300, temp:8,  expect:[['lewis','Ammonia shares its lone pair with boron’s empty orbital']]},
   {k:'coord',  c:'coord',      title:'Water gathers round a metal ion', mols:[['[Cu+]',1],['water',6]],                      box:330, temp:10, expect:[['coord','A water molecule bonds to the copper ion'],['coord','A second one joins'],['coord','And a third']]},
   {k:'salt',   c:'ionization', title:'Sodium burns in chlorine',       mols:[['[Na]',2],['ClCl',2]],                        box:320, temp:14, expect:[[['redox','ionization'],'A sodium atom hands its electron to chlorine'],[['redox','ionization'],'The second sodium does the same']]},
@@ -7699,11 +7699,13 @@ function protonTransfer2D(dt){
       const gap = pb - pa;
       if(d > (gap > 10 ? far : reach)) continue;
       let rate = 20*Math.min(1, Math.pow(10, gap));
-      if(Math.abs(gap) < 0.5) rate *= 0.02;
+      const same = Math.abs(gap) < 0.5;           /* H3O+ to water: rare, undrawn, off while stepping (see l3AcidBase) */
+      if(same && STEP.on) continue;
+      if(same) rate *= 0.005;
       else if(Math.abs(gap) < 3) rate *= 0.1;     /* no flickering to and fro (see l3AcidBase) */
       if(Math.random() > rate*span) continue;
       const sA0 = Math.abs(gap) >= 0.5 ? species2D(a) : null, sB0 = sA0 ? species2D(b) : null;
-      vfly('proton', {x:h.x, y:h.y}, b);
+      if(!same) vfly('proton', {x:h.x, y:h.y}, b);
       breakBond(hb[0], true);
       setCharge2D(a, (a.charge||0) - 1);
       setCharge2D(b, (b.charge||0) + 1);
@@ -11397,9 +11399,15 @@ function l3AcidBase(dt){
       /* fast when downhill (proton transfers go at the diffusion limit), slowed
          by 10^gap when uphill, so equilibria sit where the pKa values say */
       let rate = 20*Math.min(1, Math.pow(10, gap));
-      /* a proton passing between two identical sites changes nothing: that
-         shuffling happens, but it is not drawn or counted */
-      if(Math.abs(gap) < 0.5) rate *= 0.02;
+      /* A proton passing between two identical sites (H3O+ to a neighbouring
+         water) changes nothing chemically. It really happens, every picosecond
+         or so in water (the Grotthuss mechanism, why acids conduct so well),
+         but shown at that pace it looks like a glitch: here it is rare, not
+         drawn, not counted, and switched off while stepping through reactions
+         so the proton being watched stays put. */
+      const same = Math.abs(gap) < 0.5;
+      if(same && STEP.on) continue;
+      if(same) rate *= 0.005;
       /* near equilibrium (H2SO4 and water, 1.3 pKa apart) the proton goes back
          and forth; both ways are slowed alike, so where the balance sits is
          unchanged, but it does not flicker to and fro several times a second */
@@ -11412,7 +11420,7 @@ function l3AcidBase(dt){
       const aLeft = l3Bonds(a).filter(x=>x.type === 'covalent').length;
       if(aLeft) l3SetFq(a, (a.fq||0) - 1); else l3SetIon(a, (a.ion||0) - 1);
       if(b.ion){ l3SetIon(b, b.ion + 1); if(!b.ion) b.charge = b.fq||0; } else l3SetFq(b, (b.fq||0) + 1);
-      l3Fly('proton', {x:h.x, y:h.y, z:h.z}, h);
+      if(!same) l3Fly('proton', {x:h.x, y:h.y, z:h.z}, h);
       const nb = l3Bond(h, b, 1, 'covalent');
       /* the proton sits at bond length on its new partner, on the side it came from */
       const L0 = l3Len(h, b, 1), ux = (h.x-b.x)/d, uy = (h.y-b.y)/d, uz = (h.z-b.z)/d;
@@ -14363,8 +14371,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 100;
+const VERSION = 101;
 const CHANGELOG = [
+  [101, 'Hydronium ions no longer seem to toss protons about. A proton passing from H\u2083O\u207a to the water beside it is real (the Grotthuss mechanism, every picosecond or so in real water), but it was drawn with the same flying H\u207a as a real reaction and happened every couple of seconds, which looked like a glitch. It is now rare, not drawn, and switched off while stepping through reactions or in Learn mode, and the acid\u2013base card in the Guide explains it.'],
   [100, 'Learn mode fixes. Sodium burns in chlorine could stall: a sodium that reacted in the first moment after the scene was set out was not reported, so the checklist waited for a step that had already happened, and one transfer could be counted twice (as redox and as ionisation) so the topic finished half done. Every electron transfer is now reported exactly once, and only building a molecule or crystal is kept quiet. The scene has two chlorine molecules so the second sodium always has one to meet. Neutralisation has water to carry the proton, so it no longer waits on HCl meeting hydroxide head on, and magnesium in acid counts the hydrogen freed from water too.'],
   [99, 'The 3D bench no longer turns by itself: it stays where you leave it, and you turn it by dragging. The Turn slowly switch is gone from the Display menu.'],
   [98, 'Learn mode, from the header or the Guide. The side panels and bench controls step aside, the 3D view fills the window, and one panel on the right does all the explaining, with the molecules shifted clear of it. Pick one of twelve reactions (an acid meets water, neutralisation, a Lewis adduct, water round a metal ion, sodium in chlorine, zinc and copper ions, magnesium in acid, sodium and water, bromine and ethene, Markovnikov\u2019s rule, making an ester, splitting one): each sets out just the molecules it needs at a set temperature and waits, paused, on an introduction saying what to watch for. Start runs it slowly, stops at every step to explain it in the panel, ticks off the checklist as things happen, offers a nudge if the molecules are slow to meet, and ends on a summary with the equations, the total \u0394H, the key idea and the next topic. Esc or Exit gives you back your own bench exactly as it was. Outside Learn mode the step-through card now sits in the top-right corner, out of the way. Watch it in 3D on a Guide card opens that reaction in Learn mode.'],
