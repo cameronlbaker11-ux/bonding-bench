@@ -5423,12 +5423,12 @@ function stepRing(g, x, y, r, now){
    was expected as it happens, and ends with a summary. */
 const LEARN_TOPICS = [
   {k:'acid',   c:'acidbase',   title:'An acid meets water',            mols:[['HCl',1],['water',5]],                       box:360, temp:12, expect:[['acidbase','HCl gives its proton to a water molecule, making H₃O⁺ and Cl⁻']]},
-  {k:'neut',   c:'neutral',    title:'Neutralisation',                 mols:[['[Na+].[OH-]',1],['HCl',1]],                  box:320, temp:12, expect:[['neutral','Hydroxide takes the proton from HCl and becomes water']]},
+  {k:'neut',   c:'neutral',    title:'Neutralisation',                 mols:[['[Na+].[OH-]',1],['HCl',1],['water',2]],      box:320, temp:12, expect:[['neutral','Hydroxide takes a proton, from HCl or from H\u2083O\u207a, and becomes water']]},
   {k:'lewis',  c:'lewis',      title:'A Lewis adduct',                 mols:[['FB(F)F',1],['ammonia',1]],                   box:300, temp:8,  expect:[['lewis','Ammonia shares its lone pair with boron’s empty orbital']]},
   {k:'coord',  c:'coord',      title:'Water gathers round a metal ion', mols:[['[Cu+]',1],['water',6]],                      box:330, temp:10, expect:[['coord','A water molecule bonds to the copper ion'],['coord','A second one joins'],['coord','And a third']]},
-  {k:'salt',   c:'ionization', title:'Sodium burns in chlorine',       mols:[['[Na]',2],['ClCl',1]],                        box:320, temp:14, expect:[[['redox','ionization'],'A sodium atom hands its electron to chlorine'],[['redox','ionization'],'The second sodium does the same']]},
+  {k:'salt',   c:'ionization', title:'Sodium burns in chlorine',       mols:[['[Na]',2],['ClCl',2]],                        box:320, temp:14, expect:[[['redox','ionization'],'A sodium atom hands its electron to chlorine'],[['redox','ionization'],'The second sodium does the same']]},
   {k:'zncu',   c:'redox',      title:'Zinc and copper ions',           mols:[['[Zn]',1],['[Cu+]',1],['water',3]],           box:320, temp:12, expect:[['redox','Zinc gives an electron to the copper ion, and copper metal comes out']]},
-  {k:'mgacid', c:'metalacid',  title:'Magnesium in acid',              mols:[['[Mg]',1],['HCl',2],['water',3]],             box:330, temp:14, expect:[['metalacid','Magnesium gives an electron to an acid proton, freeing hydrogen']]},
+  {k:'mgacid', c:'metalacid',  title:'Magnesium in acid',              mols:[['[Mg]',1],['HCl',2],['water',3]],             box:330, temp:14, expect:[[['metalacid','metalwater'],'Magnesium gives up an electron and a hydrogen atom is set free']]},
   {k:'naw',    c:'metalwater', title:'Sodium and water',               mols:[['[Na]',2],['water',4]],                       box:320, temp:18, expect:[['metalwater','Sodium takes oxygen from water and sets hydrogen free']]},
   {k:'br2',    c:'addition',   title:'Bromine adds to ethene',         mols:[['C=C',1],['BrBr',1]],                         box:280, temp:30, expect:[['addition','Br₂ opens the C=C and adds one Br to each carbon']]},
   {k:'markov', c:'markov',     title:'Markovnikov’s rule',        mols:[['CC=C',1],['HBr',1]],                         box:300, temp:25, expect:[['markov','HBr adds: H to the carbon with more H, Br to the other']]},
@@ -10959,7 +10959,9 @@ function l3Bond(a, b, order, force){
   if(type === 'ionic'){
     const cat = ea.en < eb.en ? a : b, an = cat === a ? b : a;
     if(!cat.ion && !an.ion && typeof l3Fly === 'function') l3Fly('electron', cat, an);
-    if(!cat.ion && !an.ion && !(a.cool > 0) && !(b.cool > 0) && typeof rxIonise === 'function') rxIonise(EL[cat.e].sym, EL[an.e].sym, '3D', 1, [cat.id, an.id]);
+    /* a real transfer is reported even straight after a scene is set out; only
+       building a molecule or crystal, or a reaction that reports itself, is quiet */
+    if(!cat.ion && !an.ion && !L3.quiet && typeof rxIonise === 'function') rxIonise(EL[cat.e].sym, EL[an.e].sym, '3D', 1, [cat.id, an.id]);
     if(!cat.ion) l3SetIon(cat, 1); if(!an.ion) l3SetIon(an, -1);
   }
   L3.bonds.push(bd); L3.dirty = true; L3.bv = (L3.bv||0) + 1;
@@ -10973,6 +10975,10 @@ function l3Find(id){
   L3.idx = {list:L3.atoms, n:L3.atoms.length, m};
   const a = m.get(id); return a;
 }
+/* building things is not chemistry happening: bonds made while building are not reported */
+function l3Quietly(f){ return function(){ L3.quiet = (L3.quiet||0) + 1; try{ return f.apply(this, arguments); } finally { L3.quiet--; } }; }
+/* the builders are declared further down; declarations are hoisted, so they can be wrapped here */
+l3Preset = l3Quietly(l3Preset); l3BuildAny = l3Quietly(l3BuildAny); l3Restore = l3Quietly(l3Restore); l3Crystal = l3Quietly(l3Crystal); sendTo3D = l3Quietly(sendTo3D);
 function l3Preset(name){
   const spec = L3_PRESETS[name];
   /* somewhere clear of what is already there */
@@ -11051,7 +11057,7 @@ function l3MetalReact(dt){
              else L3.bonds.splice(L3.bonds.indexOf(b), 1); }
       /* it leaves the metal: no longer part of the electron sea */
       L3.bonds = L3.bonds.filter(m=>!(m.type === 'metallic' && (m.a === a.id || m.b === a.id)));
-      const nb = l3Bond(a, x, 1);
+      L3.quiet = (L3.quiet||0) + 1; let nb; try{ nb = l3Bond(a, x, 1); } finally { L3.quiet--; }
       l3Fly('electron', a, x);
       const lost = b ? e0 - (L3.bonds.includes(b) ? b.energy : 0) : 0, dE = nb.energy - lost;
       if(dE > 0) l3Kick(a, x, dE);
@@ -14357,8 +14363,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 99;
+const VERSION = 100;
 const CHANGELOG = [
+  [100, 'Learn mode fixes. Sodium burns in chlorine could stall: a sodium that reacted in the first moment after the scene was set out was not reported, so the checklist waited for a step that had already happened, and one transfer could be counted twice (as redox and as ionisation) so the topic finished half done. Every electron transfer is now reported exactly once, and only building a molecule or crystal is kept quiet. The scene has two chlorine molecules so the second sodium always has one to meet. Neutralisation has water to carry the proton, so it no longer waits on HCl meeting hydroxide head on, and magnesium in acid counts the hydrogen freed from water too.'],
   [99, 'The 3D bench no longer turns by itself: it stays where you leave it, and you turn it by dragging. The Turn slowly switch is gone from the Display menu.'],
   [98, 'Learn mode, from the header or the Guide. The side panels and bench controls step aside, the 3D view fills the window, and one panel on the right does all the explaining, with the molecules shifted clear of it. Pick one of twelve reactions (an acid meets water, neutralisation, a Lewis adduct, water round a metal ion, sodium in chlorine, zinc and copper ions, magnesium in acid, sodium and water, bromine and ethene, Markovnikov\u2019s rule, making an ester, splitting one): each sets out just the molecules it needs at a set temperature and waits, paused, on an introduction saying what to watch for. Start runs it slowly, stops at every step to explain it in the panel, ticks off the checklist as things happen, offers a nudge if the molecules are slow to meet, and ends on a summary with the equations, the total \u0394H, the key idea and the next topic. Esc or Exit gives you back your own bench exactly as it was. Outside Learn mode the step-through card now sits in the top-right corner, out of the way. Watch it in 3D on a Guide card opens that reaction in Learn mode.'],
   [97, 'A tidier screen. The 3D bar is one row, clear of the tools: Send to 2D, a Display menu (style, turning, \u03b4 charges, lone pairs, names, as switches), Step through, Speed, and a \u22ef menu for adding water, snapshots and clearing. The 3D left panel keeps the periodic table, the Build box and Temperature in view and folds everything else into sections that remember how you left them; the reactions are sorted into acids and bases, Lewis acids and metal ions, metals and redox, organic and solutions, on both benches. On the flat bench, atoms in molecules no longer carry their full names (lone atoms, a small bench, or the atom under the pointer still do), the lab table is a thin ledge until something is put on it, the note, bench size and diagram buttons fold into a \u22ef menu so the bottom bar no longer overlaps itself, and the how-to line on the 3D view fades once you have used it.'],
@@ -18614,4 +18621,5 @@ try{ if(window.claude&&window.claude.hot&&window.claude.hot.snapshot) window.cla
 if(window.claude&&window.claude.hot&&window.claude.hot.ready) window.claude.hot.ready(safeStart);
 else safeStart((window.claude&&window.claude.hot&&window.claude.hot.data)||{});
 setInterval(rescueSave, 20000);
+
 </script>
