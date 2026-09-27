@@ -853,7 +853,8 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 body.learning .workspace{grid-template-columns:minmax(0,1fr)}
 body.learning .workspace > .panel,body.learning .workspace > .gutter{display:none}
 body.learning #l3bar,body.learning #l3tools,body.learning #l3read,body.learning #l3Tip,body.learning #hud,body.learning #stepCard,
-body.learning #benchRT,body.learning #shareBtn,body.learning #clearBtn,body.learning #modeSeg{display:none!important}
+body.learning #benchRT,body.learning #shareBtn,body.learning #clearBtn,body.learning #modeSeg,
+body.learning #tools,body.learning .timectl,body.learning #camCtl,body.learning #lessonCard,body.learning #tourCard,body.learning #hint,body.learning #toolbar{display:none!important}
 .learn-btn.on{background:#F2B034;color:var(--ink);border-color:#E0A020}
 .learn-dock{position:absolute;right:14px;top:14px;bottom:14px;width:min(360px,42%);z-index:8;background:rgba(255,255,255,.97);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--shadow-l);padding:14px 16px;overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:2px}
 .learn-dock[hidden]{display:none}
@@ -1025,6 +1026,7 @@ body.learning #benchRT,body.learning #shareBtn,body.learning #clearBtn,body.lear
       <div id="tourCard" hidden></div>
       <div id="lessonCard" hidden></div>
       <div id="stepCard" class="step-card" hidden></div>
+      <div class="learn-dock" id="learnDock" hidden></div>
       <div class="timectl"><div class="seg" id="timeSeg" role="group" aria-label="Time scale"></div>
         <div class="stats">
           <span><b id="sAtoms">0</b> atoms</span>
@@ -1032,7 +1034,7 @@ body.learning #benchRT,body.learning #shareBtn,body.learning #clearBtn,body.lear
           <span><b id="sMols">0</b> species</span>
         </div></div>
       <div id="camCtl"></div>
-      <div id="lab3d" hidden><canvas id="c3d"></canvas><div class="l3-bar" id="l3bar"></div><div class="tools l3-tools" id="l3tools"></div><div class="learn-dock" id="learnDock" hidden></div>
+      <div id="lab3d" hidden><canvas id="c3d"></canvas><div class="l3-bar" id="l3bar"></div><div class="tools l3-tools" id="l3tools"></div>
         <div class="l3-read" id="l3read"></div>
         <div class="l3-tip" id="l3Tip">3D bench &mdash; drag to turn &middot; drag an atom to move it &middot; scroll to zoom &middot; Delete removes the selected atom &middot; shift-click adds five</div></div>
       <input id="noteInput" type="text" hidden maxlength="60" placeholder="a short note, then Enter">
@@ -2588,6 +2590,30 @@ function targetAngle(sn,n){
 }
 
 let datClock = 0;
+/* a metal ion with its ligands, as chemists write it: [Cu(H2O)3]+ */
+function complex2D(m){
+  const ligs = new Map();
+  bondsOf(m).filter(b=>b.type === 'dative').forEach(b=>{ const o = other(b, m); if(o){ const f = species2D(o).f; ligs.set(f, (ligs.get(f)||0) + 1); } });
+  const M = EL[m.e].sym, q = chargeSup(m.charge||0);
+  if(!ligs.size) return M+q;
+  return '['+M+[...ligs].map(([f, n])=>(f.length > 1 ? '('+f+')' : f)+(n > 1 ? subPlain(String(n)) : '')).join('')+']'+q;
+}
+function logDative2D(bd, s0, cx0){
+  const acc = findAtom(bd.acceptor), don = findAtom(bd.donor); if(!acc || !don) return;
+  const sAcc = s0.get(acc), sDon = s0.get(don); if(!sAcc || !sDon) return;
+  const es = EL[acc.e].sym, ds = EL[don.e].sym;
+  if(isMetal(EL[acc.e]) && (acc.charge||0) > 0){
+    logRx({c:'coord', bench:'2D', atoms:[acc.id, don.id], dH:-(bd.energy||55),
+      title: capFirst(nameOrF(sDon))+' joined the '+elName(es)+' ion as a ligand.',
+      eq: cx0.get(acc)+' + '+sDon.f+' \u2192 '+complex2D(acc),
+      why:'A metal ion has empty orbitals that lone pairs can fill. '+capFirst(nameOrF(sDon))+' gives the pair on its '+ds+', a coordinate bond. Up to six fit round the ion, at the corners of an octahedron. This is how metal ions dissolve: Cu\u00b2\u207a in water is really [Cu(H\u2082O)\u2086]\u00b2\u207a.'});
+  } else {
+    logRx({c:'lewis', bench:'2D', atoms:[acc.id, don.id], dH:-(bd.energy||100),
+      title: capFirst(nameOrF(sDon))+' shared a lone pair with '+nameOrF(sAcc)+'.',
+      eq: sAcc.f+' + '+sDon.f+' \u2192 '+sAcc.f+'\u00b7'+sDon.f,
+      why: capFirst(elName(ds))+' has a lone pair, and '+elName(es)+' has an empty orbital to take it. The pair is shared as a coordinate (dative) bond: both electrons came from '+ds+', so it takes a formal + charge and '+es+' a formal \u2212.'});
+  }
+}
 function scanDative(){
   for(let i=0;i<atoms.length;i++){
     const a=atoms[i]; if(a.dying) continue;
@@ -2596,7 +2622,12 @@ function scanDative(){
       /* an empty orbital reaches for a lone pair from a little further than a shared bond forms */
       if(Math.hypot(b.x-a.x,b.y-a.y) > pmToPx((EL[a.e].rc+EL[b.e].rc)*1.08)*1.65) continue;
       if(pairBond(a,b) || onCooldown(a,b)) continue;
-      if(dativePlan(a,b)) makeBond(a,b,true);
+      if(dativePlan(a,b)){
+        /* written up in the notebook as the 3D bench does: a Lewis adduct, or a ligand joining a metal ion */
+        const s0 = new Map([[a, species2D(a)], [b, species2D(b)]]), cx0 = new Map([[a, complex2D(a)], [b, complex2D(b)]]);
+        const bd = makeBond(a,b,true);
+        if(bd && bd.type === 'dative' && !building && !presetBuilding) logDative2D(bd, s0, cx0);
+      }
     }
   }
 }
@@ -5105,7 +5136,7 @@ const CONCEPTS = {
     one:'Small molecules join into big ones, often giving off water at each link.',
     what:['Two amino acids join through a peptide (amide) bond, losing a water molecule; thousands of links make a protein. Ethene molecules open their double bonds and link end to end to make polythene, an addition polymer that loses nothing.',
           'Nearly every large molecule in living things is built by condensation and taken apart by hydrolysis.'],
-    sim:'On the flat bench, amino acids brought together form peptide bonds, and a chain-growth tool links monomers into a polymer.',
+    sim:'On both benches an acid\u2019s \u2013COOH and an amine\u2019s N\u2013H brought together lose a water and form an amide (peptide) bond, given heat (on the flat bench with Water solvent on); never within one molecule. Polymerise the alkenes, in the left panel of either bench, joins every small alkene into one chain.',
     look:'Watch for the water molecule that leaves each time a peptide bond forms.',
     nums:[['Peptide bond','C(=O)–N, planar']],
     tr:null, rel:['ester','hydrolysis']},
@@ -5421,17 +5452,19 @@ function stepRing(g, x, y, r, now){
    needs, close together, at a set temperature; it waits on an introduction
    saying what to watch for, runs slowly, stops at every step, ticks off what
    was expected as it happens, and ends with a summary. */
+/* flat:false: the flat bench's chemistry cannot run it (it has no metal and water, oxygen or halogen reactions,
+   and HBr and propene rarely meet on it), so choosing it there opens the 3D bench */
 const LEARN_TOPICS = [
   {k:'acid',   c:'acidbase',   title:'An acid meets water',            mols:[['HCl',1],['water',5]],                       box:360, temp:12, expect:[['acidbase','HCl gives its proton to a water molecule, making H₃O⁺ and Cl⁻']]},
   {k:'neut',   c:'neutral',    title:'Neutralisation',                 mols:[['[Na+].[OH-]',1],['HCl',1],['water',2]],      box:290, temp:14, expect:[['neutral','Hydroxide takes a proton, from HCl or from H\u2083O\u207a, and becomes water']]},
   {k:'lewis',  c:'lewis',      title:'A Lewis adduct',                 mols:[['FB(F)F',1],['ammonia',1]],                   box:300, temp:8,  expect:[['lewis','Ammonia shares its lone pair with boron’s empty orbital']]},
   {k:'coord',  c:'coord',      title:'Water gathers round a metal ion', mols:[['[Cu+]',1],['water',6]],                      box:330, temp:10, expect:[['coord','A water molecule bonds to the copper ion'],['coord','A second one joins'],['coord','And a third']]},
-  {k:'salt',   c:'ionization', title:'Sodium burns in chlorine',       mols:[['[Na]',2],['ClCl',2]],                        box:320, temp:14, expect:[[['redox','ionization'],'A sodium atom hands its electron to chlorine'],[['redox','ionization'],'The second sodium does the same']]},
-  {k:'zncu',   c:'redox',      title:'Zinc and copper ions',           mols:[['[Zn]',1],['[Cu+]',1],['water',3]],           box:320, temp:12, expect:[['redox','Zinc gives an electron to the copper ion, and copper metal comes out']]},
+  {k:'salt',   c:'ionization', title:'Sodium burns in chlorine',       mols:[['[Na]',2],['ClCl',2]],                        box:320, temp:14, expect:[[['redox','ionization'],'A sodium atom hands its electron to chlorine'],[['redox','ionization'],'The second sodium does the same']], flat:false},
+  {k:'zncu',   c:'redox',      title:'Zinc and copper ions',           mols:[['[Zn]',1],['[Cu+]',1],['water',3]],           box:320, temp:12, expect:[['redox','Zinc gives an electron to the copper ion, and copper metal comes out']], flat:false},
   {k:'mgacid', c:'metalacid',  title:'Magnesium in acid',              mols:[['[Mg]',1],['HCl',2],['water',3]],             box:330, temp:14, expect:[[['metalacid','metalwater'],'Magnesium gives up an electron and a hydrogen atom is set free']]},
-  {k:'naw',    c:'metalwater', title:'Sodium and water',               mols:[['[Na]',2],['water',4]],                       box:320, temp:18, expect:[['metalwater','Sodium takes oxygen from water and sets hydrogen free']]},
+  {k:'naw',    c:'metalwater', title:'Sodium and water',               mols:[['[Na]',2],['water',4]],                       box:320, temp:18, expect:[['metalwater','Sodium takes oxygen from water and sets hydrogen free']], flat:false},
   {k:'br2',    c:'addition',   title:'Bromine adds to ethene',         mols:[['C=C',1],['BrBr',1]],                         box:280, temp:30, expect:[['addition','Br₂ opens the C=C and adds one Br to each carbon']]},
-  {k:'markov', c:'markov',     title:'Markovnikov’s rule',        mols:[['CC=C',1],['HBr',1]],                         box:300, temp:25, expect:[['markov','HBr adds: H to the carbon with more H, Br to the other']]},
+  {k:'markov', c:'markov',     title:'Markovnikov’s rule',        mols:[['CC=C',1],['HBr',1]],                         box:300, temp:25, expect:[['markov','HBr adds: H to the carbon with more H, Br to the other']], flat:false},
   {k:'ester',  c:'ester',      title:'Making an ester',                mols:[['acetic acid',2],['ethanol',2],['[OH3+]',1]], box:350, temp:55, expect:[['ester','Acetic acid and ethanol join, giving off water']]},
   {k:'hydro',  c:'hydrolysis', title:'Splitting an ester with water',  mols:[['ethyl acetate',2],['water',4],['[OH3+]',1]], box:360, temp:60, expect:[['hydrolysis','Water splits ethyl acetate back into acid and alcohol']]}
 ];
@@ -5442,9 +5475,8 @@ const learnHeld = () => LEARN.on && (LEARN.phase !== 'watch' || LEARN.paused);
 function learnMode(on){
   if(!!on === LEARN.on) return;
   if(on){
-    if(!L3.on) set3D(true);
-    /* your own bench comes back, just as it was, when you leave */
-    LEARN.keep = {step:STEP.on, temp:P.temp, snap:JSON.stringify(l3Snap())};
+    /* it runs on whichever bench is up; your own bench comes back, just as it was, when you leave */
+    LEARN.keep = {step:STEP.on, temp:P.temp, bench:L3.on ? '3D' : '2D', snap:JSON.stringify(L3.on ? l3Snap() : snapshot())};
     L3.menu = null;
     LEARN.on = true; LEARN.phase = 'pick'; LEARN.topic = null; LEARN.paused = false;
     document.body.classList.add('learning');
@@ -5453,21 +5485,31 @@ function learnMode(on){
     LEARN.on = false;
     document.body.classList.remove('learning');
     if(LEARN.keep){ if(!LEARN.keep.step) stepMode(false, true);
-      try{ l3Restore(JSON.parse(LEARN.keep.snap)); }catch(e){}
+      if(LEARN.keep.bench === '3D'){ if(!L3.on) set3D(true); try{ l3Restore(JSON.parse(LEARN.keep.snap)); }catch(e){} }
+      else { if(L3.on) set3D(false); try{ loadState(JSON.parse(LEARN.keep.snap)); }catch(e){} }
       setSlider('temp', LEARN.keep.temp); try{ renderLeft3D(); }catch(e){} }
     L3.shiftX = 0;
     try{ l3Build(); }catch(e){}
   }
-  /* the panels come and go, so the canvases take their new size */
-  setTimeout(()=>{ try{ resize(); }catch(e){} L3.dirty = true; }, 30);
+  /* the panels come and go, so the canvases take their new size, and the flat
+     bench's piston goes back to the edge of the wider (or narrower) bench */
+  setTimeout(()=>{ try{ resize(); }catch(e){} try{ pistonInit(); }catch(e){} L3.dirty = true; }, 30);
   renderLearnDock(); renderStepCard();
   const b = el('learnBtn'); if(b){ b.classList.toggle('on', LEARN.on); b.textContent = LEARN.on ? 'Exit Learn mode' : 'Learn mode'; }
 }
 function learnStart(k){
   const t = LEARN_TOPICS.find(x=>x.k === k); if(!t) return;
   if(!LEARN.on) learnMode(true);
-  l3Scene({k:'learn-'+k, label:t.title, note:CONCEPTS[t.c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box, temp:t.temp});
-  L3.menu = null; l3Build();
+  if(!L3.on && t.flat === false) set3D(true);
+  const sc = {k:'learn-'+k, label:t.title, note:CONCEPTS[t.c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box, temp:t.temp};
+  if(L3.on){ l3Scene(sc); L3.menu = null; l3Build(); }
+  else {
+    try{ resize(); pistonInit(); }catch(e){}
+    scene2D(sc); if(t.temp != null) setSlider('temp', t.temp);
+    /* the molecules sit left of the panel, not behind it */
+    const dw = ((el('learnDock').offsetWidth || 340)/2 + 8)/cam.z;
+    atoms.forEach(a=>{ if(!a.dying) a.x -= dw; });
+  }
   Object.assign(LEARN, {topic:t, phase:'intro', ticks:t.expect.map(()=>false), startId:logId, paused:false, lastEvt:performance.now()});
   stepMode(true, true);
   renderLearnDock();
@@ -5491,6 +5533,15 @@ function learnAfterNext(){
 }
 /* nothing happening: move every molecule a third of the way toward the middle */
 function learnNudge(){
+  if(!L3.on){
+    const live = atoms.filter(a=>!a.dying); if(!live.length) return;
+    const mx = live.reduce((t,a)=>t+a.x,0)/live.length, my = live.reduce((t,a)=>t+a.y,0)/live.length, seen = new Set();
+    live.forEach(a0=>{ if(seen.has(a0)) return; const list = [a0]; seen.add(a0);
+      for(let i=0;i<list.length;i++) bondsOf(list[i]).forEach(b=>{ const o = other(b, list[i]); if(o && !o.dying && !seen.has(o)){ seen.add(o); list.push(o); } });
+      const cx = list.reduce((t,a)=>t+a.x,0)/list.length, cy = list.reduce((t,a)=>t+a.y,0)/list.length;
+      list.forEach(a=>{ a.x -= (cx-mx)*0.35; a.y -= (cy-my)*0.35; }); });
+    LEARN.lastEvt = performance.now(); dirty = true; say('Nudged the molecules closer together.', 'bench', true); return;
+  }
   l3Molecules().forEach(list=>{
     let cx = 0, cy = 0, cz = 0; list.forEach(a=>{ cx += a.x; cy += a.y; cz += a.z; }); cx /= list.length; cy /= list.length; cz /= list.length;
     list.forEach(a=>{ a.x -= cx*0.35; a.y -= cy*0.35; a.z -= cz*0.35; });
@@ -5503,7 +5554,7 @@ function renderLearnDock(){
   if(!LEARN.on){ host.hidden = true; host._html = ''; return; }
   host.hidden = false;
   /* the molecules sit left of the panel, not behind it */
-  L3.shiftX = Math.round((host.offsetWidth || 340)/2 + 8);
+  L3.shiftX = L3.on ? Math.round((host.offsetWidth || 340)/2 + 8) : 0;
   const t = LEARN.topic, c = t && CONCEPTS[t.c], cat = c && CONCEPT_CATS[c.cat];
   const exit = '<button type="button" class="ld-exit" data-ld="exit">Exit Learn mode</button>';
   let h = '';
@@ -5512,9 +5563,10 @@ function renderLearnDock(){
     h = '<div class="ld-head"><span class="eyebrow">Learn mode</span>'+exit+'</div>'+
       '<h3 class="ld-title">What would you like to watch?</h3>'+
       '<p class="ld-p">Each one sets out just the molecules it needs, runs slowly, and stops at every step to explain what happened.</p>'+
+      '<p class="ld-hint" style="margin-top:0">On the '+(L3.on ? '3D bench' : 'flat bench: topics marked 3D open on the 3D bench')+'.</p>'+
       '<div class="ld-list">'+LEARN_TOPICS.map(x=>{ const cc = CONCEPTS[x.c], ct = CONCEPT_CATS[cc.cat];
         const head = ct.label !== last ? '<span class="ld-grp">'+(last = ct.label)+'</span>' : '';
-        return head+'<button type="button" data-ld="topic" data-k="'+x.k+'" style="--gc:'+ct.col+'"><i class="g-ic">'+cc.g+'</i><span><b>'+x.title+'</b><small>'+cc.name+'</small></span>'+(learnDone[x.k] ? '<em>✓</em>' : '')+'</button>'; }).join('')+'</div>';
+        return head+'<button type="button" data-ld="topic" data-k="'+x.k+'" style="--gc:'+ct.col+'"><i class="g-ic">'+cc.g+'</i><span><b>'+x.title+'</b><small>'+cc.name+(!L3.on && x.flat === false ? ' \u00b7 3D' : '')+'</small></span>'+(learnDone[x.k] ? '<em>✓</em>' : '')+'</button>'; }).join('')+'</div>';
   } else {
     const checks = '<div class="ld-checks"><span class="eyebrow">Watch for</span>'+t.expect.map((x, j)=>'<div class="ld-check'+(LEARN.ticks[j] ? ' on' : '')+'"><i>'+(LEARN.ticks[j] ? '✓' : '')+'</i>'+x[1]+'</div>').join('')+'</div>';
     h = '<div class="ld-head" style="--lc:'+cat.col+'"><button type="button" class="ld-back" data-ld="pick">‹ All topics</button>'+exit+'</div>'+
@@ -5673,8 +5725,8 @@ async function saveLog(){
 /* ---------- the guide page ---------- */
 let guideOpen = null, guideQuery = '', guideCat = '', guideDirty = true;
 function tryConcept(c, bench){
-  const lt = bench !== '2D' && LEARN_TOPICS.find(x=>x.c === c);
-  if(lt){ learnStart(lt.k); return; }
+  const lt = LEARN_TOPICS.find(x=>x.c === c && (bench !== '2D' || x.flat !== false));
+  if(lt){ if(bench === '3D' && !L3.on) set3D(true); if(bench === '2D' && L3.on) set3D(false); learnStart(lt.k); return; }
   const t = CONCEPTS[c] && CONCEPTS[c].tr; if(!t) return;
   const sc = t.scene ? SCENES.find(x=>x.k === t.scene) : {k:'guide-'+c, label:CONCEPTS[c].name, note:CONCEPTS[c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box||460, temp:t.temp};
   if(!sc) return;
@@ -6900,6 +6952,7 @@ function buildLibrary(){
   el('libBody').querySelectorAll('.lib').forEach(b=>{
     b.onclick=()=>{
       const m = LIBRARY.filter(x=>x.f===b.dataset.f)[0];
+      if(L3.on){ specTo3D(m, m.n.toLowerCase()); closeLib(); return; }
       pushUndo();
       buildSpec(m, viewCX()+(Math.random()-0.5)*150, viewCY()+(Math.random()-0.5)*110, false);
       say(m.n+' built \u2014 '+subPlain(m.f)+'.','added');
@@ -10048,6 +10101,10 @@ function peptideScan(dt){
       const nh = nbrs(b).filter(x=>sym(x.o)==='H');
       if(!nh.length) continue;
       if(Math.hypot(b.x-a.x, b.y-a.y) > pmToPx(340)) continue;
+      /* not an amino acid with its own amine: that ring would be far too strained */
+      { const seen = new Set([a]); let edge = [a];
+        for(let k=0;k<3;k++){ const nx = []; for(const x of edge) for(const y of nbrs(x)) if(!seen.has(y.o)){ seen.add(y.o); nx.push(y.o); } edge = nx; }
+        if(seen.has(b)) continue; }
       pushUndo();
       const h = nh[0].o;
       const bondOH = pairBond(a, oh), bondNH = pairBond(b, h);
@@ -11287,6 +11344,36 @@ function l3Organic(dt){
       return;
     }
   }
+  /* Amide (peptide) bonds: an acid's C(=O)-OH and an amine's N-H lose a water
+     between them. It needs heat (about 62 kJ/mol here), and an amine and an
+     acid usually swap a proton first, which stops it: that is why amides are
+     made hot, from the salt. Never within one molecule, where the ring would
+     be far too strained. */
+  const near3 = (a, b) => { const seen = new Set([a.id]); let edge = [a];
+    for(let k=0;k<3;k++){ const nx = []; for(const x of edge) for(const y of nbrs(x)) if(!seen.has(y.id)){ seen.add(y.id); nx.push(y); } edge = nx; }
+    return seen.has(b.id); };
+  for(const c of A){
+    if(sym(c) !== 'C' || c.ion || (c.fq||0)) continue;
+    if(!l3Bonds(c).some(b=>b.order === 2 && sym(l3Find(l3Other(b, c.id))) === 'O')) continue;
+    const o1 = nbrs(c).find(o=>sym(o) === 'O' && !(o.fq||0) && !o.ion && l3Bonds(c).some(b=>b.order === 1 && l3Other(b, c.id) === o.id) && nbrs(o).length === 2 && nbrs(o).some(x=>sym(x) === 'H'));
+    if(!o1) continue;
+    for(const n of A){
+      if(sym(n) !== 'N' || n.ion || (n.fq||0) || nbrs(n).length >= 4) continue;
+      const nh = nbrs(n).filter(x=>sym(x) === 'H'); if(!nh.length) continue;
+      if(Math.hypot(n.x-c.x, n.y-c.y, n.z-c.z) > 330 || near3(c, n)) continue;
+      if(Math.random() > rate(62)*span) continue;
+      const h = nh[0], sC0 = species3D(c), sN0 = species3D(n);
+      const bO = l3Bonds(c).find(b=>l3Other(b, c.id) === o1.id), bN = l3Bonds(n).find(b=>l3Other(b, n.id) === h.id);
+      L3.bonds.splice(L3.bonds.indexOf(bO), 1); L3.bonds.splice(L3.bonds.indexOf(bN), 1); L3.bv = (L3.bv||0) + 1;
+      place(h, o1, l3Len(h, o1, 1));
+      l3Bond(c, n, 1, 'covalent'); l3Bond(o1, h, 1, 'covalent');
+      l3Note(-5, 'amide bond formed, water given off', c, n, {c:'condensation',
+        title:'An amide (peptide) bond joined '+nameOrF(sC0)+' and '+nameOrF(sN0)+', and water came off.',
+        eq:eqText([sC0, sN0], [species3D(c), species3D(o1)]),
+        why:'The acid\u2019s \u2013OH and one H from the amine\u2019s N leave together as water, and the carbon bonds to the nitrogen: C(=O)\u2013N, an amide. Between two amino acids it is called a peptide bond, and proteins are chains of them. It needs heat (activation energy about 62 kJ/mol here, at '+Math.round(T)+' K), and it cannot happen while the acid and amine have swapped a proton into a salt.'});
+      return;
+    }
+  }
   /* esterification and hydrolysis */
   const catalyst = A.some(a=>(sym(a) === 'O' && (a.fq||0) > 0) || (sym(a) === 'S' && nbrs(a).filter(x=>sym(x) === 'O').length >= 4));
   if(!catalyst) return;
@@ -12382,6 +12469,12 @@ function l3BuildSmiles(sm, label){
   g.atoms.forEach(a=>{ syms.push(a.sym); iso.push(a.iso||0); chg.push(a.q||0); });
   g.bonds.forEach(b=>bl.push({a:b.a, b:b.b, o:b.o}));
   g.atoms.forEach((a, k)=>{ for(let j=0;j<(a.h||0);j++){ syms.push('H'); iso.push(0); chg.push(0); bl.push({a:k, b:syms.length-1, o:1}); } });
+  return l3BuildGraph(syms, bl, iso, chg, label, sm);
+}
+/* a molecule from its atoms and bonds (from SMILES, a saved card, the library,
+   or monomers being joined), given a 3D shape and set down somewhere clear */
+function l3BuildGraph(syms, bl, iso, chg, label, sm){
+  iso = iso || []; chg = chg || [];
   if(syms.length > 800){ say((label||'That')+' has '+syms.length+' atoms: the 3D bench builds up to 800 at a time.','bench'); return []; }
   const P = l3Embed(syms, bl);
   const cx = P.reduce((t,p)=>t+p[0],0)/P.length, cy = P.reduce((t,p)=>t+p[1],0)/P.length, cz = P.reduce((t,p)=>t+p[2],0)/P.length;
@@ -12392,12 +12485,67 @@ function l3BuildSmiles(sm, label){
   const made = syms.map((s2, k)=>{ const a = l3Add(s2, P[k][0]-cx+ox, P[k][1]-cy+oy, P[k][2]-cz+oz, iso[k] || undefined); a.cool = 1.5; return a; });
   bl.forEach(b=>l3Bond(made[b.a], made[b.b], b.o, 'covalent'));
   /* remember what it is, for as long as it stays whole */
-  const libName = label || Object.keys(L3_LIB).find(k=>L3_LIB[k] === sm), tag = L3.seq++;
+  const libName = label || (sm && Object.keys(L3_LIB).find(k=>L3_LIB[k] === sm)), tag = L3.seq++;
   if(libName) made.forEach(a=>{ a.lib = libName; a.libId = tag; a.libN = made.length; });
   /* a charge on an atom standing alone makes it an ion ([Na+].[Cl-]) */
   made.forEach((a, k)=>{ if(!chg[k]) return; if(!bl.some(b=>b.a===k||b.b===k)) l3SetIon(a, chg[k]); else l3SetFq(a, chg[k]); });
   say((label ? label.charAt(0).toUpperCase()+label.slice(1)+', from its known structure: ' : 'Built from SMILES: ')+benchFormula(countsOf(made))+', '+bl.length+' bonds.','bench');
   return made;
+}
+/* a flat bench card (a saved compound or a library molecule) built in 3D */
+function specTo3D(spec, label){
+  if(!spec || !spec.atoms || !spec.atoms.length) return null;
+  const syms = spec.atoms.map(r=>r[0]), chg = spec.atoms.map(r=>r[3]||0), iso = spec.atoms.map(r=>r[4]||0);
+  const bl = (spec.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1}));
+  l3Push();
+  return l3BuildGraph(syms, bl, iso, chg, label);
+}
+/* the molecule the selected atom is in, kept in the same library the flat bench uses */
+function l3KeepSelected(){
+  const a0 = L3.sel;
+  if(!a0){ say('Click an atom of the molecule you want to keep first.','note'); return; }
+  const seen = new Set([a0.id]), list = [a0];
+  for(let i=0;i<list.length;i++) for(const b of l3Bonds(list[i])){ if(b.type === 'metallic') continue; const o = l3Other(b, list[i].id); if(!seen.has(o)){ seen.add(o); const y = l3Find(o); if(y) list.push(y); } }
+  if(list.length > 60){ say('Too large to keep: sixty atoms is the limit.','note'); return; }
+  const ix = new Map(list.map((a, k)=>[a.id, k]));
+  const cx = list.reduce((t,a)=>t+a.x,0)/list.length, cy = list.reduce((t,a)=>t+a.y,0)/list.length;
+  const spec = {atoms:list.map(a=>{ const r = [EL[a.e].sym, Math.round(pmToPx(a.x-cx)), Math.round(pmToPx(a.y-cy))]; const q = (a.ion||0)+(a.fq||0); if(q || a.A) r[3] = q; if(a.A) r[4] = a.A; return r; }),
+    bonds:L3.bonds.filter(b=>b.type !== 'metallic' && ix.has(b.a) && ix.has(b.b)).map(b=>[ix.get(b.a), ix.get(b.b), b.order||1])};
+  const sp = species3D(a0), f = benchFormula(countsOf(list));
+  const sig = spec.atoms.map(r=>r[0]).sort().join(',')+'|'+spec.bonds.length;
+  if(vault.some(v=>v.sig === sig && v.f === f)){ say(subPlain(f)+' is already in your library.','note'); return; }
+  vault.unshift({id:'v'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36), f, n:sp.name || (list.length+' atoms, as built in 3D'), spec, sig, when:Date.now()});
+  saveVault(); renderVault(); renderLeft3D();
+  say(subPlain(f)+' kept in your library. It can be built on either bench.','bench');
+}
+/* Addition polymerisation: every small alkene on the bench opens its C=C and
+   they join end to end into one chain, with an unpaired electron left at each
+   end (a real chain would be capped by the initiator's fragments) */
+function l3Polymerise(){
+  const mono = l3Molecules().filter(list=>list.length <= 14 && list.every(a=>['C','H','F','Cl'].includes(EL[a.e].sym)) &&
+    L3.bonds.filter(b=>b.type === 'covalent' && b.order === 2 && !b.arom && list.some(a=>a.id === b.a) && list.some(a=>a.id === b.b) && EL[l3Find(b.a).e].sym === 'C' && EL[l3Find(b.b).e].sym === 'C').length === 1);
+  if(mono.length < 2){ say('Polymerising needs two or more small alkenes on the bench (ethene, propene, chloroethene…).','note'); return; }
+  const use = mono.slice(0, 30), syms = [], bl = [];
+  let prevEnd = -1;
+  use.forEach(list=>{
+    const ix = new Map(list.map((a, k)=>[a.id, syms.length + k]));
+    list.forEach(a=>syms.push(EL[a.e].sym));
+    let cc = null;
+    L3.bonds.forEach(b=>{ if(b.type !== 'covalent' || !ix.has(b.a) || !ix.has(b.b)) return;
+      if(b.order === 2 && !b.arom && EL[l3Find(b.a).e].sym === 'C' && EL[l3Find(b.b).e].sym === 'C'){ cc = [ix.get(b.a), ix.get(b.b)]; bl.push({a:cc[0], b:cc[1], o:1}); }
+      else bl.push({a:ix.get(b.a), b:ix.get(b.b), o:b.order||1}); });
+    /* head to tail: the CH2 end of this monomer onto the other end of the last */
+    const hc = k => bl.filter(b=>(b.a === k || b.b === k) && syms[b.a === k ? b.b : b.a] === 'H').length;
+    const [c1, c2] = hc(cc[0]) >= hc(cc[1]) ? cc : [cc[1], cc[0]];
+    if(prevEnd >= 0) bl.push({a:prevEnd, b:c1, o:1});
+    prevEnd = c2;
+  });
+  l3Push();
+  const gone = new Set(use.flat().map(a=>a.id));
+  L3.atoms = L3.atoms.filter(a=>!gone.has(a.id)); L3.bonds = L3.bonds.filter(b=>!gone.has(b.a) && !gone.has(b.b)); L3.bv = (L3.bv||0) + 1; L3.idx = null;
+  l3BuildGraph(syms, bl, null, null, 'a polymer of '+use.length+' monomers');
+  logRx({c:'condensation', bench:'3D', title:use.length+' alkene molecules joined into one polymer chain.', eq:'n monomer → polymer (n = '+use.length+')',
+    why:'Each monomer’s C=C opened and bonded to the next, head to tail, so the chain grew end to end without losing any atoms: addition polymerisation, the way polythene is made from ethene and PVC from chloroethene.'});
 }
 /* what the builder box does with what you type */
 /* Ready-made scenes for the new chemistry: each clears the bench and sets out the
@@ -13629,7 +13777,10 @@ function renderLeft3D(){
     '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K</span>'+
       '<input type="range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
     sec('rx', 'Reactions', rx, SCENES.length)+
-    sec('mol', 'Molecules', '<div class="l3-pres">'+Object.keys(L3_PRESETS).map(k=>'<button type="button" data-l3pre="'+k+'">'+k+'</button>').join('')+'</div>', Object.keys(L3_PRESETS).length)+
+    sec('mol', 'Molecules', '<div class="l3-pres">'+Object.keys(L3_PRESETS).map(k=>'<button type="button" data-l3pre="'+k+'">'+k+'</button>').join('')+'</div>'+
+      '<div class="btn-row" style="margin-top:8px"><button class="ghost-btn" type="button" data-l3lib="1">Molecule library</button><button class="ghost-btn" type="button" data-l3poly="1">Polymerise the alkenes</button></div>', Object.keys(L3_PRESETS).length)+
+    sec('vault', 'Saved compounds', (vault.length ? '<div class="l3-pres sm">'+vault.slice(0, 24).map(v=>'<button type="button" data-l3vault="'+v.id+'" title="Build it here">'+subHtml(v.f)+'</button>').join('')+'</div>' : '<p class="vault-tip">Nothing kept yet.</p>')+
+      '<div class="btn-row" style="margin-top:8px"><button class="ghost-btn" type="button" data-l3keep="1">Keep the selected molecule</button></div>', vault.length || '')+
     sec('crys', 'Crystals and metals', '<div class="l3-pres">'+
       [['salt','Rock salt'],['benzene','Benzene'],['ice','Water cluster']].map(([k,l])=>'<button type="button" data-l3crys="'+k+'">'+l+'</button>').join('')+'</div>'+
       '<div class="l3-build"><select id="l3MetalSel" title="Which metal">'+
@@ -13654,6 +13805,10 @@ function renderLeft3D(){
     const b = ev.target.closest('button'); if(!b) return;
     if(b.dataset.l3crys){ l3Crystal(b.dataset.l3crys); return; }
     if(b.dataset.l3scene){ l3Scene(b.dataset.l3scene); return; }
+    if(b.dataset.l3vault){ const v = vault.find(x=>x.id === b.dataset.l3vault); if(v) specTo3D(v.spec, v.n); return; }
+    if(b.dataset.l3keep){ l3KeepSelected(); return; }
+    if(b.dataset.l3lib){ openLib(); return; }
+    if(b.dataset.l3poly){ l3Polymerise(); return; }
     if(b.dataset.l3undo){ l3Undo(); return; }
     if(b.dataset.l3add || b.dataset.l3pre || b.dataset.l3iso || b.dataset.l3nuc || b.dataset.l3rm || b.dataset.l3 === 'clear') l3Push();
     if(b.dataset.l3add){ for(let i=0;i<(ev.shiftKey?5:1);i++) l3Add(b.dataset.l3add); }
@@ -14199,6 +14354,19 @@ const l3Knob = k => (P[k] || 0)/(P0[k] || 1);
 
 /* ---------- the corner controls ---------- */
 let camMenu = false;
+/* a picture of a canvas on a light ground, saved where the browser saves files
+   (through the viewer's downloads, inside claude.ai) */
+function saveCanvasPNG(src, name){
+  const out = document.createElement('canvas'); out.width = src.width; out.height = src.height;
+  const og = out.getContext('2d'); og.fillStyle = '#F4F5F3'; og.fillRect(0, 0, out.width, out.height); og.drawImage(src, 0, 0);
+  out.toBlob(async blob=>{
+    if(!blob) return;
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if(dl){ try{ await dl.save({filename:name, data:blob}); say('Snapshot saved as '+name+'.','bench'); } catch(e){ say(e && e.code === 'declined' ? 'Snapshot not saved.' : 'Snapshots cannot be saved from this view.','note'); } }
+    else if(window.claude && window.claude.use) say('Snapshots cannot be saved from this view.','note');
+    else { const a = document.createElement('a'); a.download = name; a.href = URL.createObjectURL(blob); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); say('Snapshot saved as '+name+'.','bench'); }
+  }, 'image/png');
+}
 function renderCamCtl(){
   el('camCtl').innerHTML =
     '<div class="seg">'+
@@ -14211,6 +14379,8 @@ function renderCamCtl(){
         '<button type="button" id="noteBtn">Add a note</button>'+
         '<button type="button" id="sizeBtn" title="Classic fits the window; wide and huge give a floor several times bigger">Bench size: '+(benchHuge?'huge':benchWide?'wide':'classic')+' \u25b8</button>'+
         '<button type="button" id="svgBtn">Copy as a diagram</button>'+
+        '<button type="button" id="snap2d">Save a snapshot</button>'+
+        '<button type="button" id="water2d">Add 12 waters</button>'+
       '</div>' : '')+'</span>'+
       '<button class="ghost-btn cam-btn'+(STEP.on ? ' on' : '')+'" data-steptoggle="1" type="button" title="Slow reactions down and stop after each step">'+(STEP.on ? 'Stepping \u2713' : 'Step through')+'</button>'+
       '<button class="ghost-btn cam-btn l3-go" id="btn3d" type="button" title="Carry everything on this bench up to the 3D bench">Send to 3D</button>';
@@ -14225,6 +14395,11 @@ function renderCamCtl(){
   el('zFit').onclick=()=>frameBench(1.6);
   el('noteBtn').onclick=()=>{ noteArmed=!noteArmed; camMenu = false; renderCamCtl(); if(noteArmed) say('Click the bench where the note should go.','bench'); };
   el('svgBtn').onclick=()=>{ camMenu = false; renderCamCtl(); copyDiagram(); };
+  el('snap2d').onclick=()=>{ camMenu = false; renderCamCtl(); saveCanvasPNG(cv, 'bonding-bench-2d.png'); };
+  el('water2d').onclick=()=>{ camMenu = false; renderCamCtl(); pushUndo();
+    const vw = W/cam.z, vh = viewH()/cam.z;
+    for(let i=0;i<12;i++){ const ang = i/12*TAU + Math.random()*0.3, r = Math.min(vw, vh)*(0.22 + 0.15*Math.random()); buildCompound2D('water', viewCX() + Math.cos(ang)*r, viewCY() + Math.sin(ang)*r*0.8); }
+    say('Twelve water molecules added.','added'); };
   el('btn3d').onclick=()=>sendTo3D();
 }
 /* ---------- the bench as a drawing ---------- */
@@ -14402,8 +14577,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 102;
+const VERSION = 103;
 const CHANGELOG = [
+  [103, 'The two benches match. On the 3D bench: your saved compounds (keep the selected molecule, build any saved one), the molecule library, Polymerise the alkenes, and amide (peptide) bonds between an acid and an amine. On the flat bench: the 0.1\u00d7 to 3\u00d7 speed slider, Save a snapshot and Add 12 waters in the \u22ef menu, a crystal of any metal packed the way it really crystallises, and Learn mode, which now runs on whichever bench you are on (topics the flat bench cannot run, marked 3D, open the 3D bench). The flat bench now writes up Lewis adducts and ligands joining a metal ion in the notebook with their equations, as the 3D bench does, and an amino acid no longer forms a peptide bond with itself.'],
   [102, 'Metal crystals keep their structure until they melt. Aluminium, copper and the other close-packed metals were losing their crystal order at about half their melting point, turning into a glassy lump (and being read as body-centred), because the metal well reached too far: a long-ranged pair force favours a disordered cluster over close packing. Close-packed metals now have a shorter-ranged well centred on the real spacing (286 pm in aluminium, where it was 310), so they stay ordered to about 0.9 of their melting point and have melted by about 1.3. Metal crystals are about 130 atoms instead of 30, so they have a real inside rather than being almost all surface. Iron, tungsten and the other body-centred metals ran hundreds of kelvin hotter than the bench, which melted them early: the force that keeps them body-centred switched on and off abruptly, and now fades in smoothly. The side panel no longer rebuilds every frame for a big metal crystal, so they run smoothly.'],
   [101, 'Hydronium ions no longer seem to toss protons about. A proton passing from H\u2083O\u207a to the water beside it is real (the Grotthuss mechanism, every picosecond or so in real water), but it was drawn with the same flying H\u207a as a real reaction and happened every couple of seconds, which looked like a glitch. It is now rare, not drawn, and switched off while stepping through reactions or in Learn mode, and the acid\u2013base card in the Guide explains it.'],
   [100, 'Learn mode fixes. Sodium burns in chlorine could stall: a sodium that reacted in the first moment after the scene was set out was not reported, so the checklist waited for a step that had already happened, and one transfer could be counted twice (as redox and as ionisation) so the topic finished half done. Every electron transfer is now reported exactly once, and only building a molecule or crystal is kept quiet. The scene has two chlorine molecules so the second sodium always has one to meet. Neutralisation has water to carry the proton, so it no longer waits on HCl meeting hydroxide head on, and magnesium in acid counts the hydrogen freed from water too.'],
@@ -14587,11 +14763,13 @@ function frameBody(now){
     return;
   }
   stepTick(now);
-  if(!paused && !STEP.hold){
+  if(!paused && !STEP.hold && !learnHeld()){
     const ts = STEP.on ? timeScale*stepRate(now) : timeScale;
-    if(ts>=1){ for(let i=0;i<ts;i++) step(dt); }
+    /* faster than real time: whole steps, never longer than a normal frame */
+    if(ts>1){ const n = Math.ceil(ts); for(let i=0;i<n;i++) step(dt*ts/n); }
     else step(dt*ts);
   }
+  if(LEARN.on && now - (renderLearnDock._t||0) > 1000){ renderLearnDock._t = now; renderLearnDock(); }
   draw(now);
   sampleCharts(dt);
   if(now-lastChart>120){ lastChart=now; drawCharts(); }
@@ -18481,8 +18659,13 @@ function start(data){
   const mats = [['Fe lattice',()=>buildLattice('Fe','hex',5,4)],['Cu lattice',()=>buildLattice('Cu','centred',4,3)],
     ['Si lattice',()=>buildLattice('Si','square',4,4)],['Dope P',()=>dope('P')],['Dope B',()=>dope('B')],
     ['Make steel',makeSteel]];
-  el('matRow').innerHTML = mats.map((m,i)=>'<button class="ghost-btn" type="button" data-mat="'+i+'">'+m[0]+'</button>').join('');
-  el('matRow').querySelectorAll('button').forEach(b=>{ b.onclick=mats[+b.dataset.mat][1]; });
+  el('matRow').innerHTML = mats.map((m,i)=>'<button class="ghost-btn" type="button" data-mat="'+i+'">'+m[0]+'</button>').join('')+
+    /* any metal, packed the way it really crystallises (seen flat: close-packed rows, or square for body-centred) */
+    '<div class="l3-build" style="width:100%;margin-top:6px"><select id="metal2dSel" title="Which metal">'+
+      ['Na','K','Li','Cs','Mg','Ca','Al','Ti','Cr','Fe','Co','Ni','Cu','Zn','Ag','Sn','W','Pt','Au','Hg','Pb'].map(x=>'<option value="'+x+'">'+EL[BY_SYM[x].i].name+' \u00b7 '+(STRUCT_NAME[METAL_STRUCT[x]]||'packed')+'</option>').join('')+
+    '</select><button type="button" id="metal2dBtn">Metal crystal</button></div>';
+  el('matRow').querySelectorAll('button[data-mat]').forEach(b=>{ b.onclick=mats[+b.dataset.mat][1]; });
+  el('metal2dBtn').onclick=()=>{ const m = el('metal2dSel').value; buildLattice(m, METAL_STRUCT[m] === 'bcc' ? 'centred' : 'hex', 6, 5); };
   renderPuzzle();
   const aseg=el('accelSeg');
   aseg.innerHTML=ACCELS.map(a=>'<button type="button" data-v="'+a[0]+'"'+(a[0]===decayAccel?' class="on"':'')+'>'+a[1]+'</button>').join('');
@@ -18575,17 +18758,15 @@ function start(data){
   ft.addEventListener('mouseover',ev=>{
     const c=ev.target.closest('.fel[data-i]'); if(c) showDetail(EL[+c.dataset.i]);
   });
-  const tseg=el('timeSeg');
-  tseg.innerHTML=[[0.25,'0.25\u00d7'],[1,'1\u00d7'],[3,'3\u00d7']]
-    .map(v=>'<button type="button" data-v="'+v[0]+'">'+v[1]+'</button>').join('');
-  tseg.querySelectorAll('button').forEach(b=>{
-    if(+b.dataset.v===1) b.classList.add('on');
-    b.onclick=()=>{
-      timeScale=+b.dataset.v;
-      tseg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
-      say(timeScale<1?'Slow motion \u2014 watch the electron cross.':timeScale>1?'Three times speed.':'Real time.','time');
-    };
-  });
+  /* the same speed control as the 3D bench: 0.1x (slow motion) to 3x, double-click for 1x */
+  { const tseg = el('timeSeg');
+    try{ timeScale = clamp(+localStorage.getItem('bondingbench.2dspeed') || 1, 0.1, 3); }catch(e){}
+    const txt = () => (timeScale < 1 ? timeScale.toFixed(2).replace(/0$/, '') : timeScale.toFixed(1))+'\u00d7';
+    tseg.classList.add('speed2d');
+    tseg.innerHTML = '<label class="l3-speed" title="How fast time runs: 0.1x (slow motion) to 3x. Double-click for 1x.">Speed<input type="range" id="speed2d" min="-1" max="0.477" step="0.01" value="'+Math.log10(timeScale).toFixed(2)+'"><b id="speed2dVal">'+txt()+'</b></label>';
+    const inp = el('speed2d');
+    const set = v => { timeScale = Math.pow(10, v); if(Math.abs(timeScale-1) < 0.04) timeScale = 1; inp.style.setProperty('--pct', ((v+1)/1.477*100)+'%'); el('speed2dVal').textContent = txt(); try{ localStorage.setItem('bondingbench.2dspeed', String(timeScale)); }catch(e){} };
+    inp.oninput = ()=>set(+inp.value); inp.ondblclick = ()=>{ inp.value = 0; set(0); }; inp.style.setProperty('--pct', ((+inp.value+1)/1.477*100)+'%'); }
 
   loadCollection(); loadAwards(); loadLessons();
   renderLessonList();
