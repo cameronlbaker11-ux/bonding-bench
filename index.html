@@ -944,6 +944,23 @@ input[type=range].temp-range::-moz-range-track{height:5px;border-radius:3px;back
 .p3-bar{display:block;position:relative;height:3px;border-radius:2px;background:rgba(0,0,0,.07);margin-top:6px}
 .p3-bar > i{display:block;height:100%;border-radius:2px;background:var(--tc);transition:width .4s var(--ease)}
 .p3-bar em{position:absolute;top:-2px;width:1.5px;height:7px;background:var(--ink-2);opacity:.55}
+
+.mol-count{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;background:var(--sunk);font-family:var(--font-mono);font-size:10px;color:var(--ink-2);vertical-align:middle;font-weight:500}
+
+/* keyboard shortcuts */
+.keys-sheet{position:fixed;inset:0;z-index:40;background:rgba(20,22,26,.28);display:grid;place-items:center;animation:benchIn .2s var(--ease) both}
+.keys-sheet[hidden]{display:none}
+.ks-card{width:min(560px,calc(100% - 32px));max-height:80vh;overflow:auto;background:var(--surface);border-radius:14px;box-shadow:var(--shadow-l);padding:14px 18px 16px}
+.ks-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ks-head b{font-family:var(--font-display);font-size:18px}
+.ks-card .eyebrow{display:block;margin:12px 0 6px}
+.ks-card dl{display:grid;grid-template-columns:150px 1fr;gap:5px 12px;margin:0}
+.ks-card dl dt{text-transform:none;letter-spacing:0;font-family:var(--font-ui);padding:0;border:0}
+.ks-card dl dd{margin:0;font-size:12px;color:var(--ink-2);text-align:left;font-family:var(--font-ui);padding:0;border:0}
+kbd{display:inline-block;font-family:var(--font-mono);font-size:10.5px;padding:1px 6px;border-radius:5px;border:1px solid var(--hair);border-bottom-width:2px;background:var(--surface);color:var(--ink);line-height:1.5}
+.l3-pop kbd{margin-left:6px;font-size:9px;padding:0 4px}
+/* the events feed: each icon in its family's colour */
+.p3-ev[style*="--ec"] > i{color:var(--ec);background:color-mix(in srgb,var(--ec) 14%,transparent);border-radius:5px}
 </style>
 
 <div class="app">
@@ -1074,6 +1091,7 @@ input[type=range].temp-range::-moz-range-track{height:5px;border-radius:3px;back
       <div id="lessonCard" hidden></div>
       <div id="stepCard" class="step-card" hidden></div>
       <div id="atomTip" class="atom-tip" hidden></div>
+      <div id="keysSheet" class="keys-sheet" hidden role="dialog" aria-label="Keyboard shortcuts"></div>
       <div id="elTip" class="atom-tip el-tip" hidden></div>
       <div class="learn-dock" id="learnDock" hidden></div>
       <div class="timectl"><div class="seg" id="timeSeg" role="group" aria-label="Time scale"></div>
@@ -2958,6 +2976,10 @@ function draw(now){
   drawPiston(now);
   drawCell(now);
   drawSelectionRing(now);
+  if(SHOW.molnames){ const placed = [], sc = 1/cam.z;
+    groupsCache.forEach(g=>{ const live = g.atoms.filter(a=>!a.dying); if(!live.length || (live.length < 2 && !live[0].charge)) return;
+      let top = 1e9, sx = 0; live.forEach(a=>{ top = Math.min(top, a.y - atomR(a)); sx += a.x; });
+      nameTag(ctx, sx/live.length, top - 8*sc, g.name && !/atoms, arranged/.test(g.name) ? capFirst(String(g.name)) : subPlain(g.text), sc, placed); }); }
   if(STEP.on && STEP.focus.length && STEP.bench === '2D') STEP.focus.forEach(id=>{ const a = findAtom(id); if(a && !a.dying) stepRing(ctx, a.x, a.y, pmToPx(radPm(a))*0.5 + 12, now); });
   drawArrows(now);
   drawBand();
@@ -4235,8 +4257,17 @@ function renderPanel(){
   const mols=groupsCache.filter(g=>!(g.atoms.length===1&&g.bonds.length===0));
   const seen=new Set();
 
-  mols.forEach((g, gi)=>{
-    seen.add(g.key);
+  /* one card per kind of molecule, as on the 3D bench, not one per molecule */
+  const kindMap = new Map();
+  mols.forEach(g=>{
+    const q = g.atoms.reduce((t,a)=>t+(a.charge||0), 0);
+    const k = g.text+'|'+(g.units||1)+'|'+q+'|'+g.bonds.map(b=>b.type[0]+(b.order||1)).sort().join('');
+    const e = kindMap.get(k); if(e){ e.n++; e.all.push(g); } else kindMap.set(k, {g, n:1, all:[g], k});
+  });
+  const kindArr = [...kindMap.values()];
+  kindArr.forEach(({g, n, all, k:kk}, gi)=>{
+    const cardId = 'k:'+kk;
+    seen.add(cardId);
     const types={};
     g.bonds.forEach(b=>{ const t=b.type==='covalent'?(b.polar?'polar':'nonpolar'):b.type; types[t]=(types[t]||0)+1; });
     const rows=[];
@@ -4268,11 +4299,12 @@ function renderPanel(){
       if(g.bonds.some(b=>b.polar)) rows.push(['Dipole', mu.mag<0.2?'cancels out':mu.mag.toFixed(2)+' D']);
       rows.push(['Molar mass', (g.atoms.reduce((t,x)=>t+EL[x.e].mass,0)).toFixed(2)+' g/mol']);
     }
-    const ck = '2|'+g.text+'|'+sn.name, open = cardOpen(ck, gi, mols.length);
+    const ck = '2|'+g.text+'|'+sn.name, open = cardOpen(ck, gi, kindArr.length);
     const html=
       '<div class="mol-head" data-cardkey="'+escAttr(ck)+'" role="button" tabindex="0" aria-expanded="'+open+'"><div class="mol-top"><span class="formula">'+
         g.keys.map(k=>k+(g.counts[k]>1?'<sub>'+g.counts[k]+'</sub>':'')).join('')+
         (g.units>1?'<span style="font-size:11px;color:var(--muted)"> ×'+g.units+'</span>':'')+
+        (n>1?'<span class="mol-count">\u00d7'+n+'</span>':'')+
       '</span><span class="mol-name">'+sn.name+'<i class="chev">\u203a</i></span></div>'+
       '<div class="badges">'+
         Object.keys(types).map(t=>'<span class="badge '+t+'">'+
@@ -4283,13 +4315,13 @@ function renderPanel(){
         (g.bonds.some(b=>b.type==='dative')?'<span class="badge metallic">coordinate</span>':'')+
         hasGroup(g).map(x=>'<span class="badge nonpolar">'+x+'</span>').join('')+
         (ISOMERS[g.text]?'<span class="badge">'+ISOMERS[g.text]+' isomer'+(ISOMERS[g.text]===1?'':'s')+'</span>':'')+
-        (g.atoms.some(x=>hbAtoms.has(x.id))?'<span class="badge hbond">h-bonded</span>':'')+
+        (all.some(gg=>gg.atoms.some(x=>hbAtoms.has(x.id)))?'<span class="badge hbond">h-bonded</span>':'')+
       '</div></div>'+
       (open ? structSVG(g)+(rows.length?'<dl>'+rows.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>':'') : '<p class="mol-sum">'+cardSummary(rows)+'</p>')+
       '<button class="save-mol" type="button" data-save="'+g.key+'" title="Keep this in your library" '+
         'aria-label="Save this species to your library">'+SAVE_ICON+'</button>';
-    let node=cards.get(g.key);
-    if(!node){ node=document.createElement('div'); node.className='mol'; cards.set(g.key,node); readout.appendChild(node); }
+    let node=cards.get(cardId);
+    if(!node){ node=document.createElement('div'); node.className='mol'; cards.set(cardId,node); readout.appendChild(node); }
     node.classList.toggle('open', open); node.classList.toggle('shut', !open);
     if(node._html!==html){ node.innerHTML=html; node._html=html; }
   });
@@ -5452,6 +5484,46 @@ function wireCardToggles(host, rerender){
     const card = h.closest('.mol'), k = h.dataset.cardkey;
     CARD_OPEN.set(k, !card.classList.contains('open')); rerender();
   });
+}
+/* ---------- keyboard shortcuts ----------
+   Press ? for the sheet (or open it from either bench's more menu). */
+const KEYS = [
+  ['Both benches', [['1 \u2013 0','the tools: move, bond, break, remove, energy, measure, light, field, neutron, catalyst'],['Space','pause or play'],['\u2318/Ctrl Z','undo'],['N','next step, while stepping through'],['Esc','leave Learn mode, close this'],['?','this sheet']]],
+  ['3D bench', [['Drag','turn the view (on an atom: move it)'],['Scroll','zoom'],['Double-click','look at an atom (empty space: see everything)'],['F','fit everything in view'],['Delete','remove the selected atom'],['Shift-click','add five of an element']]],
+  ['Flat bench', [['[ and ]','turn the selection'],['+ and \u2212','give or take an electron (selected atom)'],['\u2318/Ctrl C, X, V, D','copy, cut, paste, duplicate'],['\u2318/Ctrl A','select everything'],['Delete','remove the selection']]]
+];
+function toggleKeys(show){
+  const k = el('keysSheet'); if(!k) return;
+  const on = show == null ? k.hidden : show;
+  if(on && !k.innerHTML) k.innerHTML = '<div class="ks-card"><div class="ks-head"><b>Keyboard shortcuts</b><button type="button" class="close-x" data-ks="x" aria-label="Close"><svg width="12" height="12" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 2l9 9M11 2l-9 9"/></svg></button></div>'+
+    KEYS.map(([t, rows])=>'<span class="eyebrow">'+t+'</span><dl>'+rows.map(r=>'<dt><kbd>'+r[0]+'</kbd></dt><dd>'+r[1]+'</dd>').join('')+'</dl>').join('')+'</div>';
+  k.hidden = !on;
+}
+document.addEventListener('keydown', ev=>{
+  if(/INPUT|TEXTAREA|SELECT/.test((ev.target||{}).tagName||'')) return;
+  if(ev.key === '?'){ ev.preventDefault(); toggleKeys(); }
+  else if(ev.key === 'Escape' && el('keysSheet') && !el('keysSheet').hidden) toggleKeys(false);
+});
+document.addEventListener('click', ev=>{ const k = el('keysSheet'); if(!k || k.hidden) return; if(ev.target.closest('[data-ks]') || ev.target === k) toggleKeys(false); });
+/* ---------- molecule name tags ----------
+   With Molecule names on, each molecule carries a small tag above it: its
+   name if the bench knows one, else its formula. Tags that would overlap
+   one already drawn are left out, so a crowded bench stays readable. */
+function nameTag(g, x, y, text, sc, placed){
+  g.save(); g.font = '600 '+(11*sc)+'px Archivo, system-ui, sans-serif';
+  const w = g.measureText(text).width + 12*sc, h = 17*sc, x0 = x - w/2, y0 = y - h;
+  if(placed.some(r=>x0 < r[2] && x0 + w > r[0] && y0 < r[3] && y0 + h > r[1])){ g.restore(); return; }
+  placed.push([x0, y0, x0 + w, y0 + h]);
+  g.fillStyle = 'rgba(255,255,255,.88)'; g.strokeStyle = 'rgba(20,20,19,.12)'; g.lineWidth = sc;
+  g.beginPath(); if(g.roundRect) g.roundRect(x0, y0, w, h, 8*sc); else g.rect(x0, y0, w, h); g.fill(); g.stroke();
+  g.fillStyle = '#2A2C30'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y0 + h/2 + 0.5*sc);
+  g.restore();
+}
+function l3MolLabel(list){
+  if(list.every(l3Metal)) return list.length > 1 ? EL[list[0].e].name+' metal' : EL[list[0].e].name.toLowerCase();
+  if(list.length > 1 && list.some(a=>a.ion) && list.every(a=>a.ion || l3Metal(a))) return benchFormula(countsOf(list))+' crystal';
+  const sp = species3D(list[0]);
+  return sp.name ? capFirst(sp.name) : sp.f;
 }
 /* ---------- the hover card ----------
    Point at an atom on either bench for a card on it: what it is, the molecule
@@ -6924,7 +6996,7 @@ const MODES = [
 const SWITCH_DEFS = [['labels','Element labels'],['charges','Charges & dipoles'],['lone','Lone pairs'],
    ['wedge','Wedge & hash bonds'],['formal','Formal charges'],['oxid','Oxidation states'],
    ['orbitals','Orbital clouds'],['autobond','Bond on contact'],['weak','Weak-force lines'],
-   ['decay','Radioactive decay']];
+   ['decay','Radioactive decay'],['molnames','Molecule names']];
 const SWITCH_3D = {
   labels:  [()=>!L3.hideLabels, v=>{ L3.hideLabels = !v; }],
   charges: [()=>!!L3.showQ, v=>{ L3.showQ = v; }],
@@ -6932,7 +7004,8 @@ const SWITCH_3D = {
   orbitals:[()=>L3.view === 'esp', v=>{ L3.view = v ? 'esp' : 'ball'; }],
   autobond:[()=>!L3.noAuto, v=>{ L3.noAuto = !v; }],
   weak:    [()=>!L3.hideHB, v=>{ L3.hideHB = !v; }],
-  decay:   [()=>!L3.noDecay, v=>{ L3.noDecay = !v; }]
+  decay:   [()=>!L3.noDecay, v=>{ L3.noDecay = !v; }],
+  molnames:[()=>!!SHOW.molnames, v=>{ SHOW.molnames = v; }]
 };
 function renderSwitches(){
   const sw = el('switches'); if(!sw) return;
@@ -7854,6 +7927,10 @@ function basePKa2D(b){
   if(lonePairs(b) < 1) return null;
   const ns = covBonds(b).map(x=>other(x,b)).filter(Boolean);
   if(!ns.length && q < 0) return s === 'F' ? 3.2 : s === 'Cl' ? -7 : s === 'Br' ? -9 : s === 'I' ? -10 : s === 'O' ? 15.7 : null;
+  /* a bare neutral atom (split off by heat) is a radical, not a base: counted as
+     water before (every one of its no neighbours is a hydrogen), it took protons
+     and made nonsense like OH+ */
+  if(!ns.length) return null;
   if(s === 'N'){
     if(q > 0) return null;
     if(covBonds(b).some(x=>x.order > 1)) return 5.2;
@@ -11590,6 +11667,7 @@ function l3BasePKa(b){
   if(l3Lone(b) < 1 && !(b.ion < 0)) return null;
   if(b.ion < 0) return s === 'F' ? 3.2 : s === 'Cl' ? -7 : s === 'Br' ? -9 : s === 'I' ? -10 : s === 'O' ? 15.7 : null;
   const ns = l3Bonds(b).filter(x=>x.type==='covalent').map(x=>l3Find(l3Other(x, b.id))).filter(Boolean);
+  if(!ns.length) return null;   /* a bare neutral atom is a radical, not a base (see basePKa2D) */
   if(s === 'N'){
     if(fq > 0) return null;
     if(l3Bonds(b).some(x=>x.order > 1 || x.arom)) return 5.2;                  /* pyridine-like */
@@ -12298,18 +12376,31 @@ function l3Chart(cv){
   const H = L3.hist, mode = L3.chart;
   const axis = (lo, hi, fmt, xl)=>{ g.textAlign = 'right'; g.fillText(fmt(hi), L-4, T+7); g.fillText(fmt(lo), L-4, Bm);
     g.textAlign = 'center'; g.fillText(xl, (L+R)/2, h-5); };
-  const line = (vals, lo, hi, col, n)=>{
-    g.strokeStyle = col; g.lineWidth = 1.8; g.beginPath();
-    vals.forEach((v,i)=>{ const x = L + (R-L)*i/Math.max(1,(n||vals.length)-1), y = Bm - (Bm-T)*(v-lo)/(hi-lo||1); i ? g.lineTo(x,y) : g.moveTo(x,y); });
+  /* faint guides at the quarters */
+  g.strokeStyle = 'rgba(20,20,19,.05)'; g.lineWidth = 1;
+  [0.25, 0.5, 0.75].forEach(f=>{ const y = Math.round(T + (Bm-T)*f) + 0.5; g.beginPath(); g.moveTo(L+1, y); g.lineTo(R, y); g.stroke(); });
+  /* a line, and for the main ones a soft wash beneath it and a dot where it is now */
+  const line = (vals, lo, hi, col, n, fill)=>{
+    const pts = vals.map((v,i)=>[L + (R-L)*i/Math.max(1,(n||vals.length)-1), Bm - (Bm-T)*(v-lo)/(hi-lo||1)]);
+    if(fill && pts.length > 1 && /^#[0-9a-f]{6}$/i.test(col)){
+      const gr = g.createLinearGradient(0, T, 0, Bm); gr.addColorStop(0, col+'3a'); gr.addColorStop(1, col+'00');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(pts[0][0], Bm); pts.forEach(p=>g.lineTo(p[0], p[1])); g.lineTo(pts[pts.length-1][0], Bm); g.closePath(); g.fill();
+    }
+    g.strokeStyle = col; g.lineWidth = 1.8; g.lineJoin = 'round'; g.beginPath();
+    pts.forEach((p,i)=>i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
     g.stroke();
+    if(fill && pts.length){ const q = pts[pts.length-1]; g.fillStyle = '#fff'; g.beginPath(); g.arc(q[0], q[1], 3.6, 0, TAU); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(q[0], q[1], 2.4, 0, TAU); g.fill(); }
   };
   if(mode === 'T' || mode === 'P'){
     const vals = H.map(p=>mode==='T' ? p.T : p.P);
     if(vals.length < 2){ g.textAlign = 'center'; g.fillText('gathering…', (L+R)/2, (T+Bm)/2); return; }
     let hi = Math.max(...vals)*1.15 || 1, lo = 0;
     if(mode === 'T'){ hi = Math.max(hi, kelvin()*1.3); g.setLineDash([3,3]); line([kelvin(), kelvin()], lo, hi, 'rgba(192,80,58,.5)', 2); g.setLineDash([]); }
-    line(vals, lo, hi, mode==='T' ? '#C0503A' : '#2A7A78');
+    line(vals, lo, hi, mode==='T' ? '#C0503A' : '#2A7A78', undefined, true);
     const fmt = v => mode==='T' ? Math.round(v)+' K' : (v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v))+'';
+    { const v = vals[vals.length-1], y = Bm - (Bm-T)*(v-lo)/(hi-lo||1), mf = getComputedStyle(document.body).getPropertyValue('--font-mono');
+      g.fillStyle = mode==='T' ? '#A8432F' : '#236866'; g.textAlign = 'right'; g.font = '600 10px '+mf;
+      g.fillText(fmt(v)+(mode==='P' ? ' atm' : ''), R - 7, Math.max(T + 9, y - 7)); g.font = '9px '+mf; g.fillStyle = '#8A8A85'; }
     axis(lo, hi, fmt, 'last '+Math.round((H[H.length-1].t - H[0].t))+' s'+(mode==='T' ? ' · dashed: the bath' : ' · atm'));
   } else if(mode === 'v'){
     /* the speed of every atom of the commonest element, binned, against the
@@ -13611,6 +13702,18 @@ function l3Draw(){
       g.fillText(f.kind === 'proton' ? 'H\u207a' : 'e\u207b', pp.x, pp.y + 0.5); }
   }
   g.textBaseline = 'alphabetic';
+  if(SHOW.molnames && L3.atoms.length){
+    const tn = performance.now();
+    if(!L3._ml || tn - L3._ml.t > 500 || (L3._ml.bv !== L3.bv && tn - L3._ml.t > 150))
+      L3._ml = {t:tn, bv:L3.bv, list:l3Molecules().filter(l=>l.length > 1 || l[0].ion).slice(0, 80).map(l=>({ids:l.map(a=>a.id), text:l3MolLabel(l)}))};
+    const placed = [];
+    L3._ml.list.forEach(m=>{
+      let top = 1e9, sx = 0, n = 0, zs = 0;
+      m.ids.forEach(id=>{ const a = l3Find(id); if(!a) return; const pp = l3Project(a, W3, H3); top = Math.min(top, pp.y - l3R(a, pp.s)); sx += pp.x; zs += pp.z; n++; });
+      if(!n || (L3.dist + zs/n)/L3.dist < 0.5) return;
+      nameTag(g, sx/n, top - 6, m.text, 1, placed);
+    });
+  }
   if(L3.hover && L3.atoms.includes(L3.hover)){ const pp = l3Project(L3.hover, W3, H3), rr = Math.max(9, l3R(L3.hover, pp.s)) + 4;
     g.save(); g.strokeStyle = 'rgba(47,91,234,.75)'; g.lineWidth = 1.8; g.beginPath(); g.arc(pp.x, pp.y, rr, 0, TAU); g.stroke();
     g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1; g.beginPath(); g.arc(pp.x, pp.y, rr + 1.6, 0, TAU); g.stroke(); g.restore(); }
@@ -13928,7 +14031,7 @@ function renderPanel3D(){
     const w = e.what, ic = /proton/.test(w) ? 'H\u207a' : /electron|dissolved|oxidised|took O/.test(w) ? 'e\u207b' : /lone pair|coordinated/.test(w) ? '\u2192' : /added|ester|hydrolysed/.test(w) ? '+' : /decay|fission|fusion/.test(w) ? '\u2622' : '\u2022';
     const ago = Math.max(0, Math.round((performance.now() - e.t)/1000));
     const cc = e.c && CONCEPTS[e.c];
-    return '<div class="p3-ev'+(cc ? ' lk' : '')+'"'+(cc ? ' data-learn="'+e.c+'" title="Learn: '+cc.name+'"' : '')+'><i>'+(cc ? cc.g : ic)+'</i><span>'+w+'</span><em>'+(Math.abs(e.dE) >= 1 ? (e.dE < 0 ? '\u2212' : '+')+Math.round(Math.abs(e.dE))+' kJ' : '')+(ago ? ' \u00b7 '+ago+' s' : '')+'</em></div>';
+    return '<div class="p3-ev'+(cc ? ' lk' : '')+'"'+(cc ? ' data-learn="'+e.c+'" title="Learn: '+cc.name+'" style="--ec:'+CONCEPT_CATS[cc.cat].col+'"' : '')+'><i>'+(cc ? cc.g : ic)+'</i><span>'+w+'</span><em>'+(Math.abs(e.dE) >= 1 ? (e.dE < 0 ? '\u2212' : '+')+Math.round(Math.abs(e.dE))+' kJ' : '')+(ago ? ' \u00b7 '+ago+' s' : '')+'</em></div>';
   }).join('')+'</div>';
   if(host._html !== html){ host.innerHTML = html; host._html = html; }
   if(!host._learn){ host._learn = true; host.addEventListener('click', ev=>{ const L = ev.target.closest('[data-learn]'); if(L) openConcept(L.dataset.learn); }); }
@@ -14190,11 +14293,12 @@ function l3Build(){
   const dispMenu = L3.menu === 'disp' ? '<div class="l3-pop" data-pop="disp">'+
       '<span class="eyebrow">Style</span><div class="l3-seg">'+Object.keys(L3_VIEWS).map(k=>'<button type="button" data-l3view="'+k+'"'+((L3.view||'ball') === k ? ' class="on"' : '')+'>'+L3_VIEWS[k]+'</button>').join('')+'</div>'+
       '<span class="eyebrow">Show</span>'+
-      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+
+      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+
     '</div>' : '';
   const moreMenu = L3.menu === 'more' ? '<div class="l3-pop right" data-pop="more">'+
       '<button type="button" class="l3-item" data-l3="water">Add 12 waters</button>'+
       '<button type="button" class="l3-item" data-l3="fit">Fit everything in view <kbd>F</kbd></button>'+
+      '<button type="button" class="l3-item" data-l3="keys">Keyboard shortcuts <kbd>?</kbd></button>'+
       '<button type="button" class="l3-item" data-l3="snap">Save a snapshot</button>'+
       '<button type="button" class="l3-item danger" data-l3="clear">Clear the 3D bench</button>'+
     '</div>' : '';
@@ -14225,7 +14329,9 @@ function l3Build(){
     else if(b.dataset.l3 === 'menu-disp' || b.dataset.l3 === 'menu-more'){ const k = b.dataset.l3.slice(5); L3.menu = L3.menu === k ? null : k; l3Build(); }
     else if(b.dataset.l3 === 'lp'){ L3.showLP = !L3.showLP; l3Build(); }
     else if(b.dataset.l3 === 'names'){ L3.names = !L3.names; l3Build(); }
+    else if(b.dataset.l3 === 'molnames'){ SHOW.molnames = !SHOW.molnames; l3Build(); }
     else if(b.dataset.l3 === 'fit'){ L3.menu = null; l3Build(); l3FitView(true); }
+    else if(b.dataset.l3 === 'keys'){ L3.menu = null; l3Build(); toggleKeys(true); }
     else if(b.dataset.l3 === 'snap'){ L3.menu = null; l3Build();
       /* the view as a picture, on a white ground, saved where your browser saves downloads */
       const src = l3Canvas(), out = document.createElement('canvas'); out.width = src.width; out.height = src.height;
@@ -14606,6 +14712,7 @@ function renderCamCtl(){
         '<button type="button" id="svgBtn">Copy as a diagram</button>'+
         '<button type="button" id="snap2d">Save a snapshot</button>'+
         '<button type="button" id="water2d">Add 12 waters</button>'+
+        '<button type="button" id="keys2d">Keyboard shortcuts</button>'+
       '</div>' : '')+'</span>'+
       '<button class="ghost-btn cam-btn'+(STEP.on ? ' on' : '')+'" data-steptoggle="1" type="button" title="Slow reactions down and stop after each step">'+(STEP.on ? 'Stepping \u2713' : 'Step through')+'</button>'+
       '<button class="ghost-btn cam-btn l3-go" id="btn3d" type="button" title="Carry everything on this bench up to the 3D bench">Send to 3D</button>';
@@ -14621,6 +14728,7 @@ function renderCamCtl(){
   el('noteBtn').onclick=()=>{ noteArmed=!noteArmed; camMenu = false; renderCamCtl(); if(noteArmed) say('Click the bench where the note should go.','bench'); };
   el('svgBtn').onclick=()=>{ camMenu = false; renderCamCtl(); copyDiagram(); };
   el('snap2d').onclick=()=>{ camMenu = false; renderCamCtl(); saveCanvasPNG(cv, 'bonding-bench-2d.png'); };
+  el('keys2d').onclick=()=>{ camMenu = false; renderCamCtl(); toggleKeys(true); };
   el('water2d').onclick=()=>{ camMenu = false; renderCamCtl(); pushUndo();
     const vw = W/cam.z, vh = viewH()/cam.z;
     for(let i=0;i<12;i++){ const ang = i/12*TAU + Math.random()*0.3, r = Math.min(vw, vh)*(0.22 + 0.15*Math.random()); buildCompound2D('water', viewCX() + Math.cos(ang)*r, viewCY() + Math.sin(ang)*r*0.8); }
@@ -14802,8 +14910,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 105;
+const VERSION = 106;
 const CHANGELOG = [
+  [106, 'Molecule names: a switch in the 3D Display menu and in the Forces tab puts a small tag above each molecule, its name if the bench knows it and its formula if not, leaving out any tag that would cover another. Press ? for a sheet of every keyboard shortcut (also in both benches\u2019 \u22ef menus). The temperature and pressure charts have a soft wash beneath the line, faint guides, and a dot with the current value at the end. The 3D events list colours each icon by its family of reaction. The flat bench gives each kind of molecule one card with a count, as the 3D bench does, instead of a card for every molecule. Fixed: a bare atom split off by heat (an oxygen, say) was treated as water by the acid and base rules and took protons, making impossible ions like OH\u207a; on both benches a bare neutral atom is no longer a base.'],
   [105, 'The 3D camera frames what is on the bench: a scene, a crystal or a Learn mode topic glides into a view with everything in it, double-clicking an atom glides in to look at it (the view then turns round that atom), and double-clicking empty space, pressing F, or Fit everything in view in the \u22ef menu brings everything back. The molecule cards fold: with more than two kinds on the bench only the first is open and the rest show a one-line summary until clicked, and they stay the way you leave them, on both benches. Hovering an element in the 3D bench\u2019s periodic table shows its card (shells, valence electrons, usual bonds, electronegativity, first ionisation energy, Zeff, radius, and how a metal packs and where it melts), and its tiles are tinted by family. The temperature tile takes the temperature\u2019s colour, with a bar against the bath. Switching benches fades the new one in. An ion\u2019s card no longer gives it a dipole moment, which a charged molecule does not have.'],
   [104, 'Point at any atom, on either bench, for a card on it: the element, the molecule it is in, its charge (and partial charge in 3D), its bonds, the shape of the electron pairs round it with the hybridisation, its lone pairs and its electronegativity; in 3D the atom under the pointer is ringed too. Temperature sliders are thermometers now, shaded from cold blue to hot red, and show degrees Celsius beside kelvin. An empty 3D box says what to do instead of sitting blank. Zooming in on the 3D bench can no longer put the camera inside the box: atoms that come close to the camera fade out, rather than filling the view with one giant sphere, and the zoom stops short of the box.'],
   [103, 'The two benches match. On the 3D bench: your saved compounds (keep the selected molecule, build any saved one), the molecule library, Polymerise the alkenes, and amide (peptide) bonds between an acid and an amine. On the flat bench: the 0.1\u00d7 to 3\u00d7 speed slider, Save a snapshot and Add 12 waters in the \u22ef menu, a crystal of any metal packed the way it really crystallises, and Learn mode, which now runs on whichever bench you are on (topics the flat bench cannot run, marked 3D, open the 3D bench). The flat bench now writes up Lewis adducts and ligands joining a metal ion in the notebook with their equations, as the 3D bench does, and an amino acid no longer forms a peptide bond with itself.'],
