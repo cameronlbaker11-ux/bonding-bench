@@ -897,6 +897,20 @@ body.learning #tools,body.learning .timectl,body.learning #camCtl,body.learning 
 .g-learn{display:block;width:100%;text-align:left;padding:11px 13px;border-radius:11px;border:0;background:var(--ink);color:#fff;cursor:pointer;margin:0 0 10px;font:inherit}
 .g-learn b{display:block;font-size:13px}
 .g-learn span{display:block;font-size:11px;opacity:.75;margin-top:2px;line-height:1.45}
+
+/* the hover card */
+.atom-tip{position:fixed;z-index:30;pointer-events:none;width:250px;box-sizing:border-box;background:rgba(255,255,255,.97);border:1px solid var(--hair);border-radius:11px;box-shadow:var(--shadow-l);padding:9px 11px 8px;font-size:11.5px;animation:cardIn .14s var(--ease) both}
+.atom-tip .at-head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.atom-tip .at-head i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;box-shadow:inset -3px -4px 6px rgba(0,0,0,.22),inset 2px 2px 4px rgba(255,255,255,.35);text-shadow:0 1px 1px rgba(0,0,0,.3)}
+.atom-tip .at-head b{display:block;font-size:12.5px;color:var(--ink)}
+.atom-tip .at-head small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.atom-tip dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0}
+.atom-tip dl dt{color:var(--muted);font-size:11px;font-family:var(--font-ui);text-transform:none;letter-spacing:0;padding:1px 0;border:0}
+.atom-tip dl dd{margin:0;color:var(--ink);font-size:11px;font-family:var(--font-ui);text-align:right;padding:1px 0;border:0}
+/* temperature sliders are thermometers: cold blue to hot red */
+input[type=range].temp-range::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:linear-gradient(to right,#3E63C8 0%,#5A9BD5 18%,#8FB39A 36%,#E0A04A 60%,#D0512F 80%,#B0203A 100%)}
+input[type=range].temp-range::-webkit-slider-thumb{margin-top:-4px}
+input[type=range].temp-range::-moz-range-track{height:5px;border-radius:3px;background:linear-gradient(to right,#3E63C8 0%,#5A9BD5 18%,#8FB39A 36%,#E0A04A 60%,#D0512F 80%,#B0203A 100%)}
 </style>
 
 <div class="app">
@@ -1026,6 +1040,7 @@ body.learning #tools,body.learning .timectl,body.learning #camCtl,body.learning 
       <div id="tourCard" hidden></div>
       <div id="lessonCard" hidden></div>
       <div id="stepCard" class="step-card" hidden></div>
+      <div id="atomTip" class="atom-tip" hidden></div>
       <div class="learn-dock" id="learnDock" hidden></div>
       <div class="timectl"><div class="seg" id="timeSeg" role="group" aria-label="Time scale"></div>
         <div class="stats">
@@ -3916,6 +3931,9 @@ function endPointer(ev){
 cv.addEventListener('pointerup', endPointer);
 cv.addEventListener('pointercancel', endPointer);
 cv.addEventListener('pointerleave', ()=>{ hoverId=null; hoverBond=null; });
+/* the hover card on the flat bench: the atom the pointer is over (hoverId), while nothing is being dragged */
+cv.addEventListener('pointermove', ev=>{ if(ev.buttons){ atomTip(null); return; } const a = hoverId != null ? findAtom(hoverId) : null; atomTip(a && !a.dying ? a : null, ev.clientX, ev.clientY, '2D'); });
+cv.addEventListener('pointerleave', ()=>atomTip(null));
 cv.addEventListener('wheel', ev=>{
   ev.preventDefault();
   const r0=cv.getBoundingClientRect();
@@ -4006,8 +4024,9 @@ function buildSliderGroup(host, defs){
       /* a slider with no readable value leaves the setting where it was */
       if(input.value !== '' && !isNaN(+input.value)) P[s.k]=+input.value;
       input.style.setProperty('--pct',((input.value-(s.min||0))/((s.max||100)-(s.min||0))*100)+'%');
-      val.textContent=s.fmt(+input.value);
+      val.textContent=s.fmt(+input.value)+(s.k==='temp' ? ' \u00b7 '+(kelvin()-273)+' \u00b0C' : '');
       if(s.k==='temp'){
+        input.classList.add('temp-range');
         /* the 3D bench's own temperature slider shows the same setting */
         const t3 = el('l3Temp');
         if(t3 && t3 !== document.activeElement){ t3.value = P.temp; t3.style.setProperty('--pct', ((P.temp-T_MIN)/(T_MAX-T_MIN)*100)+'%'); const tv = el('l3TempVal'); if(tv) tv.textContent = kelvin()+' K'; }
@@ -5347,6 +5366,48 @@ function overallRx(eq, dh, steps){
   steps.length = 0; logDirty = true;
 }
 
+
+/* ---------- the hover card ----------
+   Point at an atom on either bench for a card on it: what it is, the molecule
+   it is in, its charge, its bonds, its lone pairs and the shape round it. */
+const SHAPE_OF = {2:['linear','sp'], 3:['trigonal planar','sp²'], 4:['tetrahedral','sp³'], 5:['trigonal bipyramidal','sp³d'], 6:['octahedral','sp³d²']};
+function atomTipInfo(a, bench){
+  const e = EL[a.e], rows = [];
+  let sp, charge = 0, formal = 0, delta = 0, lone = 0, bl = [];
+  if(bench === '3D'){
+    sp = species3D(a); charge = a.ion||0; formal = a.fq||0; delta = (a.q||0) - charge - formal;
+    lone = typeof l3Lone === 'function' ? l3Lone(a) : 0;
+    bl = l3Bonds(a).map(b=>({type:b.type, order:b.order||1, arom:!!b.arom}));
+  } else {
+    sp = species2D(a); charge = a.charge||0; lone = typeof lonePairs === 'function' ? lonePairs(a) : 0;
+    bl = bondsOf(a).map(b=>({type:b.type, order:b.order||1, arom:!!(b.arom||b.res)}));
+  }
+  const cnt = {};
+  bl.forEach(b=>{ const k = b.type === 'covalent' ? (b.arom ? 'aromatic' : ['single','double','triple'][b.order-1] || 'single') : b.type; cnt[k] = (cnt[k]||0) + 1; });
+  const bondTxt = Object.keys(cnt).map(k=>cnt[k]+' '+k).join(', ') || 'none';
+  const chTxt = charge ? (bench === '3D' ? 'ion, ' : '')+(charge > 0 ? '+' : '−')+Math.abs(charge) : formal ? 'formal '+(formal > 0 ? '+' : '−')+Math.abs(formal) : 'neutral';
+  rows.push(['Charge', chTxt+(bench === '3D' && Math.abs(delta) >= 0.05 ? ' · δ'+(delta > 0 ? '+' : '−')+Math.abs(delta).toFixed(2) : '')]);
+  rows.push(['Bonds', bondTxt]);
+  const around = bl.filter(b=>b.type === 'covalent' || b.type === 'dative').length;
+  if(!isMetal(e) && around + lone >= 2 && around >= 1){
+    const shp = SHAPE_OF[Math.min(6, around + lone)];
+    rows.push(['Shape', (shp ? shp[0]+', '+shp[1] : '')]);
+    if(lone) rows.push(['Lone pairs', String(lone)]);
+  } else if(lone) rows.push(['Lone pairs', String(lone)]);
+  if(e.en != null) rows.push(['Electronegativity', e.en.toFixed(2)]);
+  if(a.A && a.A !== Math.round(e.mass)) rows.push(['Isotope', e.sym+'-'+a.A]);
+  return {head:'<i style="background:'+e.col+'">'+e.sym+'</i><span><b>'+e.name+'</b><small>'+(sp && sp.n > 1 ? (sp.name ? capFirst(sp.name)+' · ' : '')+sp.f : 'on its own')+'</small></span>', rows};
+}
+function atomTip(a, cx, cy, bench){
+  const t = el('atomTip'); if(!t) return;
+  if(!a){ t.hidden = true; t._key = ''; return; }
+  const key = bench+a.id+'|'+(a.ion||0)+(a.fq||0)+(a.charge||0)+'|'+(bench === '3D' ? l3Bonds(a).length+':'+Math.round((a.q||0)*20) : bondsOf(a).length);
+  if(t._key !== key){ const info = atomTipInfo(a, bench); t.innerHTML = '<div class="at-head">'+info.head+'</div><dl>'+info.rows.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>'; t._key = key; }
+  t.hidden = false;
+  const w = t.offsetWidth || 220, h = t.offsetHeight || 120;
+  t.style.left = Math.round(Math.min(window.innerWidth - w - 8, cx + 16))+'px';
+  t.style.top = Math.round(cy + 18 + h > window.innerHeight - 8 ? cy - h - 12 : cy + 18)+'px';
+}
 /* ---------- step through ----------
    Reactions slowed right down and taken one at a time. Each step plays in slow
    motion (the proton or electron can be seen crossing), the atoms in it are
@@ -13089,7 +13150,12 @@ function l3Draw(){
   }
   for(const a of L3.atoms) items.push({z:pos.get(a.id).z, atom:a, p:pos.get(a.id)});
   items.sort((u,v)=>v.z-u.z);
+  /* anything reaching the camera fades out, rather than filling the view */
+  const nearA = pz => clamp(((L3.dist + pz)/L3.dist - 0.3)/0.25, 0, 1);
   for(const it of items){
+    const na = it.bond ? Math.min(nearA(it.p.z), nearA(it.q.z)) : nearA(it.p.z);
+    if(na <= 0) continue;
+    g.globalAlpha = na;
     if(it.bond){
       const {p, q, bond} = it, A1 = l3Find(bond.a), A2 = l3Find(bond.b);
       const dx = q.x-p.x, dy = q.y-p.y, L = Math.hypot(dx,dy)||1, ux = dx/L, uy = dy/L, nx = -uy, ny = ux;
@@ -13202,6 +13268,7 @@ function l3Draw(){
       }
     }
   }
+  g.globalAlpha = 1;
   /* The charge cloud: every atom wrapped in its electron cloud at its van der
      Waals radius, tinted by the charge it carries: red where electrons pile up
      (the oxygen of water, a chloride ion), blue where they are thin (the
@@ -13427,6 +13494,20 @@ function l3Draw(){
       g.fillText(f.kind === 'proton' ? 'H\u207a' : 'e\u207b', pp.x, pp.y + 0.5); }
   }
   g.textBaseline = 'alphabetic';
+  if(L3.hover && L3.atoms.includes(L3.hover)){ const pp = l3Project(L3.hover, W3, H3), rr = Math.max(9, l3R(L3.hover, pp.s)) + 4;
+    g.save(); g.strokeStyle = 'rgba(47,91,234,.75)'; g.lineWidth = 1.8; g.beginPath(); g.arc(pp.x, pp.y, rr, 0, TAU); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1; g.beginPath(); g.arc(pp.x, pp.y, rr + 1.6, 0, TAU); g.stroke(); g.restore(); }
+  if(!L3.atoms.length){
+    /* an empty box says what to do, rather than sitting blank */
+    const cx = W3/2 - (L3.shiftX||0), cy = H3/2, tt = performance.now()/1000;
+    g.save(); g.strokeStyle = 'rgba(47,91,234,.22)'; g.lineWidth = 1.2; g.setLineDash([3, 6]); g.lineDashOffset = -tt*8;
+    [30, 50].forEach(r=>{ g.beginPath(); g.ellipse(cx, cy-40, r, r*0.42, -0.35, 0, TAU); g.stroke(); g.beginPath(); g.ellipse(cx, cy-40, r, r*0.42, 0.9, 0, TAU); g.stroke(); });
+    g.setLineDash([]); g.fillStyle = 'rgba(47,91,234,.14)'; g.beginPath(); g.arc(cx, cy-40, 12, 0, TAU); g.fill();
+    g.textAlign = 'center'; g.fillStyle = 'rgba(71,76,84,.85)'; g.font = '500 15px Archivo, system-ui, sans-serif'; g.fillText('An empty box', cx, cy+30);
+    g.fillStyle = 'rgba(138,144,152,.95)'; g.font = '12.5px Archivo, system-ui, sans-serif';
+    g.fillText('Click an element in the table, type a name like caffeine into Build,', cx, cy+52);
+    g.fillText('or pick a reaction on the left.', cx, cy+70); g.restore();
+  }
   if(STEP.on && STEP.focus.length && STEP.bench === '3D'){ const tn = performance.now();
     STEP.focus.forEach(id=>{ const a = l3Find(id); if(!a) return; const pp = l3Project(a, W3, H3); stepRing(g, pp.x, pp.y, Math.max(10, EL[a.e].rc*0.62*pp.s + 6), tn); }); }
   /* a soft vignette, so the eye settles in the middle of the box */
@@ -13774,8 +13855,8 @@ function renderLeft3D(){
   host.innerHTML = '<span class="eyebrow">3D bench · every element</span>'+
     '<div class="l3-table l3-full" style="margin-top:10px">'+table+'</div>'+
     '<div class="l3-build" style="margin-top:10px"><input id="l3Formula" type="text" placeholder="Build: caffeine, CCO, H2SO4…" spellcheck="false" autocomplete="off"><button type="button" data-l3build="1">Build</button><button type="button" class="ghost-sm" data-l3undo="1" title="Undo (Ctrl/Cmd + Z)">Undo</button></div>'+
-    '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K</span>'+
-      '<input type="range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
+    '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C</span>'+
+      '<input type="range" class="temp-range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
     sec('rx', 'Reactions', rx, SCENES.length)+
     sec('mol', 'Molecules', '<div class="l3-pres">'+Object.keys(L3_PRESETS).map(k=>'<button type="button" data-l3pre="'+k+'">'+k+'</button>').join('')+'</div>'+
       '<div class="btn-row" style="margin-top:8px"><button class="ghost-btn" type="button" data-l3lib="1">Molecule library</button><button class="ghost-btn" type="button" data-l3poly="1">Polymerise the alkenes</button></div>', Object.keys(L3_PRESETS).length)+
@@ -13836,7 +13917,7 @@ function renderLeft3D(){
   const tIn = el('l3Temp');
   if(tIn){
     const tp = ()=>tIn.style.setProperty('--pct', ((tIn.value-T_MIN)/(T_MAX-T_MIN)*100)+'%'); tp();
-    tIn.oninput = ()=>{ setSlider('temp', +tIn.value); tp(); el('l3TempVal').textContent = kelvin()+' K'; };
+    tIn.oninput = ()=>{ setSlider('temp', +tIn.value); tp(); el('l3TempVal').textContent = kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C'; };
   }
   host.querySelectorAll('[data-l3v]').forEach(inp=>{
     inp.style.setProperty('--pct', ((inp.value-inp.min)/(inp.max-inp.min)*100)+'%');
@@ -14090,7 +14171,16 @@ function l3Build(){
   });
   const up = ()=>{ if(L3.drag && L3.drag.fieldFrom && !L3.field) say('Field off.','field'); else if(L3.drag && L3.drag.fieldFrom && L3.field) say('Field on along your drag.','field'); L3.drag = null; };
   cv3.addEventListener('pointerup', up); cv3.addEventListener('pointercancel', up);
-  cv3.addEventListener('wheel', ev=>{ ev.preventDefault(); L3.dist = clamp(L3.dist*(ev.deltaY>0 ? 1.08 : 0.93), 1100, 6000); }, {passive:false});
+  /* never so close that the front of the box reaches the camera */
+  cv3.addEventListener('wheel', ev=>{ ev.preventDefault(); L3.dist = clamp(L3.dist*(ev.deltaY>0 ? 1.08 : 0.93), Math.max(1100, L3.box*1.7), 6000); }, {passive:false});
+  /* the hover card, and a ring on the atom under the pointer */
+  cv3.addEventListener('pointermove', ev=>{
+    if(L3.drag || ev.buttons){ if(L3.hover){ L3.hover = null; atomTip(null); } return; }
+    const r = cv3.getBoundingClientRect(), hit = pick(ev.clientX-r.left, ev.clientY-r.top), a = hit ? hit.atom : null;
+    if(a !== L3.hover){ L3.hover = a; }
+    atomTip(a, ev.clientX, ev.clientY, '3D');
+  });
+  cv3.addEventListener('pointerleave', ()=>{ L3.hover = null; atomTip(null); });
   window.addEventListener('keydown', ev=>{
     if(L3.on && /^[0-9]$/.test(ev.key) && !/INPUT|TEXTAREA/.test((ev.target||{}).tagName||'')){ l3SetTool(L3_TOOLS[(+ev.key+9)%10]); ev.preventDefault(); ev.stopImmediatePropagation(); return; }
     if(!L3.on || !L3.sel) return;
@@ -14577,8 +14667,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 103;
+const VERSION = 104;
 const CHANGELOG = [
+  [104, 'Point at any atom, on either bench, for a card on it: the element, the molecule it is in, its charge (and partial charge in 3D), its bonds, the shape of the electron pairs round it with the hybridisation, its lone pairs and its electronegativity; in 3D the atom under the pointer is ringed too. Temperature sliders are thermometers now, shaded from cold blue to hot red, and show degrees Celsius beside kelvin. An empty 3D box says what to do instead of sitting blank. Zooming in on the 3D bench can no longer put the camera inside the box: atoms that come close to the camera fade out, rather than filling the view with one giant sphere, and the zoom stops short of the box.'],
   [103, 'The two benches match. On the 3D bench: your saved compounds (keep the selected molecule, build any saved one), the molecule library, Polymerise the alkenes, and amide (peptide) bonds between an acid and an amine. On the flat bench: the 0.1\u00d7 to 3\u00d7 speed slider, Save a snapshot and Add 12 waters in the \u22ef menu, a crystal of any metal packed the way it really crystallises, and Learn mode, which now runs on whichever bench you are on (topics the flat bench cannot run, marked 3D, open the 3D bench). The flat bench now writes up Lewis adducts and ligands joining a metal ion in the notebook with their equations, as the 3D bench does, and an amino acid no longer forms a peptide bond with itself.'],
   [102, 'Metal crystals keep their structure until they melt. Aluminium, copper and the other close-packed metals were losing their crystal order at about half their melting point, turning into a glassy lump (and being read as body-centred), because the metal well reached too far: a long-ranged pair force favours a disordered cluster over close packing. Close-packed metals now have a shorter-ranged well centred on the real spacing (286 pm in aluminium, where it was 310), so they stay ordered to about 0.9 of their melting point and have melted by about 1.3. Metal crystals are about 130 atoms instead of 30, so they have a real inside rather than being almost all surface. Iron, tungsten and the other body-centred metals ran hundreds of kelvin hotter than the bench, which melted them early: the force that keeps them body-centred switched on and off abruptly, and now fades in smoothly. The side panel no longer rebuilds every frame for a big metal crystal, so they run smoothly.'],
   [101, 'Hydronium ions no longer seem to toss protons about. A proton passing from H\u2083O\u207a to the water beside it is real (the Grotthuss mechanism, every picosecond or so in real water), but it was drawn with the same flying H\u207a as a real reaction and happened every couple of seconds, which looked like a glitch. It is now rare, not drawn, and switched off while stepping through reactions or in Learn mode, and the acid\u2013base card in the Guide explains it.'],
