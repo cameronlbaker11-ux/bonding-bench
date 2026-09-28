@@ -11037,7 +11037,7 @@ function frameBench(maxZ){
    the angles VSEPR predicts, with lone pairs taking room of their own. So
    methane folds into a real tetrahedron, ammonia into a pyramid and water
    bends to about 104.5 degrees. Units are picometres and the bench temperature. */
-const L3 = {on:false, atoms:[], bonds:[], seq:900001, yaw:0.6, pitch:-0.35, dist:2050, spin:false,
+const L3 = {on:false, atoms:[], bonds:[], seq:900001, wImp:0, wT:0, yaw:0.6, pitch:-0.35, dist:2050, spin:false,
             sel:null, drag:null, box:540, upg:0, dirty:true, readT:0,
             flashes:[], ledger:[], Tkin:0, gear:[], photons:[], volts:40, nm:254, lampClock:0,
             tool:'move', pend:null, measure:[], neutrons:[], cats:[], field:null, nClock:0, fusions:0, fissions:0, decays:0,
@@ -12225,14 +12225,15 @@ function l3Step(dt){
       const v = Math.hypot(a.vx, a.vy, a.vz);
       if(v > 3000){ a.vx *= 3000/v; a.vy *= 3000/v; a.vz *= 3000/v; }
       a.x += a.vx*h; a.y += a.vy*h; a.z += a.vz*h;
-      if(a.x < -B){ a.x = -B; a.vx = Math.abs(a.vx); } if(a.x > B){ a.x = B; a.vx = -Math.abs(a.vx); }
-      if(a.y < -B){ a.y = -B; a.vy = Math.abs(a.vy); } if(a.y > B){ a.y = B; a.vy = -Math.abs(a.vy); }
-      if(a.z < -B){ a.z = -B; a.vz = Math.abs(a.vz); } if(a.z > B){ a.z = B; a.vz = -Math.abs(a.vz); }
+      /* every bounce off a wall is momentum handed to it: added up, that is the push on the walls */
+      if(a.x < -B){ a.x = -B; L3.wImp += 2*m*Math.abs(a.vx); a.vx = Math.abs(a.vx); } if(a.x > B){ a.x = B; L3.wImp += 2*m*Math.abs(a.vx); a.vx = -Math.abs(a.vx); }
+      if(a.y < -B){ a.y = -B; L3.wImp += 2*m*Math.abs(a.vy); a.vy = Math.abs(a.vy); } if(a.y > B){ a.y = B; L3.wImp += 2*m*Math.abs(a.vy); a.vy = -Math.abs(a.vy); }
+      if(a.z < -B){ a.z = -B; L3.wImp += 2*m*Math.abs(a.vz); a.vz = Math.abs(a.vz); } if(a.z > B){ a.z = B; L3.wImp += 2*m*Math.abs(a.vz); a.vz = -Math.abs(a.vz); }
       /* the pressure gauge: kinetic energy, plus the virial of the forces
          between atoms (r . F), which is negative where they pull together */
       L3.kin += m*(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz); L3.vir += a.x*a.fx + a.y*a.fy + a.z*a.fz;
     }
-    L3.nSub++;
+    L3.nSub++; L3.wT = (L3.wT||0) + h;
   }
   /* bonds break: pulled too far, or shaken apart. The chance per second follows
      Boltzmann, exp(-E/RT), at the pair's own temperature, so a bond near freshly
@@ -12326,17 +12327,43 @@ function l3Field(a){
    (the molecules hug and hit the walls less), over 1 where the molecules are
    crowded into each other's room. */
 const L3_MS = Math.sqrt(0.008314*298/22000*1e6);  /* one kinetic speed unit, in m/s (about 10.6) */
+/* the most the piston can push with, in atmospheres: about what a strong
+   hydraulic press manages. A gas gives way to it; a solid or a liquid barely does. */
+const PISTON_MAX = 20000;
 function l3Gauge(dt){
+  /* the push the walls actually feel, from the momentum of everything bouncing
+     off them, in atmospheres (the same scale as the gauge) */
+  if((L3.wT||0) >= 0.03){
+    const B = L3.box, area = 6*(2*B)*(2*B), Pw = 1.8457e6*(L3.wImp||0)/(L3.wT*area);
+    L3.Pwall = L3.Pwall == null ? Pw : L3.Pwall + (Pw - L3.Pwall)*0.3;
+    L3.wImp = 0; L3.wT = 0;
+  }
   /* the walls ease towards where the piston wants them, a few picometres a
-     step: squeezing a gas by hand warms it, as it would */
+     step: squeezing a gas by hand warms it, as it would. Against a solid or a
+     liquid the piston stalls, as a real one would: iron would not be crushed
+     to half its spacing by any press, and a crushed lump flew apart when let go */
   if(L3.boxTo && Math.abs(L3.box - L3.boxTo) > 0.5 && dt > 0){
-    const d = clamp(L3.boxTo - L3.box, -140*dt, 140*dt);
+    /* it slows as the contents push back, as a press does, instead of slamming into a solid */
+    const ease = clamp(1 - (L3.Pwall||0)/PISTON_MAX, 0.04, 1);
+    let d = clamp(L3.boxTo - L3.box, -140*dt*ease, 140*dt);
+    const stalled = d < 0 && (L3.Pwall||0) > PISTON_MAX;
+    if(stalled){ d = (L3.Pwall||0) > 2*PISTON_MAX ? 20*dt : 0;
+      if(!L3.stall) say('The piston has stalled: what is in the box pushes back with about '+(Math.round(L3.Pwall/1000)*1000).toLocaleString()+' atm, as hard as a strong press can push. Solids and liquids hardly compress.','bench'); }
+    L3.stall = stalled;
     L3.box += d;
-    /* a wall moving in hits atoms harder: adiabatic heating comes from that */
-    if(d < 0) L3.atoms.forEach(a=>{ const B = L3.box;
-      if(a.x < -B+8) a.vx += -d/dt*0.5; if(a.x > B-8) a.vx -= -d/dt*0.5;
-      if(a.y < -B+8) a.vy += -d/dt*0.5; if(a.y > B-8) a.vy -= -d/dt*0.5;
-      if(a.z < -B+8) a.vz += -d/dt*0.5; if(a.z > B-8) a.vz -= -d/dt*0.5; });
+    /* A wall moving in at speed w bounces what it meets off itself, v' = 2w - v:
+       that is where squeezing a gas heats it. Only atoms it actually meets
+       (moving toward it, or slower than it) are hit, so a solid pressed
+       against a stalled piston is not fed heat on every step. */
+    if(d < 0){ const w = -d/dt, B = L3.box;
+      L3.atoms.forEach(a=>{ const m = l3Mass(a); let dv = 0;
+        if(a.x < -B+8 && a.vx < w){ dv += Math.abs(2*w - 2*a.vx); a.vx = 2*w - a.vx; }
+        if(a.x > B-8 && a.vx > -w){ dv += Math.abs(2*w + 2*a.vx); a.vx = -2*w - a.vx; }
+        if(a.y < -B+8 && a.vy < w){ dv += Math.abs(2*w - 2*a.vy); a.vy = 2*w - a.vy; }
+        if(a.y > B-8 && a.vy > -w){ dv += Math.abs(2*w + 2*a.vy); a.vy = -2*w - a.vy; }
+        if(a.z < -B+8 && a.vz < w){ dv += Math.abs(2*w - 2*a.vz); a.vz = 2*w - a.vz; }
+        if(a.z > B-8 && a.vz > -w){ dv += Math.abs(2*w + 2*a.vz); a.vz = -2*w - a.vz; }
+        if(dv) L3.wImp = (L3.wImp||0) + m*dv; }); }
   }
   L3.impT += dt;
   if(L3.impT >= 0.5 && L3.nSub){
@@ -14910,8 +14937,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 107;
+const VERSION = 108;
 const CHANGELOG = [
+  [108, 'The 3D piston behaves like a real press. It used to push the walls in regardless of what was in the way, crushing iron to half its spacing at hundreds of millions of atmospheres, so the lump exploded when let go. The walls now measure how hard the atoms push on them, the piston slows as that push grows and stalls at about 20 000 atm (a strong hydraulic press), and a solid or liquid barely compresses and springs back gently. A gas still squeezes and warms as before. A moving wall now only bounces atoms it actually meets, so a solid pressed against it is not fed heat.'],
   [107, 'The tan work top across the bottom third of the flat bench is gone: the whole bench is open for atoms, and equipment stands on its bottom edge. The lab table strip along the bottom only appears once something is put on it.'],
   [106, 'Molecule names: a switch in the 3D Display menu and in the Forces tab puts a small tag above each molecule, its name if the bench knows it and its formula if not, leaving out any tag that would cover another. Press ? for a sheet of every keyboard shortcut (also in both benches\u2019 \u22ef menus). The temperature and pressure charts have a soft wash beneath the line, faint guides, and a dot with the current value at the end. The 3D events list colours each icon by its family of reaction. The flat bench gives each kind of molecule one card with a count, as the 3D bench does, instead of a card for every molecule. Fixed: a bare atom split off by heat (an oxygen, say) was treated as water by the acid and base rules and took protons, making impossible ions like OH\u207a; on both benches a bare neutral atom is no longer a base.'],
   [105, 'The 3D camera frames what is on the bench: a scene, a crystal or a Learn mode topic glides into a view with everything in it, double-clicking an atom glides in to look at it (the view then turns round that atom), and double-clicking empty space, pressing F, or Fit everything in view in the \u22ef menu brings everything back. The molecule cards fold: with more than two kinds on the bench only the first is open and the rest show a one-line summary until clicked, and they stay the way you leave them, on both benches. Hovering an element in the 3D bench\u2019s periodic table shows its card (shells, valence electrons, usual bonds, electronegativity, first ionisation energy, Zeff, radius, and how a metal packs and where it melts), and its tiles are tinted by family. The temperature tile takes the temperature\u2019s colour, with a bar against the bath. Switching benches fades the new one in. An ion\u2019s card no longer gives it a dipole moment, which a charged molecule does not have.'],
