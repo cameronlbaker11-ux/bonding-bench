@@ -14910,8 +14910,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 106;
+const VERSION = 107;
 const CHANGELOG = [
+  [107, 'The tan work top across the bottom third of the flat bench is gone: the whole bench is open for atoms, and equipment stands on its bottom edge. The lab table strip along the bottom only appears once something is put on it.'],
   [106, 'Molecule names: a switch in the 3D Display menu and in the Forces tab puts a small tag above each molecule, its name if the bench knows it and its formula if not, leaving out any tag that would cover another. Press ? for a sheet of every keyboard shortcut (also in both benches\u2019 \u22ef menus). The temperature and pressure charts have a soft wash beneath the line, faint guides, and a dot with the current value at the end. The 3D events list colours each icon by its family of reaction. The flat bench gives each kind of molecule one card with a count, as the 3D bench does, instead of a card for every molecule. Fixed: a bare atom split off by heat (an oxygen, say) was treated as water by the acid and base rules and took protons, making impossible ions like OH\u207a; on both benches a bare neutral atom is no longer a base.'],
   [105, 'The 3D camera frames what is on the bench: a scene, a crystal or a Learn mode topic glides into a view with everything in it, double-clicking an atom glides in to look at it (the view then turns round that atom), and double-clicking empty space, pressing F, or Fit everything in view in the \u22ef menu brings everything back. The molecule cards fold: with more than two kinds on the bench only the first is open and the rest show a one-line summary until clicked, and they stay the way you leave them, on both benches. Hovering an element in the 3D bench\u2019s periodic table shows its card (shells, valence electrons, usual bonds, electronegativity, first ionisation energy, Zeff, radius, and how a metal packs and where it melts), and its tiles are tinted by family. The temperature tile takes the temperature\u2019s colour, with a bar against the bath. Switching benches fades the new one in. An ion\u2019s card no longer gives it a dipole moment, which a charged molecule does not have.'],
   [104, 'Point at any atom, on either bench, for a card on it: the element, the molecule it is in, its charge (and partial charge in 3D), its bonds, the shape of the electron pairs round it with the hybridisation, its lone pairs and its electronegativity; in 3D the atom under the pointer is ringed too. Temperature sliders are thermometers now, shaded from cold blue to hot red, and show degrees Celsius beside kelvin. An empty 3D box says what to do instead of sitting blank. Zooming in on the 3D bench can no longer put the camera inside the box: atoms that come close to the camera fade out, rather than filling the view with one giant sphere, and the zoom stops short of the box.'],
@@ -15982,9 +15983,12 @@ function newGear(kind, where, x, y){
 /* The bench is a work top, not a void: equipment stands on it, and it is solid
    under anything that lands on it. It sits two thirds of the way down the world
    so there is room to work above it and somewhere to put things down. */
-const SURFACE_Y = () => Math.round(WORLD.h*0.66);
+/* (it used to be a tan work top across the bottom third of the bench; now the
+   bottom edge of the bench is the surface, and the whole height is free) */
+const SURFACE_Y = () => WORLD.h;
 const standsUp = g => g.kind !== 'chamber' && g.kind !== 'lamp';
 function drawBenchTop(now){
+  return;   /* no separate work top any more: see SURFACE_Y */
   const y = SURFACE_Y();
   ctx.save();
   /* a little shade on the wall just above the work top */
@@ -17838,7 +17842,7 @@ function drawGear(now){
 /* the lab table is a thin ledge until something is put on it */
 let TABLE_H = 138;
 function syncTable(){
-  const want = tableItems().length ? 138 : 40;
+  const want = tableItems().length ? 138 : 0;   /* not there at all until something is put on it */
   if(TABLE_H === want && syncTable._done) return;
   TABLE_H = want; syncTable._done = true;
   document.documentElement.style.setProperty('--tablelift', (want + 14)+'px');
@@ -18598,6 +18602,7 @@ function tableAtPoint(sx, sy){
 }
 function drawLabTable(now){
   syncTable();
+  if(!TABLE_H) return;
   const t = now/1000, top = tableTop(), lip = top + TABLE_H - 26;
   ctx.save();
   /* the table casts a little shade back onto the bench behind it */
