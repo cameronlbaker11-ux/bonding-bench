@@ -12330,6 +12330,7 @@ const L3_MS = Math.sqrt(0.008314*298/22000*1e6);  /* one kinetic speed unit, in 
 /* the most the piston can push with, in atmospheres: about what a strong
    hydraulic press manages. A gas gives way to it; a solid or a liquid barely does. */
 const PISTON_MAX = 20000;
+try{ L3.freePress = localStorage.getItem('bondingbench.freepress') === '1'; }catch(e){}
 function l3Gauge(dt){
   /* the push the walls actually feel, from the momentum of everything bouncing
      off them, in atmospheres (the same scale as the gauge) */
@@ -12344,9 +12345,9 @@ function l3Gauge(dt){
      to half its spacing by any press, and a crushed lump flew apart when let go */
   if(L3.boxTo && Math.abs(L3.box - L3.boxTo) > 0.5 && dt > 0){
     /* it slows as the contents push back, as a press does, instead of slamming into a solid */
-    const ease = clamp(1 - (L3.Pwall||0)/PISTON_MAX, 0.04, 1);
+    const ease = L3.freePress ? 1 : clamp(1 - (L3.Pwall||0)/PISTON_MAX, 0.04, 1);
     let d = clamp(L3.boxTo - L3.box, -140*dt*ease, 140*dt);
-    const stalled = d < 0 && (L3.Pwall||0) > PISTON_MAX;
+    const stalled = !L3.freePress && d < 0 && (L3.Pwall||0) > PISTON_MAX;   /* the switch in Box and pressure turns this off */
     if(stalled){ d = (L3.Pwall||0) > 2*PISTON_MAX ? 20*dt : 0;
       if(!L3.stall) say('The piston has stalled: what is in the box pushes back with about '+(Math.round(L3.Pwall/1000)*1000).toLocaleString()+' atm, as hard as a strong press can push. Solids and liquids hardly compress.','bench'); }
     L3.stall = stalled;
@@ -14127,6 +14128,7 @@ function renderLeft3D(){
       [['Small',540],['Medium',820],['Large',1150]].map(([l,bx])=>'<button type="button" data-l3box="'+bx+'"'+(L3.boxTo===bx?' style="background:var(--ink);color:#fff"':'')+'>'+l+'</button>').join('')+'</div>'+
     '<div class="slider" style="margin-top:10px"><label>Piston</label><span class="val" id="l3BoxVal">'+Math.round(L3.boxTo*2)+' pm across</span>'+
       '<input type="range" id="l3Box" min="300" max="1150" step="10" value="'+Math.round(L3.boxTo)+'"><span class="note">squeeze the walls in: pressure rises, and a gas heats as you push</span></div>'+
+      '<button type="button" class="switch'+(L3.freePress ? '' : ' on')+'" role="switch" aria-checked="'+!L3.freePress+'" data-l3press="1" style="margin-top:4px"><span>Realistic press <em>'+(L3.freePress ? 'off: crushes anything, and what it crushes flies apart' : 'stalls at '+PISTON_MAX.toLocaleString()+' atm')+'</em></span><span class="track"></span></button>'+
       '')+
     sec('gear', 'Equipment', '<div class="l3-gear-add">'+gearRow+'</div>'+cards+(L3.gear.length ? '' : '<p class="vault-tip">Two electrodes and a lamp.</p>'), L3.gear.length || '')+
     sec('nuc', 'Nuclear', '<div class="l3-pres">'+
@@ -14152,6 +14154,8 @@ function renderLeft3D(){
     else if(b.dataset.l3iso){ const [s, A] = b.dataset.l3iso.split('|'); for(let i=0;i<(ev.shiftKey?5:1);i++) l3Add(s, null, null, null, +A); }
     else if(b.dataset.l3nuc === 'chain'){ for(let i=0;i<14;i++) l3Add('U', ((i%3)-1)*250, (Math.floor(i/3)%3-1)*250, (Math.floor(i/9)-0.5)*250, 235); const u = L3.atoms[L3.atoms.length-1]; l3Neutron(u.x-300, u.y, u.z, 3200, 0, 0); say('Fourteen U-235 and one neutron: watch each split free more.','nuclear'); }
     else if(b.dataset.l3nuc === 'fusion'){ const d = l3Add('H', -200, 0, 0, 2), t = l3Add('H', 200, 0, 0, 3); d.vx = 2400; t.vx = -2400; say('A deuteron and a triton fired together hard enough to fuse.','nuclear'); }
+    else if(b.dataset.l3press){ L3.freePress = !L3.freePress; try{ localStorage.setItem('bondingbench.freepress', L3.freePress ? '1' : ''); }catch(e){}
+      say(L3.freePress ? 'Realistic press off: the piston pushes as hard as it takes, so it can crush a solid, and whatever it crushes flies apart when you let go.' : 'Realistic press on: the piston stalls once the contents push back with '+PISTON_MAX.toLocaleString()+' atm.','bench'); renderLeft3D(); }
     else if(b.dataset.l3box){ L3.boxTo = +b.dataset.l3box; if(L3.boxTo > L3.box) L3.box = L3.boxTo; L3.dist = L3.boxTo*3.8; renderLeft3D(); L3.dirty = true; }
     else if(b.dataset.l3build){ const inp = el('l3Formula'); if(inp && inp.value.trim()){ l3Push(); l3BuildAny(inp.value.trim()); } }
     else if(b.dataset.l3gear) l3AddGear(b.dataset.l3gear);
@@ -14937,8 +14941,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 108;
+const VERSION = 109;
 const CHANGELOG = [
+  [109, 'A Realistic press switch under Box and pressure on the 3D bench. Turn it off and the piston pushes as hard as it takes again, crushing solids, which then fly apart when let go.'],
   [108, 'The 3D piston behaves like a real press. It used to push the walls in regardless of what was in the way, crushing iron to half its spacing at hundreds of millions of atmospheres, so the lump exploded when let go. The walls now measure how hard the atoms push on them, the piston slows as that push grows and stalls at about 20 000 atm (a strong hydraulic press), and a solid or liquid barely compresses and springs back gently. A gas still squeezes and warms as before. A moving wall now only bounces atoms it actually meets, so a solid pressed against it is not fed heat.'],
   [107, 'The tan work top across the bottom third of the flat bench is gone: the whole bench is open for atoms, and equipment stands on its bottom edge. The lab table strip along the bottom only appears once something is put on it.'],
   [106, 'Molecule names: a switch in the 3D Display menu and in the Forces tab puts a small tag above each molecule, its name if the bench knows it and its formula if not, leaving out any tag that would cover another. Press ? for a sheet of every keyboard shortcut (also in both benches\u2019 \u22ef menus). The temperature and pressure charts have a soft wash beneath the line, faint guides, and a dot with the current value at the end. The 3D events list colours each icon by its family of reaction. The flat bench gives each kind of molecule one card with a count, as the 3D bench does, instead of a card for every molecule. Fixed: a bare atom split off by heat (an oxygen, say) was treated as water by the acid and base rules and took protons, making impossible ions like OH\u207a; on both benches a bare neutral atom is no longer a base.'],
