@@ -961,6 +961,28 @@ kbd{display:inline-block;font-family:var(--font-mono);font-size:10.5px;padding:1
 .l3-pop kbd{margin-left:6px;font-size:9px;padding:0 4px}
 /* the events feed: each icon in its family's colour */
 .p3-ev[style*="--ec"] > i{color:var(--ec);background:color-mix(in srgb,var(--ec) 14%,transparent);border-radius:5px}
+
+/* learn: guesses, quizzes, hands-on controls, the glossary */
+.ld-q{margin:8px 0 6px}
+.ld-q p{margin:0 0 6px;font-size:12.5px;color:var(--ink);line-height:1.5}
+.ld-opt{display:block;width:100%;text-align:left;padding:7px 10px;margin:0 0 4px;border-radius:8px;border:1px solid var(--hair);background:var(--surface);font:inherit;font-size:12px;color:var(--ink-2);cursor:pointer;line-height:1.4}
+.ld-opt:hover:not([disabled]){border-color:var(--ink)}
+.ld-opt.picked{border-color:var(--ink);background:var(--sunk);color:var(--ink);font-weight:600}
+.ld-opt.right{border-color:#2A7A78;background:rgba(42,122,120,.10);color:#1F5E5C;font-weight:600}
+.ld-opt.wrong{border-color:#C0503A;background:rgba(192,80,58,.08);color:#A8432F}
+.ld-opt.dim{opacity:.5}
+.ld-opt[disabled]{cursor:default}
+.ld-why{font-size:11.5px;color:var(--ink-2);line-height:1.55;margin:4px 0 0;background:var(--sunk);border-radius:7px;padding:6px 8px}
+.ld-score{font-weight:700;color:#2A7A78;font-size:12.5px;margin:8px 0 0}
+.ld-verdict{margin:10px 0 2px;font-size:12px;line-height:1.55;border-radius:8px;padding:8px 10px;color:var(--ink-2)}
+.ld-verdict.right{background:rgba(42,122,120,.10)}
+.ld-verdict.right b{color:#1F5E5C}
+.ld-verdict.wrong{background:rgba(192,80,58,.08)}
+.ld-verdict.wrong b{color:#A8432F}
+.ld-ctrl{margin:8px 0 4px;padding:9px 11px;border-radius:10px;border:1px solid var(--hair)}
+.ld-ctrl label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);margin-bottom:6px}
+.ld-ctrl label b{font-family:var(--font-mono);font-weight:500;font-size:11px;color:var(--ink)}
+abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
 </style>
 
 <div class="app">
@@ -5685,9 +5707,126 @@ const LEARN_TOPICS = [
   {k:'br2',    c:'addition',   title:'Bromine adds to ethene',         mols:[['C=C',1],['BrBr',1]],                         box:280, temp:30, expect:[['addition','Br₂ opens the C=C and adds one Br to each carbon']]},
   {k:'markov', c:'markov',     title:'Markovnikov’s rule',        mols:[['CC=C',1],['HBr',1]],                         box:300, temp:25, expect:[['markov','HBr adds: H to the carbon with more H, Br to the other']], flat:false},
   {k:'ester',  c:'ester',      title:'Making an ester',                mols:[['acetic acid',2],['ethanol',2],['[OH3+]',1]], box:350, temp:55, expect:[['ester','Acetic acid and ethanol join, giving off water']]},
-  {k:'hydro',  c:'hydrolysis', title:'Splitting an ester with water',  mols:[['ethyl acetate',2],['water',4],['[OH3+]',1]], box:360, temp:60, expect:[['hydrolysis','Water splits ethyl acetate back into acid and alcohol']]}
+  {k:'hydro',  c:'hydrolysis', title:'Splitting an ester with water',  mols:[['ethyl acetate',2],['water',4],['[OH3+]',1]], box:360, temp:60, expect:[['hydrolysis','Water splits ethyl acetate back into acid and alcohol']]},
+  /* hands on: you change something and watch what it does */
+  {k:'hbond',  c:'hbond',      title:'Water\u2019s hydrogen-bond network', mols:[['water',16]], box:480, temp:69, flat:false, hands:true, ctrl:'temp',
+    expect:[{task:'Cool the water below 273 K with the slider below', check:()=>kelvin() < 273}, {task:'Wait for hydrogen bonds to link at least 7 pairs of molecules', check:()=>learnAvg('hb', (L3.hb||[]).length) >= 7}]},
+  {k:'melt',   c:'metallic',   title:'Melting a metal',                 mols:[], crystal:'metal', metal:'Al', box:820, temp:47, flat:false, hands:true, ctrl:'temp',
+    expect:[{task:'Heat the aluminium past its melting point, 933 K', check:()=>kelvin() >= 933}, {task:'Keep heating until its neat rows break up (around 1200 K)', check:()=>learnAvg('ord', l3OrderCP(L3.atoms)) < 3.2}]},
+  {k:'elec',   c:'electrolysis', title:'Splitting molten salt',         mols:[['[Na+]',3],['[Cl-]',3]], box:320, temp:60, flat:false, gear:['anode','cathode'],
+    expect:[['electrolysis','A chloride ion gives up its electron at the positive anode', /anode/],['electrolysis','A sodium ion takes an electron at the negative cathode', /cathode/]]}
 ];
-const LEARN = {on:false, phase:'pick', topic:null, ticks:[], startId:0, paused:false, lastEvt:0, keep:null};
+
+/* A guess before each topic, and two questions after it. Each is
+   {q, opts, a (the index of the right option), why}. */
+const LEARN_QA = {
+  acid:{predict:{q:'When HCl meets water, where does HCl’s hydrogen end up?', opts:['On a water molecule, making H₃O⁺','It stays on the chlorine','It flies off as H₂ gas'], a:0, why:'HCl lets its proton go at pKa −7; water would hold it at pKa −1.7, far more tightly, so the proton moves to water.'},
+    quiz:[{q:'What is left of the HCl after it gives up its proton?', opts:['A chloride ion, Cl⁻','A chlorine atom','A chlorine molecule, Cl₂'], a:0, why:'The chlorine keeps both electrons of the old bond, so it is left with a negative charge.'},
+          {q:'Why does the proton move to water?', opts:['Water’s conjugate acid holds it more tightly (pKa −1.7 against −7)','Water is heavier than HCl','Chlorine repels hydrogen'], a:0, why:'A proton ends up wherever it is held most tightly: the higher pKa.'}]},
+  neut:{predict:{q:'Hydroxide (OH⁻) meets an acid. What forms?', opts:['Water','Hydrogen gas','Oxygen gas'], a:0, why:'Hydroxide takes the acid’s proton and becomes H₂O.'},
+    quiz:[{q:'About how much heat comes out per mole of water made?', opts:['57 kJ','5 kJ','570 kJ'], a:0, why:'Whatever the strong acid and base, H⁺ + OH⁻ → H₂O gives out about 57 kJ/mol.'},
+          {q:'In NaOH + HCl, which ions are left over as the salt?', opts:['Na⁺ and Cl⁻','H⁺ and OH⁻','Sodium and chlorine atoms'], a:0, why:'The H⁺ and OH⁻ have become water; the spectator ions are the salt, sodium chloride.'}]},
+  lewis:{predict:{q:'Boron in BF₃ has only six electrons. What does ammonia offer it?', opts:['A lone pair of electrons','A proton','A fluorine atom'], a:0, why:'Nitrogen’s lone pair fills boron’s empty orbital.'},
+    quiz:[{q:'In the adduct, which atom carries a formal positive charge?', opts:['Nitrogen','Boron','Fluorine'], a:0, why:'Nitrogen gave away a share of its own pair, so on paper it has one electron fewer than it started with.'},
+          {q:'What is this kind of bond called?', opts:['Coordinate (dative)','Ionic','Metallic'], a:0, why:'Both electrons of the bond came from the same atom.'}]},
+  coord:{predict:{q:'Which end of a water molecule points at the copper ion?', opts:['The oxygen','The hydrogens','Neither: water ignores ions'], a:0, why:'The oxygen carries the lone pairs and the δ− charge.'},
+    quiz:[{q:'How many ligands usually fit round a metal ion like Cu²⁺?', opts:['Six','Two','Twelve'], a:0, why:'Six, at the corners of an octahedron: [Cu(H₂O)₆]²⁺.'},
+          {q:'The electrons in each ligand bond come from…', opts:['The ligand’s lone pair','The metal','Both, one each'], a:0, why:'That is what makes it a coordinate bond.'}]},
+  salt:{predict:{q:'Sodium meets chlorine. Which way does the electron go?', opts:['From sodium to chlorine','From chlorine to sodium','They share it evenly'], a:0, why:'Sodium holds its one outer electron loosely; chlorine pulls hard for one more.'},
+    quiz:[{q:'Why does sodium lose its outer electron so easily?', opts:['It is far from the nucleus and well shielded, so its ionisation energy is low','Sodium is heavier than chlorine','Chlorine is a metal'], a:0, why:'Only about +2.2 of the nuclear charge reaches it (its Zeff), so it takes just 496 kJ/mol to remove.'},
+          {q:'What mainly pays for handing the electron over?', opts:['The pull between the new ions (the lattice energy)','Chlorine’s electron affinity alone','Heat from the bench'], a:0, why:'Ionisation costs 496 kJ/mol and the electron affinity returns only 349; the attraction of the ions makes up the rest and more.'}]},
+  zncu:{predict:{q:'Zinc sits at −0.76 V, copper ions at +0.34 V. What happens?', opts:['Zinc dissolves and copper metal comes out','Copper dissolves and zinc comes out','Nothing'], a:0, why:'Electrons run from the lower potential to the higher: from zinc to copper ions.'},
+    quiz:[{q:'Which is oxidised?', opts:['Zinc','The copper ion','Water'], a:0, why:'Oxidation is losing electrons, and zinc is the one giving them.'},
+          {q:'What voltage would a zinc–copper cell give?', opts:['About 1.1 V','About 0.4 V','About 3 V'], a:0, why:'+0.34 − (−0.76) = 1.10 V, the Daniell cell.'}]},
+  mgacid:{predict:{q:'What bubbles off when magnesium meets an acid?', opts:['Hydrogen','Oxygen','Chlorine'], a:0, why:'The acid’s protons take electrons from the metal and pair up as H₂.'},
+    quiz:[{q:'Why does copper not do this?', opts:['Its potential (+0.34 V) is above hydrogen’s (0 V)','Copper is too heavy','Copper has no outer electrons'], a:0, why:'Only metals below hydrogen can give electrons to H⁺.'},
+          {q:'Which fizzes fastest in acid?', opts:['Magnesium','Zinc','Iron'], a:0, why:'The more negative the potential, the faster: Mg −2.37, Zn −0.76, Fe −0.44 V.'}]},
+  naw:{predict:{q:'Sodium is dropped in water. What does the metal become?', opts:['Sodium hydroxide (Na⁺ and OH⁻)','A gas','It stays as sodium metal'], a:0, why:'2Na + 2H₂O → 2NaOH + H₂.'},
+    quiz:[{q:'Which reacts faster with water?', opts:['Potassium','Sodium','They are the same'], a:0, why:'Down the group the outer electron is further out and easier to give up.'},
+          {q:'Which gas is set free?', opts:['Hydrogen','Oxygen','Chlorine'], a:0, why:'The hydrogen atoms freed from the water pair up as H₂.'}]},
+  br2:{predict:{q:'Bromine adds to ethene. What happens to the C=C?', opts:['It becomes a single bond, with one Br on each carbon','It becomes a triple bond','The molecule breaks in two'], a:0, why:'The π bond opens and each carbon takes one bromine.'},
+    quiz:[{q:'Why is bromine water a test for alkenes?', opts:['Its orange colour disappears as the Br₂ adds','It turns blue','It fizzes'], a:0, why:'The coloured Br₂ is used up, so the solution goes colourless.'},
+          {q:'Why does benzene resist this reaction?', opts:['Adding would destroy its aromatic stability','It has no double bonds at all','It is too heavy'], a:0, why:'Benzene’s ring is about 150 kJ/mol steadier than three double bonds would be.'}]},
+  markov:{predict:{q:'HBr adds to propene, CH₃CH=CH₂. Where does the H go?', opts:['To the CH₂ end, which already has more H','To the middle carbon','To the CH₃'], a:0, why:'Markovnikov’s rule: H to the carbon with more hydrogens.'},
+    quiz:[{q:'What is the main product?', opts:['2-bromopropane','1-bromopropane','Propane'], a:0, why:'The Br lands on the middle carbon.'},
+          {q:'Why that way round?', opts:['The more substituted carbocation is more stable','Bromine is lighter than hydrogen','It is random'], a:0, why:'Alkyl groups steady a positive charge next to them.'}]},
+  ester:{predict:{q:'Acetic acid + ethanol, with an acid catalyst, give an ester and…', opts:['Water','Hydrogen','Carbon dioxide'], a:0, why:'A condensation: the –OH of the acid and the H of the alcohol leave together as water.'},
+    quiz:[{q:'What does the acid catalyst do?', opts:['Makes the C=O carbon easier to attack, and is given back','Gets used up','Makes the reaction give out more heat'], a:0, why:'A catalyst offers an easier route without being consumed or changing ΔH.'},
+          {q:'Why can the ester turn back into acid and alcohol?', opts:['It is an equilibrium: water can hydrolyse the ester','The catalyst breaks down','It cannot'], a:0, why:'K is only about 4, so both directions keep running.'}]},
+  hydro:{predict:{q:'Water attacks ethyl acetate. What comes out?', opts:['Acetic acid and ethanol','Ethane and carbon dioxide','Just water'], a:0, why:'Hydrolysis splits the ester back into its acid and alcohol.'},
+    quiz:[{q:'Hydrolysis is the reverse of…', opts:['Esterification, a condensation','Combustion','Neutralisation'], a:0, why:'One joins with loss of water; the other splits with water.'},
+          {q:'Ester hydrolysis with a base instead of an acid is called…', opts:['Saponification (making soap)','Fermentation','Electrolysis'], a:0, why:'Fats are esters: boiling them with lye gives soap.'}]},
+  hbond:{predict:{q:'As water cools towards freezing, what happens to its hydrogen bonds?', opts:['More form, linking the molecules into a network','They all break','Nothing changes'], a:0, why:'Slower molecules stay close enough for hydrogen bonds to hold.'},
+    quiz:[{q:'A hydrogen bond links a hydrogen on one oxygen to…', opts:['A lone pair on a neighbouring oxygen','Another hydrogen','A carbon atom'], a:0, why:'A nearly bare δ+ hydrogen is pulled to a lone pair.'},
+          {q:'Why does water boil so much higher than H₂S (373 K against 213 K)?', opts:['Hydrogen bonds hold its molecules together','Water is heavier','H₂S is ionic'], a:0, why:'H₂S is heavier but makes almost no hydrogen bonds.'}]},
+  melt:{predict:{q:'What happens to aluminium’s neat rows of atoms as it melts?', opts:['They break up, but the atoms stay close together','The atoms fly apart like a gas','Nothing changes'], a:0, why:'A liquid is as dense as the solid, just without the long-range order.'},
+    quiz:[{q:'Aluminium melts at…', opts:['933 K','373 K','3000 K'], a:0, why:'About 660 °C.'},
+          {q:'What holds a metal’s atoms together?', opts:['A shared sea of electrons','Hydrogen bonds','Separate covalent pairs'], a:0, why:'The outer electrons belong to the whole lump, which is also why metals conduct.'}]},
+  elec:{predict:{q:'Molten salt with a power supply: where does chlorine come off?', opts:['At the positive electrode, the anode','At the negative electrode','Everywhere at once'], a:0, why:'Negative chloride ions are drawn to the positive anode and give up their electrons there.'},
+    quiz:[{q:'At the cathode, sodium ions…', opts:['Gain electrons and become sodium atoms (reduction)','Lose electrons','Turn into chlorine'], a:0, why:'The cathode pushes electrons in; a positive ion arriving there takes one.'},
+          {q:'Why would solid salt not work?', opts:['Its ions cannot move to the electrodes','It has no electrons','It is too cold to conduct heat'], a:0, why:'Electrolysis needs the ions free to move: molten, or dissolved.'}]}
+};
+let learnScore = {};
+try{ learnScore = JSON.parse(localStorage.getItem('bondingbench.learnscore')||'{}') || {}; }catch(e){ learnScore = {}; }
+/* a rolling average of a reading over the last few seconds, for the hands-on checks */
+function learnAvg(key, v){ const a = (LEARN.avg || (LEARN.avg = {}))[key] || (LEARN.avg[key] = []); a.push(v); if(a.length > 4) a.shift(); return a.length < 3 ? NaN : a.reduce((t,x)=>t+x, 0)/a.length; }
+/* how much crystal order is left in a close-packed metal: neighbours at the second shell, per atom inside the lump (about 5 solid, 2 to 3 molten) */
+function l3OrderCP(A){
+  if(A.length < 20) return 0;
+  const cx = A.reduce((t,a)=>t+a.x,0)/A.length, cy = A.reduce((t,a)=>t+a.y,0)/A.length, cz = A.reduce((t,a)=>t+a.z,0)/A.length;
+  const near = A.map(a=>{ let m = 1e9; for(const b of A){ if(b !== a){ const d = Math.hypot(a.x-b.x, a.y-b.y, a.z-b.z); if(d < m) m = d; } } return m; }).sort((u,v)=>u-v), d0 = near[near.length>>1]*1.03;
+  const inner = A.filter(a=>Math.hypot(a.x-cx, a.y-cy, a.z-cz) < d0*2); let c2 = 0;
+  inner.forEach(a=>{ for(const b of A){ if(b !== a){ const r = Math.hypot(a.x-b.x, a.y-b.y, a.z-b.z)/d0; if(r > 1.33 && r < 1.5) c2++; } } });
+  return c2/Math.max(1, inner.length);
+}
+/* the hands-on checks, about once a second while watching */
+function learnTaskCheck(){
+  if(!LEARN.on || !LEARN.topic || LEARN.phase !== 'watch' || LEARN.paused) return;
+  const t = LEARN.topic;
+  t.expect.forEach((x, j)=>{ if(LEARN.ticks[j] || !x.check) return; if(j > 0 && t.expect[j-1].check && !LEARN.ticks[j-1]) return; if(x.check()){ LEARN.ticks[j] = true; LEARN.lastEvt = performance.now(); } });
+}
+/* ---------------- the glossary ----------------
+   Key words in the explanations get a dotted underline: point at one for what it means. */
+const GLOSSARY = [
+  ['activation energy','the energy barrier a reaction has to climb before it can go'],
+  ['conjugate base','what is left of an acid once it has given up its proton'],
+  ['lattice energy','the energy given out when ions pack together into a crystal'],
+  ['ionisation energy','the energy it takes to pull an electron off an atom'],
+  ['electron affinity','the energy given out when an atom takes an extra electron'],
+  ['electronegativity','how strongly an atom pulls on the electrons it shares in a bond'],
+  ['lone pair','two electrons on an atom that are not shared in a bond'],
+  ['carbocation','a carbon atom carrying a positive charge'],
+  ['electrophile','something that seeks electrons, such as H⁺ or Br₂'],
+  ['hydronium','H₃O⁺: a water molecule carrying an extra proton'],
+  ['exothermic','giving heat out (ΔH negative)'],
+  ['endothermic','taking heat in (ΔH positive)'],
+  ['equilibrium','the point where a reaction runs both ways at the same rate'],
+  ['catalyst','something that speeds a reaction up and comes out unchanged'],
+  ['condensation','a reaction that joins two molecules and gives off a small one, usually water'],
+  ['hydrolysis','splitting a molecule by reaction with water'],
+  ['ligand','a molecule or ion that bonds to a metal ion through a lone pair'],
+  ['oxidation','losing electrons'],
+  ['reduction','gaining electrons'],
+  ['anion','a negatively charged ion'],
+  ['cation','a positively charged ion'],
+  ['pKa','how tightly an acid holds its proton: the lower the pKa, the more easily it lets go'],
+  ['proton','a hydrogen atom without its electron: H⁺'],
+  ['π bond','the second bond of a double bond, made by side-on overlap above and below the line between the atoms']
+];
+function glossify(html){
+  if(!html) return html;
+  const used = new Set();
+  return String(html).split(/(<[^>]+>)/).map(part=>{
+    if(!part || part[0] === '<') return part;
+    GLOSSARY.forEach(([term, def])=>{
+      if(used.has(term)) return;
+      const re = new RegExp('(^|[^\\wͰ-Ͽ])('+term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')+')(?![\\w])', 'i');
+      if(re.test(part)){ used.add(term); part = part.replace(re, (m0, pre, w)=>pre+'\u0001'+GLOSSARY.findIndex(g=>g[0] === term)+'\u0002'+w+'\u0003'); }
+    });
+    return part.replace(/\u0001(\d+)\u0002([^\u0003]*)\u0003/g, (m0, i, w)=>'<abbr class="gl" title="'+GLOSSARY[+i][1].replace(/"/g, '&quot;')+'">'+w+'</abbr>');
+  }).join('');
+}
+const LEARN = {on:false, phase:'pick', topic:null, ticks:[], startId:0, paused:false, lastEvt:0, keep:null, pred:null, quiz:[], avg:{}};
 let learnDone = {};
 try{ learnDone = JSON.parse(localStorage.getItem('bondingbench.learndone')||'{}') || {}; }catch(e){ learnDone = {}; }
 const learnHeld = () => LEARN.on && (LEARN.phase !== 'watch' || LEARN.paused);
@@ -5695,7 +5834,7 @@ function learnMode(on){
   if(!!on === LEARN.on) return;
   if(on){
     /* it runs on whichever bench is up; your own bench comes back, just as it was, when you leave */
-    LEARN.keep = {step:STEP.on, temp:P.temp, bench:L3.on ? '3D' : '2D', snap:JSON.stringify(L3.on ? l3Snap() : snapshot())};
+    LEARN.keep = {step:STEP.on, temp:P.temp, bench:L3.on ? '3D' : '2D', snap:JSON.stringify(L3.on ? l3Snap() : snapshot()), gear:JSON.stringify(L3.gear||[]), metal:L3.metalSym};
     L3.menu = null;
     LEARN.on = true; LEARN.phase = 'pick'; LEARN.topic = null; LEARN.paused = false;
     document.body.classList.add('learning');
@@ -5704,6 +5843,7 @@ function learnMode(on){
     LEARN.on = false;
     document.body.classList.remove('learning');
     if(LEARN.keep){ if(!LEARN.keep.step) stepMode(false, true);
+      try{ L3.gear = JSON.parse(LEARN.keep.gear||'[]'); }catch(e){} L3.metalSym = LEARN.keep.metal || L3.metalSym;
       if(LEARN.keep.bench === '3D'){ if(!L3.on) set3D(true); try{ l3Restore(JSON.parse(LEARN.keep.snap)); }catch(e){} }
       else { if(L3.on) set3D(false); try{ loadState(JSON.parse(LEARN.keep.snap)); }catch(e){} }
       setSlider('temp', LEARN.keep.temp); try{ renderLeft3D(); }catch(e){} }
@@ -5720,8 +5860,9 @@ function learnStart(k){
   const t = LEARN_TOPICS.find(x=>x.k === k); if(!t) return;
   if(!LEARN.on) learnMode(true);
   if(!L3.on && t.flat === false) set3D(true);
-  const sc = {k:'learn-'+k, label:t.title, note:CONCEPTS[t.c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box, temp:t.temp};
-  if(L3.on){ l3Scene(sc); L3.menu = null; l3Build(); }
+  const sc = {k:'learn-'+k, label:t.title, note:CONCEPTS[t.c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box, temp:t.temp, crystal:t.crystal};
+  if(t.metal) L3.metalSym = t.metal;
+  if(L3.on){ l3Scene(sc); L3.gear = (t.gear||[]).map(kind=>({kind, on:true})); L3.menu = null; l3Build(); try{ renderLeft3D(); }catch(e){} }
   else {
     try{ resize(); pistonInit(); }catch(e){}
     scene2D(sc); if(t.temp != null) setSlider('temp', t.temp);
@@ -5729,7 +5870,7 @@ function learnStart(k){
     const dw = ((el('learnDock').offsetWidth || 340)/2 + 8)/cam.z;
     atoms.forEach(a=>{ if(!a.dying) a.x -= dw; });
   }
-  Object.assign(LEARN, {topic:t, phase:'intro', ticks:t.expect.map(()=>false), startId:logId, paused:false, lastEvt:performance.now()});
+  Object.assign(LEARN, {topic:t, phase:'intro', ticks:t.expect.map(()=>false), startId:logId, paused:false, lastEvt:performance.now(), pred:null, quiz:[], avg:{}});
   stepMode(true, true);
   renderLearnDock();
 }
@@ -5738,7 +5879,7 @@ function learnGo(){ if(!LEARN.topic) return; LEARN.phase = 'watch'; LEARN.paused
 function learnEvent(e){
   if(!LEARN.on || !LEARN.topic || LEARN.phase !== 'watch') return;
   LEARN.lastEvt = performance.now();
-  const i = LEARN.topic.expect.findIndex((x, j)=>!LEARN.ticks[j] && [].concat(x[0]).includes(e.c));
+  const i = LEARN.topic.expect.findIndex((x, j)=>!LEARN.ticks[j] && Array.isArray(x) && [].concat(x[0]).includes(e.c) && (!x[2] || x[2].test(e.text||'')));
   if(i >= 0) LEARN.ticks[i] = true;
 }
 function learnAllDone(){ return LEARN.topic && LEARN.ticks.every(Boolean); }
@@ -5769,6 +5910,7 @@ function learnNudge(){
   say('Nudged the molecules closer together.', 'bench', true);
 }
 function renderLearnDock(){
+  learnTaskCheck();
   const host = el('learnDock'); if(!host) return;
   if(!LEARN.on){ host.hidden = true; host._html = ''; return; }
   host.hidden = false;
@@ -5783,27 +5925,35 @@ function renderLearnDock(){
       '<h3 class="ld-title">What would you like to watch?</h3>'+
       '<p class="ld-p">Each one sets out just the molecules it needs, runs slowly, and stops at every step to explain what happened.</p>'+
       '<p class="ld-hint" style="margin-top:0">On the '+(L3.on ? '3D bench' : 'flat bench: topics marked 3D open on the 3D bench')+'.</p>'+
-      '<div class="ld-list">'+LEARN_TOPICS.map(x=>{ const cc = CONCEPTS[x.c], ct = CONCEPT_CATS[cc.cat];
+      '<div class="ld-list">'+[...LEARN_TOPICS].sort((a,b)=>Object.keys(CONCEPT_CATS).indexOf(CONCEPTS[a.c].cat) - Object.keys(CONCEPT_CATS).indexOf(CONCEPTS[b.c].cat)).map(x=>{ const cc = CONCEPTS[x.c], ct = CONCEPT_CATS[cc.cat];
         const head = ct.label !== last ? '<span class="ld-grp">'+(last = ct.label)+'</span>' : '';
-        return head+'<button type="button" data-ld="topic" data-k="'+x.k+'" style="--gc:'+ct.col+'"><i class="g-ic">'+cc.g+'</i><span><b>'+x.title+'</b><small>'+cc.name+(!L3.on && x.flat === false ? ' \u00b7 3D' : '')+'</small></span>'+(learnDone[x.k] ? '<em>✓</em>' : '')+'</button>'; }).join('')+'</div>';
+        return head+'<button type="button" data-ld="topic" data-k="'+x.k+'" style="--gc:'+ct.col+'"><i class="g-ic">'+cc.g+'</i><span><b>'+x.title+'</b><small>'+cc.name+(x.hands ? ' \u00b7 hands on' : '')+(!L3.on && x.flat === false ? ' \u00b7 3D' : '')+'</small></span>'+(learnDone[x.k] ? '<em>✓'+(learnScore[x.k] ? ' '+learnScore[x.k].right+'/'+learnScore[x.k].of : '')+'</em>' : '')+'</button>'; }).join('')+'</div>';
   } else {
-    const checks = '<div class="ld-checks"><span class="eyebrow">Watch for</span>'+t.expect.map((x, j)=>'<div class="ld-check'+(LEARN.ticks[j] ? ' on' : '')+'"><i>'+(LEARN.ticks[j] ? '✓' : '')+'</i>'+x[1]+'</div>').join('')+'</div>';
+    const qa = LEARN_QA[t.k] || {};
+    const checks = '<div class="ld-checks"><span class="eyebrow">'+(t.hands ? 'Your turn' : 'Watch for')+'</span>'+t.expect.map((x, j)=>'<div class="ld-check'+(LEARN.ticks[j] ? ' on' : '')+'"><i>'+(LEARN.ticks[j] ? '✓' : '')+'</i>'+(Array.isArray(x) ? x[1] : x.task)+'</div>').join('')+'</div>';
+    /* the temperature, in the panel, for the topics where you change it */
+    const ctrl = t.ctrl === 'temp' ? '<div class="ld-ctrl"><label>Temperature <b id="ldTempVal"></b></label><input type="range" class="temp-range" id="ldTemp" min="'+T_MIN+'" max="'+T_MAX+'"></div>' : '';
     h = '<div class="ld-head" style="--lc:'+cat.col+'"><button type="button" class="ld-back" data-ld="pick">‹ All topics</button>'+exit+'</div>'+
       '<span class="eyebrow ld-cat" style="color:'+cat.col+'">'+c.name+'</span><h3 class="ld-title">'+t.title+'</h3>';
     if(LEARN.phase === 'intro'){
-      h += '<p class="ld-p"><b>'+c.one+'</b></p><p class="ld-p">'+c.what[0]+'</p>'+checks+
-        '<div class="ld-btns"><button type="button" class="ld-go" data-ld="go">Start ▶</button></div>'+
+      const pr = qa.predict;
+      h += '<p class="ld-p"><b>'+glossify(c.one)+'</b></p><p class="ld-p">'+glossify(c.what[0])+'</p>'+
+        (pr ? '<div class="ld-q"><span class="eyebrow">Your guess</span><p>'+pr.q+'</p>'+pr.opts.map((o, i)=>'<button type="button" class="ld-opt'+(LEARN.pred === i ? ' picked' : '')+'" data-ld="pred" data-i="'+i+'">'+o+'</button>').join('')+'</div>' : '')+
+        checks+
+        '<div class="ld-btns"><button type="button" class="ld-go" data-ld="go">'+(pr && LEARN.pred == null ? 'Start without guessing ▶' : 'Start ▶')+'</button></div>'+
         '<p class="ld-hint">The bench is paused. Turn it with the mouse to look first if you like.</p>';
     } else if(LEARN.phase === 'watch'){
-      h += checks;
-      const e = STEP.cur;
-      if(e){
+      h += checks + ctrl;
+      if(t.hands && learnAllDone()) h += '<div class="ld-btns"><button type="button" class="ld-go" data-ld="next">See the summary ▶</button></div>';
+      const e = t.hands ? null : STEP.cur;
+      if(t.hands){ /* nothing to step through: the checks tick as you go */ }
+      else if(e){
         const why = e.why || '', parts = why.split(/(?<=\.)\s+/), short = parts.slice(0, 2).join(' ');
         const cc = CONCEPTS[e.c];
         h += '<div class="ld-step" style="--lc:'+(cc ? CONCEPT_CATS[cc.cat].col : 'var(--ink)')+'"><span class="eyebrow"><b>Step '+STEP.n+'</b>'+(cc && e.c !== t.c ? ' · '+cc.name : '')+'</span>'+
           '<p class="sc-title">'+e.text+'</p>'+(e.eq ? '<div class="leq">'+e.eq+'</div>' : '')+
           (STEP.dH != null && Math.abs(STEP.dH) >= 1 ? '<span class="ldh '+(STEP.dH < 0 ? 'exo' : 'endo')+'">ΔH '+fmtDH(STEP.dH)+(STEP.dH < 0 ? ' · gives out heat' : ' · takes in heat')+'</span>' : '')+
-          (why ? '<p class="sc-why">'+(STEP.more ? why : short)+(parts.length > 2 ? ' <button type="button" class="lmore" data-ld="more">'+(STEP.more ? 'Less' : 'More')+'</button>' : '')+'</p>' : '')+
+          (why ? '<p class="sc-why">'+glossify(STEP.more ? why : short)+(parts.length > 2 ? ' <button type="button" class="lmore" data-ld="more">'+(STEP.more ? 'Less' : 'More')+'</button>' : '')+'</p>' : '')+
           '</div><div class="ld-btns"><button type="button" class="ld-go" data-ld="next">'+(!STEP.hold ? 'Slow motion… skip ▶' : learnAllDone() ? 'See the summary ▶' : 'Next step ▶')+'</button></div>';
       } else {
         const idle = performance.now() - LEARN.lastEvt > 8000;
@@ -5820,13 +5970,20 @@ function renderLearnDock(){
       h += '<p class="ld-done">✓ Done</p>'+
         '<span class="eyebrow">What happened</span>'+(steps.length ? steps.map(e=>'<div class="ld-sum"><b>'+e.text+(e.n > 1 ? ' (×'+e.n+')' : '')+'</b>'+(e.eq ? '<span class="leq">'+e.eq+'</span>' : '')+'</div>').join('') : '<p class="ld-p">No reaction steps were recorded.</p>')+
         (Math.abs(dH) >= 1 ? '<span class="ldh '+(dH < 0 ? 'exo' : 'endo')+'">ΔH '+fmtDH(dH)+' in all · '+(dH < 0 ? 'exothermic' : 'endothermic')+'</span>' : '')+
-        '<span class="eyebrow" style="display:block;margin-top:12px">The idea</span><p class="ld-p">'+(c.what[1] || c.what[0])+'</p>'+
+        '<span class="eyebrow" style="display:block;margin-top:12px">The idea</span><p class="ld-p">'+glossify(c.what[1] || c.what[0])+'</p>'+
+        (qa.predict && LEARN.pred != null ? '<div class="ld-verdict '+(LEARN.pred === qa.predict.a ? 'right' : 'wrong')+'"><b>'+(LEARN.pred === qa.predict.a ? 'Your guess was right.' : 'Not quite: '+qa.predict.opts[qa.predict.a].replace(/^./, m=>m.toLowerCase())+'.')+'</b> '+qa.predict.why+'</div>' : '')+
+        (qa.quiz ? '<span class="eyebrow" style="display:block;margin-top:12px">Check yourself</span>'+qa.quiz.map((q, qi)=>{ const ans = LEARN.quiz[qi];
+          return '<div class="ld-q"><p>'+(qi+1)+'. '+q.q+'</p>'+q.opts.map((o, i)=>'<button type="button" class="ld-opt'+(ans == null ? '' : i === q.a ? ' right' : i === ans ? ' wrong' : ' dim')+'" data-ld="quiz" data-q="'+qi+'" data-i="'+i+'"'+(ans == null ? '' : ' disabled')+'>'+o+'</button>').join('')+
+            (ans != null ? '<p class="ld-why">'+(ans === q.a ? '\u2713 ' : '')+q.why+'</p>' : '')+'</div>'; }).join('')+
+          (LEARN.quiz.filter(x=>x != null).length === qa.quiz.length ? '<p class="ld-score">'+LEARN.quiz.filter((x, i)=>x === qa.quiz[i].a).length+' of '+qa.quiz.length+' right</p>' : '') : '')+
         '<div class="ld-btns"><button type="button" class="ld-go" data-ld="topic" data-k="'+nx.k+'">Next: '+nx.title+' ▶</button>'+
         '<button type="button" class="ghost-btn" data-ld="restart">Watch again</button></div>'+
         '<div class="ld-foot"><button type="button" class="link-btn" data-ld="card">Read the full card</button></div>';
     }
   }
   if(host._html !== h){ host.innerHTML = h; host._html = h; }
+  const ti = el('ldTemp');
+  if(ti){ if(document.activeElement !== ti){ ti.value = P.temp; } ti.style.setProperty('--pct', ((P.temp-T_MIN)/(T_MAX-T_MIN)*100)+'%'); const tv = el('ldTempVal'); if(tv) tv.textContent = kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C'; }
 }
 function wireLearnDock(){
   el('learnDock').onclick = ev=>{
@@ -5842,11 +5999,17 @@ function wireLearnDock(){
     else if(k === 'pause'){ LEARN.paused = !LEARN.paused; if(!LEARN.paused) LEARN.lastEvt = performance.now(); renderLearnDock(); }
     else if(k === 'nudge') learnNudge();
     else if(k === 'more'){ STEP.more = !STEP.more; renderLearnDock(); }
+    else if(k === 'pred'){ LEARN.pred = +b.dataset.i; renderLearnDock(); }
+    else if(k === 'quiz'){ const qi = +b.dataset.q; if(LEARN.quiz[qi] != null) return; LEARN.quiz[qi] = +b.dataset.i;
+      const qa = LEARN_QA[LEARN.topic.k];
+      if(qa && LEARN.quiz.filter(x=>x != null).length === qa.quiz.length){ learnScore[LEARN.topic.k] = {right:LEARN.quiz.filter((x, i)=>x === qa.quiz[i].a).length, of:qa.quiz.length}; try{ localStorage.setItem('bondingbench.learnscore', JSON.stringify(learnScore)); }catch(e){} }
+      renderLearnDock(); }
     else if(k === 'restart' && LEARN.topic) learnStart(LEARN.topic.k);
     else if(k === 'finish'){ LEARN.ticks = LEARN.ticks.map(()=>true); STEP.hold = false; STEP.cur = null; learnAfterNext(); }
     else if(k === 'card' && LEARN.topic){ const c = LEARN.topic.c; learnMode(false); openConcept(c); }
   };
   el('learnBtn').onclick = ()=>learnMode(!LEARN.on);
+  el('learnDock').addEventListener('input', ev=>{ if(ev.target.id === 'ldTemp'){ setSlider('temp', +ev.target.value); const tv = el('ldTempVal'); if(tv) tv.textContent = kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C'; ev.target.style.setProperty('--pct', ((P.temp-T_MIN)/(T_MAX-T_MIN)*100)+'%'); } });
   document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && LEARN.on && !/INPUT|TEXTAREA/.test(ev.target.tagName)) learnMode(false); });
 }
 /* the first time something happens, the HUD offers its card */
@@ -5984,7 +6147,7 @@ function renderGuide(){
       '<button type="button" class="g-head" data-g="'+k+'"><i class="g-ic">'+c.g+'</i><span><b>'+c.name+'</b><small>'+c.one+'</small></span>'+
       (c.ev ? '<em class="g-seen'+(n ? ' on' : '')+'">'+(n ? '✓ '+n : 'not yet')+'</em>' : '')+'</button>'+
       (open ? '<div class="g-body">'+
-        c.what.map(p=>'<p>'+p+'</p>').join('')+
+        c.what.map(p=>'<p>'+glossify(p)+'</p>').join('')+
         (c.eq ? '<div class="g-eq">'+c.eq+'</div>' : '')+
         '<h5>On the bench</h5><p>'+c.sim+'</p>'+
         '<h5>What to look for</h5><p>'+c.look+'</p>'+
@@ -13308,6 +13471,62 @@ function mix3(a, b, t){
   const p = rgb(a), q = rgb(b);
   return 'rgb('+p.map((v,i)=>Math.round(v+(q[i]-v)*t)).join(',')+')';
 }
+/* Atom sprites. Each look (colour, size, metal or not) is painted once, with
+   its shading, rim light and highlight, onto a small canvas and then simply
+   stamped: a crowd of hot metal atoms used to cost five or six gradients each,
+   every frame, and dragged the frame rate down. A sprite holds only the
+   element's own colour, at whole-pixel sizes (scaled the last fraction), so a
+   scene needs a handful of them; depth haze and a hot atom's glow are laid
+   over the stamped sphere as one tinted disc. */
+const L3_SPR = new Map();
+const rgb3 = col => col[0]==='#' ? [parseInt(col.slice(1,3),16), parseInt(col.slice(3,5),16), parseInt(col.slice(5,7),16)] : (col.match(/\d+/g)||[128,128,128]).map(Number);
+function l3Sprite(col, r, shiny, label){
+  const dpr = window.devicePixelRatio || 1, rq = Math.max(2, Math.round(r));
+  const q = rgb3(col).slice(0, 3), key = q.join(',')+'|'+rq+'|'+(shiny?1:0)+'|'+dpr+'|'+(label||'');
+  let sp = L3_SPR.get(key); if(sp) return sp;
+  if(L3_SPR.size > 1200) L3_SPR.clear();
+  const half = rq*1.2 + 1, size = Math.ceil(half*2*dpr), cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const x = half, y = half, r0 = rq, c = 'rgb('+q.join(',')+')';
+  const ao = g.createRadialGradient(x, y, r0*0.9, x, y, r0*1.18);
+  ao.addColorStop(0, 'rgba(20,22,26,.16)'); ao.addColorStop(1, 'rgba(20,22,26,0)');
+  g.fillStyle = ao; g.beginPath(); g.arc(x, y, r0*1.18, 0, TAU); g.fill();
+  const grd = g.createRadialGradient(x-r0*0.38, y-r0*0.42, r0*0.05, x, y, r0);
+  grd.addColorStop(0, shade3(c, 0.7)); grd.addColorStop(0.35, shade3(c, 0.18)); grd.addColorStop(0.78, c); grd.addColorStop(1, shade3(c, -0.5));
+  g.fillStyle = grd; g.beginPath(); g.arc(x, y, r0, 0, TAU); g.fill();
+  if(shiny){
+    const env = g.createLinearGradient(x, y-r0, x, y+r0);
+    env.addColorStop(0, 'rgba(255,255,255,.55)'); env.addColorStop(0.38, 'rgba(255,255,255,.12)');
+    env.addColorStop(0.5, 'rgba(25,28,34,.42)'); env.addColorStop(0.62, 'rgba(25,28,34,.12)');
+    env.addColorStop(0.85, 'rgba(255,255,255,.22)'); env.addColorStop(1, 'rgba(25,28,34,.3)');
+    g.fillStyle = env; g.beginPath(); g.arc(x, y, r0, 0, TAU); g.fill();
+  }
+  const rim = g.createLinearGradient(x+r0*0.7, y+r0*0.7, x+r0*0.2, y+r0*0.2);
+  rim.addColorStop(0, 'rgba(190,210,255,.28)'); rim.addColorStop(1, 'rgba(190,210,255,0)');
+  g.fillStyle = rim; g.beginPath(); g.arc(x, y, r0, 0, TAU); g.fill();
+  const hl = g.createRadialGradient(x-r0*0.36, y-r0*0.4, 0, x-r0*0.36, y-r0*0.4, r0*0.36);
+  hl.addColorStop(0, 'rgba(255,255,255,'+(shiny ? 1 : .85)+')'); hl.addColorStop(shiny ? 0.45 : 1, 'rgba(255,255,255,0)');
+  g.fillStyle = hl; g.beginPath(); g.arc(x-r0*0.36, y-r0*0.4, r0*0.36, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(20,22,26,.18)'; g.lineWidth = 0.8; g.beginPath(); g.arc(x, y, r0-0.4, 0, TAU); g.stroke();
+  if(label){   /* the element's symbol, with its soft shadow, painted in once rather than every frame */
+    g.fillStyle = 'rgba(255,255,255,.95)'; g.font = '600 '+Math.min(16, r0*0.78)+'px Archivo, system-ui, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 2;
+    g.fillText(label, x, y+0.5); g.shadowColor = 'transparent'; g.shadowBlur = 0;
+  }
+  sp = {cv, half}; L3_SPR.set(key, sp); return sp;
+}
+/* the glow round a hot atom, the same way: painted once per colour and size */
+function l3GlowSprite(col, R){
+  const dpr = window.devicePixelRatio || 1, rq = Math.max(3, Math.round(R));
+  const q = rgb3(col).slice(0, 3).map(v=>Math.min(255, Math.round(v/8)*8)), key = 'g'+q.join(',')+'|'+rq+'|'+dpr;
+  let sp = L3_SPR.get(key); if(sp) return sp;
+  const size = Math.ceil(rq*2*dpr), cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  const gl = g.createRadialGradient(rq, rq, rq*0.3, rq, rq, rq);
+  gl.addColorStop(0, 'rgb('+q.join(',')+')'); gl.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gl; g.beginPath(); g.arc(rq, rq, rq, 0, TAU); g.fill();
+  sp = {cv, half:rq}; L3_SPR.set(key, sp); return sp;
+}
 function l3Draw(){
   if(L3.camAnim){
     const A = L3.camAnim, u = clamp((performance.now() - A.t0)/A.dur, 0, 1), e = u < 0.5 ? 4*u*u*u : 1 - Math.pow(-2*u + 2, 3)/2;
@@ -13388,7 +13607,20 @@ function l3Draw(){
   items.sort((u,v)=>v.z-u.z);
   /* anything reaching the camera fades out, rather than filling the view */
   const nearA = pz => clamp(((L3.dist + pz)/L3.dist - 0.3)/0.25, 0, 1);
+  /* A metal's 'bonds' are only a hint of the electron sea between touching
+     atoms: hundreds of them, drawn one gradient tube at a time, cost more than
+     everything else together. They go in first, as one faint dashed path per
+     colour, under the atoms (which hide their inner ends anyway). */
+  if(L3.view !== 'space'){
+    const mb = new Map();
+    for(const it of items){ if(!it.bond || it.bond.type !== 'metallic') continue; const A1 = l3Find(it.bond.a); if(!A1) continue;
+      const k = EL[A1.e].col, m = mb.get(k) || {pts:[], s:0, n:0}; m.pts.push(it.p.x, it.p.y, it.q.x, it.q.y); m.s += (it.p.s + it.q.s)/2; m.n++; mb.set(k, m); }
+    mb.forEach((m, col)=>{ const lw = Math.max(2.2, 15*m.s/m.n)*0.4;
+      g.save(); g.strokeStyle = shade3(col, -0.15); g.globalAlpha = 0.6; g.lineWidth = lw; g.lineCap = 'round'; g.setLineDash([lw*0.35, lw*1.2]);
+      g.beginPath(); for(let i=0;i<m.pts.length;i+=4){ g.moveTo(m.pts[i], m.pts[i+1]); g.lineTo(m.pts[i+2], m.pts[i+3]); } g.stroke(); g.restore(); });
+  }
   for(const it of items){
+    if(it.bond && it.bond.type === 'metallic') continue;   /* drawn above, all at once */
     const na = it.bond ? Math.min(nearA(it.p.z), nearA(it.q.z)) : nearA(it.p.z);
     if(na <= 0) continue;
     g.globalAlpha = na;
@@ -13443,49 +13675,24 @@ function l3Draw(){
       const hotU = clamp(((a.Ts||0) - 800)/2200, 0, 1), glowC = hotU > 0 ? l3Glow(a.Ts) : null;
       let col = fogCol(shiny ? l3Look(a) : e.col, p.z);
       if(glowC) col = mix3(col, glowC, 0.25 + hotU*0.5);
-      /* ambient occlusion, cheaply: a soft dark ring where the sphere meets its neighbours */
-      const ao = g.createRadialGradient(p.x, p.y, r*0.9, p.x, p.y, r*1.18);
-      ao.addColorStop(0, 'rgba(20,22,26,.16)'); ao.addColorStop(1, 'rgba(20,22,26,0)');
-      g.fillStyle = ao; g.beginPath(); g.arc(p.x, p.y, r*1.18, 0, TAU); g.fill();
-      /* the sphere: lit from the upper left, with a cooler bounce light along the lower right */
-      const grd = g.createRadialGradient(p.x-r*0.38, p.y-r*0.42, r*0.05, p.x, p.y, r);
-      grd.addColorStop(0, shade3(col, 0.7)); grd.addColorStop(0.35, shade3(col, 0.18)); grd.addColorStop(0.78, col); grd.addColorStop(1, shade3(col, -0.5));
-      g.fillStyle = grd; g.beginPath(); g.arc(p.x, p.y, r, 0, TAU); g.fill();
-      if(shiny){
-        /* metallic lustre: a polished sphere mirrors the room, bright sky above a
-           dark horizon band and the pale floor below, with a hard small highlight */
-        const env = g.createLinearGradient(p.x, p.y-r, p.x, p.y+r);
-        env.addColorStop(0, 'rgba(255,255,255,.55)'); env.addColorStop(0.38, 'rgba(255,255,255,.12)');
-        env.addColorStop(0.5, 'rgba(25,28,34,.42)'); env.addColorStop(0.62, 'rgba(25,28,34,.12)');
-        env.addColorStop(0.85, 'rgba(255,255,255,.22)'); env.addColorStop(1, 'rgba(25,28,34,.3)');
-        g.fillStyle = env; g.beginPath(); g.arc(p.x, p.y, r, 0, TAU); g.fill();
-      }
-      const rim = g.createLinearGradient(p.x+r*0.7, p.y+r*0.7, p.x+r*0.2, p.y+r*0.2);
-      rim.addColorStop(0, 'rgba(190,210,255,.28)'); rim.addColorStop(1, 'rgba(190,210,255,0)');
-      g.fillStyle = rim; g.beginPath(); g.arc(p.x, p.y, r, 0, TAU); g.fill();
-      /* the specular highlight */
-      const hl = g.createRadialGradient(p.x-r*0.36, p.y-r*0.4, 0, p.x-r*0.36, p.y-r*0.4, r*0.36);
-      hl.addColorStop(0, 'rgba(255,255,255,'+(shiny ? 1 : .85)+')'); hl.addColorStop(shiny ? 0.45 : 1, 'rgba(255,255,255,0)');
-      g.fillStyle = hl; g.beginPath(); g.arc(p.x-r*0.36, p.y-r*0.4, r*0.36, 0, TAU); g.fill();
-      g.strokeStyle = 'rgba(20,22,26,.18)'; g.lineWidth = 0.8; g.beginPath(); g.arc(p.x, p.y, r-0.4, 0, TAU); g.stroke();
+      /* the sphere, shading and all, stamped from its sprite (see l3Sprite),
+         then the far side's haze and a hot atom's glow laid over it */
+      { const sp = l3Sprite(shiny ? l3Look(a) : e.col, r, shiny, r > 9 && L3.view !== 'stick' && !L3.hideLabels ? e.sym : ''), k = r/Math.max(2, Math.round(r));
+        g.drawImage(sp.cv, p.x - sp.half*k, p.y - sp.half*k, sp.half*2*k, sp.half*2*k);
+        const fz = fog(p.z);
+        if(glowC){ const gc = rgb3(glowC); g.fillStyle = 'rgba('+gc[0]+','+gc[1]+','+gc[2]+','+(0.25 + hotU*0.5).toFixed(3)+')'; g.beginPath(); g.arc(p.x, p.y, r, 0, TAU); g.fill(); }
+        if(fz > 0.01){ g.fillStyle = 'rgba(238,240,238,'+fz.toFixed(3)+')'; g.beginPath(); g.arc(p.x, p.y, r, 0, TAU); g.fill(); } }
       if(glowC){
         g.save(); g.globalCompositeOperation = 'lighter';
-        const gl = g.createRadialGradient(p.x, p.y, r*0.5, p.x, p.y, r*(1.5 + hotU*1.3));
-        gl.addColorStop(0, glowC); gl.addColorStop(1, 'rgba(0,0,0,0)');
-        g.globalAlpha = 0.25 + hotU*0.45; g.fillStyle = gl; g.beginPath(); g.arc(p.x, p.y, r*(1.5 + hotU*1.3), 0, TAU); g.fill();
+        const R = r*(1.5 + hotU*1.3), gs = l3GlowSprite(glowC, R), k = R/gs.half;
+        g.globalAlpha = (g.globalAlpha||1)*(0.25 + hotU*0.45); g.drawImage(gs.cv, p.x - R, p.y - R, gs.half*2*k, gs.half*2*k);
         g.restore();
       }
       if(L3.sel === a){
         g.strokeStyle = 'rgba(47,91,234,.9)'; g.lineWidth = 2; g.setLineDash([4,4]); g.lineDashOffset = -performance.now()/60;
         g.beginPath(); g.arc(p.x,p.y,r+5,0,TAU); g.stroke(); g.setLineDash([]);
       }
-      if(r > 9 && L3.view !== 'stick' && !L3.hideLabels){
-        g.fillStyle = 'rgba(255,255,255,.95)'; g.font = '600 '+Math.min(16, r*0.78)+'px Archivo, system-ui, sans-serif';
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 2;
-        g.fillText(e.sym, p.x, p.y+0.5);
-        g.shadowColor = 'transparent'; g.shadowBlur = 0;
-      }
+      /* (the symbol is painted into the sprite now: see l3Sprite) */
       const qz = (a.ion||0) + (a.fq||0);
       if(qz && L3.view !== 'esp'){
         /* a soft halo of the charge's colour, red for positive, blue for negative */
@@ -14941,8 +15148,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 109;
+const VERSION = 110;
 const CHANGELOG = [
+  [110, 'More to Learn mode. Every topic now asks for your guess before it starts and tells you at the end whether you were right and why, then asks two Check yourself questions with the answer explained, and your score shows beside the topic. Three hands-on topics: cool water until its hydrogen-bond network forms, heat aluminium until its rows of atoms break up, and split molten salt between two electrodes; the temperature control sits in the Learn panel. Key words in the explanations (proton, pKa, lone pair, ligand, catalyst and others) have a dotted underline: point at one for what it means. The 3D bench draws much faster: each atom is painted once as a sprite and stamped, and a metal\u2019s electron-sea lines go in as one faint pass, so hot metal crystals run smoothly (drawing about 6 ms a frame instead of 20 to 30).'],
   [109, 'A Realistic press switch under Box and pressure on the 3D bench. Turn it off and the piston pushes as hard as it takes again, crushing solids, which then fly apart when let go.'],
   [108, 'The 3D piston behaves like a real press. It used to push the walls in regardless of what was in the way, crushing iron to half its spacing at hundreds of millions of atmospheres, so the lump exploded when let go. The walls now measure how hard the atoms push on them, the piston slows as that push grows and stalls at about 20 000 atm (a strong hydraulic press), and a solid or liquid barely compresses and springs back gently. A gas still squeezes and warms as before. A moving wall now only bounces atoms it actually meets, so a solid pressed against it is not fed heat.'],
   [107, 'The tan work top across the bottom third of the flat bench is gone: the whole bench is open for atoms, and equipment stands on its bottom edge. The lab table strip along the bottom only appears once something is put on it.'],
