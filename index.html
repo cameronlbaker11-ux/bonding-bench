@@ -13421,6 +13421,7 @@ function l3Project(p, W3, H3){
    never so close that a corner of the box could reach it. */
 function l3MinDist(t){ return Math.max(450, L3.box*1.74 + (t ? Math.hypot(t.x, t.y, t.z) : 0)); }
 function l3CamTo(t, dist, anim){
+  if(!t || !isFinite(t.x) || !isFinite(t.y) || !isFinite(t.z) || !isFinite(dist)) return;
   const to = {x:t.x, y:t.y, z:t.z, d:clamp(dist, l3MinDist(t), 6000)};
   if(!anim){ L3.target = {x:to.x, y:to.y, z:to.z}; L3.dist = to.d; L3.camAnim = null; return; }
   const T = L3.target || {x:0, y:0, z:0};
@@ -13604,6 +13605,9 @@ function l3Draw(){
     items.push({z:(p.z+q.z)/2 + 1, bond:b, p, q});
   }
   for(const a of L3.atoms) items.push({z:pos.get(a.id).z, atom:a, p:pos.get(a.id)});
+  /* hydrogen bonds join the same back-to-front pass, so one behind an atom is
+     hidden by it rather than drawn across its face */
+  if(!L3.hideHB) for(const hb of (L3.hb||[])){ const p = pos.get(hb.h.id), q = pos.get(hb.a.id); if(p && q) items.push({z:(p.z+q.z)/2 + 2, hbond:hb, p, q}); }
   items.sort((u,v)=>v.z-u.z);
   /* anything reaching the camera fades out, rather than filling the view */
   const nearA = pz => clamp(((L3.dist + pz)/L3.dist - 0.3)/0.25, 0, 1);
@@ -13621,9 +13625,23 @@ function l3Draw(){
   }
   for(const it of items){
     if(it.bond && it.bond.type === 'metallic') continue;   /* drawn above, all at once */
-    const na = it.bond ? Math.min(nearA(it.p.z), nearA(it.q.z)) : nearA(it.p.z);
+    const na = it.bond || it.hbond ? Math.min(nearA(it.p.z), nearA(it.q.z)) : nearA(it.p.z);
     if(na <= 0) continue;
     g.globalAlpha = na;
+    if(it.hbond){
+      /* from the hydrogen's surface to the acceptor's, thicker near the
+         camera, fainter the worse it is lined up, with a soft glow under the dashes */
+      if(L3.view === 'space') continue;
+      const {p, q, hbond:hb} = it, dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy)||1, ux = dx/L, uy = dy/L;
+      const ra = l3R(hb.h, p.s)*0.95, rb = l3R(hb.a, q.s)*0.95; if(L <= ra + rb + 2) continue;
+      const s0 = (p.s + q.s)/2, w = Math.max(1.2, 5*s0), al = (0.35 + 0.55*clamp(hb.ang||0, 0, 1))*na;
+      const x0 = p.x + ux*ra, y0 = p.y + uy*ra, x1 = q.x - ux*rb, y1 = q.y - uy*rb;
+      g.save(); g.lineCap = 'round';
+      g.strokeStyle = 'rgba(47,91,234,'+(al*0.12).toFixed(3)+')'; g.lineWidth = w*1.9; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      g.strokeStyle = 'rgba(47,91,234,'+al.toFixed(3)+')'; g.lineWidth = w; g.setLineDash([w*0.9, w*1.4]); g.lineDashOffset = -performance.now()/80;
+      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.restore();
+      continue;
+    }
     if(it.bond){
       const {p, q, bond} = it, A1 = l3Find(bond.a), A2 = l3Find(bond.b);
       const dx = q.x-p.x, dy = q.y-p.y, L = Math.hypot(dx,dy)||1, ux = dx/L, uy = dy/L, nx = -uy, ny = ux;
@@ -13632,14 +13650,16 @@ function l3Draw(){
       const ra = l3R(A1, p.s)*0.82, rb = l3R(A2, q.s)*0.82;
       if(L < ra + rb) continue;
       const w = Math.max(2.2, 15*(p.s+q.s)/2);
-      const n = bond.arom ? 2 : bond.type==='covalent' ? bond.order : 1, gap = n>1 ? w*0.62 : 0, lw = n>1 ? w*0.52 : (bond.type==='metallic' ? w*0.4 : w);
+      /* an ionic contact is only the pull between two charges, not a bond: drawn thin and quiet */
+      const n = bond.arom ? 2 : bond.type==='covalent' ? bond.order : 1, gap = n>1 ? w*0.62 : 0, lw = n>1 ? w*0.52 : (bond.type==='metallic' ? w*0.4 : bond.type==='ionic' ? w*0.28 : w);
+      if(bond.type==='ionic') g.globalAlpha *= 0.55;
       for(let k=0;k<n;k++){
         if(bond.arom && k === 1) g.setLineDash([lw*0.9, lw*0.8]);   /* the delocalised half bond */
         const off = (k-(n-1)/2)*gap*1.6;
         const x0 = p.x+ux*ra+nx*off, y0 = p.y+uy*ra+ny*off, x1 = q.x-ux*rb+nx*off, y1 = q.y-uy*rb+ny*off;
         const mx = (x0+x1)/2, my = (y0+y1)/2;
         g.lineCap = bond.type==='covalent' ? 'butt' : 'round';
-        if(bond.type==='ionic') g.setLineDash([lw*0.7, lw*1.1]);
+        if(bond.type==='ionic') g.setLineDash([lw*1.2, lw*2.2]);
         if(bond.type==='dative') g.setLineDash([lw*1.2, lw*0.7]);   /* a coordinate bond to a metal ion */
         if(bond.type==='metallic') g.setLineDash([lw*0.35, lw*1.2]);
         [[x0,y0,mx,my,A1,p.z],[mx,my,x1,y1,A2,q.z]].forEach(([a0,b0,a1,b1,A,zz])=>{
@@ -13697,12 +13717,13 @@ function l3Draw(){
       if(qz && L3.view !== 'esp'){
         /* a soft halo of the charge's colour, red for positive, blue for negative */
         g.save(); g.globalCompositeOperation = 'multiply';
-        const ha = g.createRadialGradient(p.x, p.y, r*0.8, p.x, p.y, r*1.9);
-        ha.addColorStop(0, qz > 0 ? 'rgba(224,110,90,.35)' : 'rgba(80,130,230,.35)'); ha.addColorStop(1, 'rgba(255,255,255,0)');
-        g.fillStyle = ha; g.beginPath(); g.arc(p.x, p.y, r*1.9, 0, TAU); g.fill(); g.restore();
+        const ha = g.createRadialGradient(p.x, p.y, r*0.85, p.x, p.y, r*1.4);
+        ha.addColorStop(0, qz > 0 ? 'rgba(224,110,90,.26)' : 'rgba(80,130,230,.26)'); ha.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = ha; g.beginPath(); g.arc(p.x, p.y, r*1.4, 0, TAU); g.fill(); g.restore();
       }
       if(qz){
-        const bx = p.x + r*0.72, by = p.y - r*0.72, br = Math.max(6, r*(a.ion ? 0.3 : 0.24)), ic = qz > 0 ? '#C0503A' : '#2A7A78';
+        /* a small badge on the atom's shoulder: capped, so a near atom's does not cover the view */
+        const br = clamp(r*(a.ion ? 0.26 : 0.22), 5, 9), bx = p.x + r*0.7, by = p.y - r*0.7, ic = qz > 0 ? '#C0503A' : '#2A7A78';
         g.fillStyle = ic; g.globalAlpha = 0.18; g.beginPath(); g.arc(bx, by, br*1.5, 0, TAU); g.fill(); g.globalAlpha = 1;
         g.fillStyle = '#fff'; g.strokeStyle = ic; g.lineWidth = 1.6;
         g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); g.stroke();
@@ -13803,21 +13824,17 @@ function l3Draw(){
       g.fillStyle = 'rgba(71,76,84,.9)'; g.fillText(EL[a.e].name.toUpperCase(), p.x, p.y + r + 4);
     }
   }
-  /* hydrogen bonds: dashed, fainter the worse they are lined up */
-  g.setLineDash([4,4]);
-  for(const hb of (L3.hideHB ? [] : (L3.hb||[]))){
-    const p = pos.get(hb.h.id), q = pos.get(hb.a.id); if(!p || !q) continue;
-    g.strokeStyle = 'rgba(47,91,234,'+(0.3+0.6*hb.ang).toFixed(3)+')'; g.lineWidth = 1.6;
-    g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
-  }
-  g.setLineDash([]);
-  if(L3.showQ) for(const a of L3.atoms){
-    if(Math.abs(a.q||0) < 0.08) continue;
-    const p = pos.get(a.id), r = l3R(a, p.s);
-    g.font = '600 11px "IBM Plex Mono", monospace'; g.textAlign = 'left';
-    g.fillStyle = a.q > 0 ? '#C0503A' : '#2A7A78';
-    g.fillText('\u03b4'+(a.q > 0 ? '+' : '\u2212'), p.x + r*0.75, p.y - r*0.75);
-  }
+  /* (hydrogen bonds are drawn in the back-to-front pass above) */
+  /* partial charges: sized with the atom, on a small pill so they read over
+     anything, the nearest drawn last so they sit on top */
+  if(L3.showQ) L3.atoms.filter(a=>Math.abs(a.q||0) >= 0.08 && !a.ion && !(a.fq||0)).map(a=>({a, p:pos.get(a.id)})).sort((u,v)=>v.p.z - u.p.z).forEach(({a, p})=>{
+    const r = l3R(a, p.s), fs = clamp(r*0.62, 8, 13), na = nearA(p.z); if(na <= 0) return;
+    const txt = '\u03b4'+(a.q > 0 ? '+' : '\u2212'), x = p.x + r*0.72, y = p.y - r*0.72;
+    g.save(); g.globalAlpha = na; g.font = '600 '+fs.toFixed(1)+'px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const tw = g.measureText(txt).width + fs*0.7;
+    g.fillStyle = 'rgba(255,255,255,.88)'; g.beginPath(); if(g.roundRect) g.roundRect(x - tw/2, y - fs*0.72, tw, fs*1.44, fs*0.72); else g.rect(x - tw/2, y - fs*0.72, tw, fs*1.44); g.fill();
+    g.fillStyle = a.q > 0 ? '#C0503A' : '#2A7A78'; g.fillText(txt, x, y + 0.5); g.restore();
+  });
   /* the plates on the side walls, and the lamp over the top */
   [['anode', -B, '192,80,58', '+'], ['cathode', B, '42,122,120', '\u2212']].forEach(([k, x, rgb, sign])=>{
     const g0 = L3.gear.find(gg=>gg.kind===k); if(!g0) return;
@@ -14195,7 +14212,7 @@ function renderPanel3D(){
       (list.length>1 && !list.every(l3Metal) ? (ionQ ? '<span class="badge ionic">'+(ionQ > 0 ? 'cation' : 'anion')+'</span>' : '<span class="badge '+(mu>0.5?'polar':'nonpolar')+'">'+(mu>0.5?'polar':'nonpolar')+'</span>') : '')+
       (hbd ? '<span class="badge hbond">h-bonding</span>' : '')+
       (bl.some(b=>b.arom) ? '<span class="badge polar">aromatic</span>' : '')+
-      (list.some(x=>L3_HYPER[EL[x.e].sym] && l3Used(x) > l3Cap(EL[x.e])) ? '<span class="badge">expanded octet</span>' : '');
+      (list.some(x=>L3_HYPER[EL[x.e].sym] && !x.ion && l3UsedCov(x) > l3Cap(EL[x.e])) ? '<span class="badge">expanded octet</span>' : '');
     /* the bonds by kind, with their measured length and their energy */
     const byPair = {};
     bl.forEach(b=>{
@@ -15148,8 +15165,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 110;
+const VERSION = 111;
 const CHANGELOG = [
+  [111, 'Cleaner interaction graphics on the 3D bench. Hydrogen bonds are depth-sorted with the atoms, run from surface to surface, and thin out with distance instead of floating on top of everything. The δ+/δ− labels sit on small pills sized to the atom. Ionic contacts are lighter dashes, charge halos are smaller, and charge badges no longer balloon in close-ups. Ions in a salt crystal no longer get a false expanded-octet badge.'],
   [110, 'More to Learn mode. Every topic now asks for your guess before it starts and tells you at the end whether you were right and why, then asks two Check yourself questions with the answer explained, and your score shows beside the topic. Three hands-on topics: cool water until its hydrogen-bond network forms, heat aluminium until its rows of atoms break up, and split molten salt between two electrodes; the temperature control sits in the Learn panel. Key words in the explanations (proton, pKa, lone pair, ligand, catalyst and others) have a dotted underline: point at one for what it means. The 3D bench draws much faster: each atom is painted once as a sprite and stamped, and a metal\u2019s electron-sea lines go in as one faint pass, so hot metal crystals run smoothly (drawing about 6 ms a frame instead of 20 to 30).'],
   [109, 'A Realistic press switch under Box and pressure on the 3D bench. Turn it off and the piston pushes as hard as it takes again, crushing solids, which then fly apart when let go.'],
   [108, 'The 3D piston behaves like a real press. It used to push the walls in regardless of what was in the way, crushing iron to half its spacing at hundreds of millions of atmospheres, so the lump exploded when let go. The walls now measure how hard the atoms push on them, the piston slows as that push grows and stalls at about 20 000 atm (a strong hydraulic press), and a solid or liquid barely compresses and springs back gently. A gas still squeezes and warms as before. A moving wall now only bounces atoms it actually meets, so a solid pressed against it is not fed heat.'],
