@@ -3247,6 +3247,24 @@ function drawAtom(a, now){
 
 /* the name labels placed so far this frame, so the next one can keep off them */
 const labelRects = [];
+/* a charge sign drawn as strokes, not text: a font's + and − sit off the centre
+   of their box (and differently in each font), so badges looked lopsided. r is
+   the badge radius; a number (2+, 3−) goes to the left of a smaller sign. */
+function chargeMark(c, x, y, r, q, col){
+  const n = Math.abs(q); if(!n) return;
+  c.save();
+  let sx = x, h = r*0.48;
+  if(n > 1){
+    c.fillStyle = col; c.font = '600 '+Math.round(r*1.15)+'px "IBM Plex Mono", monospace';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(String(n), x - r*0.42, y + r*0.06);
+    sx = x + r*0.32; h = r*0.3;
+  }
+  c.strokeStyle = col; c.lineWidth = Math.max(1.3, r*0.22); c.lineCap = 'round';
+  c.beginPath(); c.moveTo(sx - h, y); c.lineTo(sx + h, y);
+  if(q > 0){ c.moveTo(sx, y - h); c.lineTo(sx, y + h); }
+  c.stroke(); c.restore();
+}
 const rectsHit = (p, q) => p.x < q.x+q.w && p.x+p.w > q.x && p.y < q.y+q.h && p.y+p.h > q.y;
 function drawAtomOverlay(a){
   const e=EL[a.e], R=atomR(a), die=a.dying?Math.max(0,1-a.dying):1;
@@ -3256,10 +3274,7 @@ function drawAtomOverlay(a){
     const bx=a.x+R*0.76, by=a.y-R*0.76, col=a.charge>0?'#C0503A':'#2A7A78';
     ctx.fillStyle='#fff'; ctx.strokeStyle=col; ctx.lineWidth=1.3;
     ctx.beginPath(); ctx.arc(bx,by,9.5,0,TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=col; ctx.font='500 10px "IBM Plex Mono", monospace';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    const n=Math.abs(a.charge);
-    ctx.fillText((n>1?n:'')+(a.charge>0?'+':'−'), bx, by+0.5);
+    chargeMark(ctx, bx, by, 9.5, a.charge, col);
   }
   if(SHOW.formal){
     const fc = a.charge ? 0 : formalCharge(a);
@@ -3365,8 +3380,7 @@ function drawFlyers(){
     for(let k=4;k>=1;k--){ const tt = Math.max(0, t-k*0.05), bb = Math.sin(tt*Math.PI)*0.16; dot(f.fx+dx*tt+px*bb, f.fy+dy*tt+py*bb, 3.6-k*0.5, 'rgba('+col+','+(0.16*(4-k))+')'); }
     const bow = Math.sin(t*Math.PI)*0.16, x = f.fx+dx*t+px*bow, y = f.fy+dy*t+py*bow;
     dot(x, y, 5.2, 'rgba('+col+',.25)'); dot(x, y, 3.8, 'rgb('+col+')');
-    ctx.fillStyle = '#fff'; ctx.font = '600 6px "IBM Plex Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(f.kind === 'proton' ? '+' : '\u2212', x, y+0.3);
+    chargeMark(ctx, x, y, 3.8, f.kind === 'proton' ? 1 : -1, '#fff');
   }
   for(const f of flyers){
     if(f.t<0) continue;
@@ -13747,8 +13761,7 @@ function l3Draw(){
         g.fillStyle = ic; g.globalAlpha = 0.18; g.beginPath(); g.arc(bx, by, br*1.5, 0, TAU); g.fill(); g.globalAlpha = 1;
         g.fillStyle = '#fff'; g.strokeStyle = ic; g.lineWidth = 1.6;
         g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); g.stroke();
-        g.fillStyle = ic; g.font = '600 '+Math.round(br*1.4)+'px "IBM Plex Mono", monospace';
-        g.fillText((Math.abs(qz) > 1 ? Math.abs(qz) : '')+(qz > 0 ? '+' : '−'), bx, by+0.5);
+        chargeMark(g, bx, by, br, qz, ic);
       }
     }
   }
@@ -15208,8 +15221,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 112;
+const VERSION = 113;
 const CHANGELOG = [
+  [113, 'The + and − on charge badges sit dead centre now, on both benches. They were drawn as text, and a font\u2019s plus and minus sit off the middle of their box; they are drawn as strokes instead, with the number beside a smaller sign for 2+ and 3−. The proton and electron dots that fly between atoms use the same marks.'],
   [112, 'Salt really dissolves in water on the 3D bench. Salt + water now sits the crystal in about a hundred water molecules at room temperature, and the water pulls ions off the corners and edges first. Each water touching an ion weakens its hold on the crystal, an ion with a shell of water round it no longer snaps back on, and each dissolved ion keeps waters of its own, so a little water dissolves only a little salt: when it runs out, the rest stays solid (saturated). Dissolving now shows the real ΔH of about +4 kJ/mol rather than the full lattice energy, since the water gives almost all of that back. Charges on clusters print as superscripts (Na₆Cl₉³⁻ rather than Na₆Cl₉3-), and an ion pair snapping shut in water no longer heats the atoms to a glow.'],
   [111, 'Cleaner interaction graphics on the 3D bench. Hydrogen bonds are depth-sorted with the atoms, run from surface to surface, and thin out with distance instead of floating on top of everything. The δ+/δ− labels sit on small pills sized to the atom. Ionic contacts are lighter dashes, charge halos are smaller, and charge badges no longer balloon in close-ups. Ions in a salt crystal no longer get a false expanded-octet badge.'],
   [110, 'More to Learn mode. Every topic now asks for your guess before it starts and tells you at the end whether you were right and why, then asks two Check yourself questions with the answer explained, and your score shows beside the topic. Three hands-on topics: cool water until its hydrogen-bond network forms, heat aluminium until its rows of atoms break up, and split molten salt between two electrodes; the temperature control sits in the Learn panel. Key words in the explanations (proton, pKa, lone pair, ligand, catalyst and others) have a dotted underline: point at one for what it means. The 3D bench draws much faster: each atom is painted once as a sprite and stamped, and a metal\u2019s electron-sea lines go in as one faint pass, so hot metal crystals run smoothly (drawing about 6 ms a frame instead of 20 to 30).'],
