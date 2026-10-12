@@ -15,7 +15,11 @@ function elStub(tag){
     dispatchEvent(e){ (node._listeners[e&&e.type]||[]).forEach(f=>f(e)); return true; },
     removeEventListener(){}, appendChild(c){ node.children.push(c); c.parentNode=node; return c; },
     remove(){}, setAttribute(k,v){ node['attr_'+k]=v; }, getAttribute(k){ return node['attr_'+k]!==undefined?node['attr_'+k]:null; },
-    querySelectorAll(){ return []; }, querySelector(){ return elStub('input'); }, closest(){ return null; },
+    querySelectorAll(){ return []; },
+    /* an input written into innerHTML with an id is the same node getElementById finds,
+       so listeners added through either one hear setSlider's events */
+    querySelector(sel){ const m = sel === 'input' && node._html.match(/<input[^>]*\sid="([^"]+)"/); return m ? document.getElementById(m[1]) : elStub('input'); },
+    closest(){ return null; },
     getBoundingClientRect(){ return {left:0,top:0,right:900,bottom:620,width:900,height:620}; },
     setPointerCapture(){}, select(){}, setSelectionRange(){}, scrollIntoView(){},
     getContext(){ return ctxStub(); }, width:900, height:620, clientWidth:280, clientHeight:600
