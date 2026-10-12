@@ -5139,8 +5139,8 @@ const CONCEPTS = {
     one:'Water pulls ions out of a crystal by surrounding each one.',
     what:['Water is polar. The δ− oxygens face cations and the δ+ hydrogens face anions, and every ion that leaves the crystal gets its own shell of water. The energy those shells release pays for breaking up the lattice.',
           'Water also screens charge: ions in water attract each other about 80 times more weakly than in air (water’s dielectric constant is 78). That is why dissolved ions stay apart.'],
-    sim:'With the Water solvent switch on, ion–ion forces are divided by 78, and an ion with water beside it is screened even without the switch.',
-    look:'Load Salt + water, then turn on Water solvent.',
+    sim:'Real water molecules pull ions off the corners and edges first. Each water touching an ion weakens its pull on the crystal, and an ion with three or more waters round it will not stick back on. Each dissolved ion keeps a shell of its own, so a little water dissolves only a little salt: when the water runs out, the rest stays solid (saturated). The Water solvent switch instead treats the whole bench as water, screening every ion–ion force 78-fold, and dissolves everything.',
+    look:'Load Salt + water and watch the crystal come apart from the corners. Delete some waters first and less of it dissolves.',
     nums:[['Water dielectric constant','78'],['NaCl solubility','360 g/L']],
     tr:{scene:'saltaq'}, rel:['ionization','coord','hbond']},
   acidbase:{cat:'acid', g:'H⁺', ev:1, name:'Acids, bases and proton transfer', alias:'bronsted lowry proton hydronium conjugate acid base',
@@ -11464,7 +11464,7 @@ function l3Preset(name){
   made.forEach(a=>{ a.cool = 1.2; });              /* folds without the strain turning into heat */
   say(name+' dropped in flat and loose — watch it fold into its real shape.','bench');
 }
-function l3Clear(){ L3.hist = []; L3.P = 0; L3.Z = 1; L3.fissions = 0; L3.fusions = 0; L3.decays = 0; L3.neutrons = []; L3.cats = []; L3.field = null; L3.electrons = 0; L3.rx = null; L3.stable = null; L3.lastSig = null; L3.atoms.length = 0; L3.bonds.length = 0; L3.sel = null; L3.flashes.length = 0; L3.ledger.length = 0; L3.dirty = true; }
+function l3Clear(){ L3.hist = []; L3.P = 0; L3.Z = 1; L3.fissions = 0; L3.fusions = 0; L3.decays = 0; L3.neutrons = []; L3.cats = []; L3.field = null; L3.electrons = 0; L3.rx = null; L3.stable = null; L3.lastSig = null; L3.atoms.length = 0; L3.bonds.length = 0; L3.sel = null; L3.flashes.length = 0; L3.ledger.length = 0; L3.solNoted = false; L3.dirty = true; }
 /* ---------- energy ----------
    Forming a bond gives out its bond enthalpy and breaking one takes it in. The
    energy given out does not vanish: it goes into the two atoms as motion, so a
@@ -11989,6 +11989,15 @@ function l3Break(b, why){
   /* a bond made from one side's lone pair goes back the way it came: the donor
      takes its pair home, and the formal charges it caused undo */
   if(b.dat && b.type === 'covalent' && p && q){ const don = b.dat === p.id ? p : q, acc = don === p ? q : p; l3SetFq(don, (don.fq||0) - 1); l3SetFq(acc, (acc.fq||0) + 1); }
+  /* an ion pulled off by water: the shell that closes round it gives back almost
+     all the lattice energy, so dissolving salt costs only about +4 kJ/mol overall
+     (about 1.3 per ionic contact broken, three for an ion on a face) */
+  if(b.type === 'ionic' && (why === 'dissolved' || L3.solvent || (p && p.nW >= 0.5) || (q && q.nW >= 0.5))){
+    const first = why === 'dissolved' && !L3.solNoted; if(first) L3.solNoted = true;
+    l3Note(1.3, why, p, q, first ? {c:'solvation', title:'Salt dissolving', eq:'NaCl(s) \u2192 Na\u207a(aq) + Cl\u207b(aq)   \u0394H \u2248 +4 kJ/mol',
+      why:'Pulling an ion off the crystal costs hundreds of kJ/mol, but the water molecules that turn to face it (oxygen toward Na\u207a, hydrogens toward Cl\u207b) give almost all of it back. What is left, about +4 kJ/mol, is why salt water gets very slightly colder. Each ion needs several waters of its own, so once the water is used up the rest of the salt stays solid: the solution is saturated.'} : null);
+    return;
+  }
   l3Note(+b.energy, why, p, q);
 }
 /* How strong each intermolecular force is, in kJ/mol: London per unit of
@@ -12097,6 +12106,10 @@ function l3Step(dt){
   L3.nb = nb; L3.hb = [];
   /* the waters on the bench, for screening ions */
   L3.waterO = A.filter(a=>EL[a.e].sym==='O' && nb.get(a.id).length===2 && nb.get(a.id).every(h=>EL[h.e].sym==='H'));
+  /* each ion's first hydration shell: waters whose oxygen touches it (Na-O 240 pm, Cl-O 320 pm) */
+  /* counted smoothly (full by 320 pm, none past 420), so the screening it sets
+     never jumps as a water drifts across a line, which would feed in false heat */
+  for(const a of A) if(a.ion){ let n = 0; for(const o of L3.waterO){ if(Math.abs(o.x-a.x) > 420) continue; const r = Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z); if(r < 420) n += Math.min(1, (420 - r)/100); } a.nW = n; }
   const PR = l3Pairs(A).slice();                  /* once a step: atoms move a few pm in four substeps */
   const mts = A.length > 150;
   for(let s=0;s<subs;s++){
@@ -12105,6 +12118,9 @@ function l3Step(dt){
     for(const b of L3.bonds){
       if(b.type === 'metallic') continue;            /* the metal is held by its pair potential, below */
       const p = l3Find(b.a), q = l3Find(b.b); if(!p || !q) continue;
+      /* an ion pair with water at it is held only by its (screened) Coulomb pull and
+         hard core, below: a stiff spring snapping shut there turned into heat */
+      if(b.type === 'ionic' && ((p.nW||0) >= 0.5 || (q.nW||0) >= 0.5)) continue;
       const dx=q.x-p.x, dy=q.y-p.y, dz=q.z-p.z, d=Math.hypot(dx,dy,dz)||1;
       /* A Morse bond, not a spring: V = De(1 - e^(-a(r-r0)))^2. At the bottom it
          is a spring as stiff as the bond is strong, so strong bonds vibrate
@@ -12162,22 +12178,25 @@ function l3Step(dt){
         const ri = x => EL[x.e].ri != null ? EL[x.e].ri : EL[x.e].rc*(x.ion > 0 ? 0.62 : 1.35);
         const same = p.ion*q.ion > 0, core = (ri(p) + ri(q))*(same ? 1.1 : 0.9);
         const de = Math.max(d, core*0.8);
-        let f = -fES*IMF.ion*138900*p.ion*q.ion*L3_KJ/(de*de)*(L3.solvent ? 1/78 : 1)*(L3.waterO && L3.waterO.some(o=>Math.hypot(o.x-p.x,o.y-p.y,o.z-p.z) < 330) ? 0.15 : 1);
+        let f = -fES*IMF.ion*138900*p.ion*q.ion*L3_KJ/(de*de)*(L3.solvent ? 1/78 : 1)/(1 + 0.6*((p.nW||0) + (q.nW||0)));
         if(d < core) f -= kR*2*(core - d);
         p.fx += f*dx/d; p.fy += f*dy/d; p.fz += f*dz/d; q.fx -= f*dx/d; q.fy -= f*dy/d; q.fz -= f*dz/d;
         if(!(s===0 && (p.ion*q.ion < 0) && d < l3Len(p,q,1)*1.3 && !nb.get(p.id).includes(q))) continue;
       }
       /* water between two ions screens them from each other, so dissolved ions stay apart */
-      const wet = x => L3.solvent || L3.waterO.some(o=>Math.hypot(o.x-x.x, o.y-x.y, o.z-x.z) < 330) ;
+      const wet = x => L3.solvent || (x.nW||0) >= 0.5, shelled = x => (x.nW||0) >= 2.5;
       /* a metal gives its electron away or does not bond: to something electronegative
          enough to take it (ionic), never a shared covalent bond with carbon or hydrogen */
       /* a metal bonds to something clearly more electronegative (ionic past 1.7, polar below), never to another like carbon */
       const metalOK = !(l3Metal(p) || l3Metal(q)) || Math.abs((EL[p.e].en||1.5) - (EL[q.e].en||1.5)) >= 1.0;
       const L = l3Len(p, q, 1), canB = (l3Free(p, q) > 0 && l3Free(q, p) > 0 && !p.ion && !q.ion && !(l3Metal(p) && l3Metal(q)) && metalOK) ||
-        (pairIons && !(wet(p) && wet(q)));
+        (pairIons && !(wet(p) && wet(q)) && !shelled(p) && !shelled(q));
       if(s===0 && d < L*1.35 && canB && !L3.noAuto){
         const nbd = l3Bond(p, q, 1); nb.get(p.id).push(q); nb.get(q.id).push(p);
-        l3Kick(p, q, nbd.energy); l3Note(-nbd.energy, 'formed', p, q);
+        /* an ion coming back out of water onto a crystal: the shell it sheds costs
+           back almost all the bond gives, as for dissolving run backwards */
+        const eNet = nbd.type === 'ionic' && (wet(p) || wet(q)) ? 1.3 : nbd.energy;
+        l3Kick(p, q, eNet); l3Note(-eNet, 'formed', p, q);
         continue;
       }
       /* A radical meeting a double or triple bond can open one of its pi bonds
@@ -12417,8 +12436,8 @@ function l3Step(dt){
        water gathered round both, an ionic bond is easily shaken apart: salt dissolves */
     let Eeff = b.energy;
     if(b.type === 'ionic'){
-      const nW = (L3.waterO||[]).filter(o=>Math.hypot(o.x-p.x, o.y-p.y, o.z-p.z) < 330 || Math.hypot(o.x-q.x, o.y-q.y, o.z-q.z) < 330).length;
-      if(nW >= 2) Eeff = b.energy/(8 + 6*Math.min(nW, 6));
+      const nW = (p.nW||0) + (q.nW||0);
+      if(nW >= 1.5) Eeff = b.energy/(8 + 6*Math.min(nW, 6));
       else if(L3.solvent) Eeff = b.energy/26;
     }
     if(b.arom) Eeff += L3_RES;                          /* the ring's resonance holds it */
@@ -12991,7 +13010,7 @@ const SCENES = [
   {k:'kw',      label:'Potassium + water',        note:'faster still',                     mols:[['[K]',4],['water',10]]},
   {k:'mgw',     label:'Magnesium + water',        note:'hardly, until you heat it',        mols:[['[Mg]',4],['water',10]]},
   {k:'nacl2',   label:'Sodium + chlorine',        note:'burns to salt',                    mols:[['[Na]',4],['ClCl',2]]},
-  {k:'saltaq',  label:'Salt + water',             note:'turn on Water solvent to dissolve', crystal:'salt', mols:[['water',12]], box:820},
+  {k:'saltaq',  label:'Salt + water',             note:'water pulls ions off the corners and edges first, until it runs out of water to give them', crystal:'salt', bath:96, mols:[], box:820, temp:13},
   {k:'d2o',     label:'Heavy water',              note:'D₂O beside H₂O',          mols:[['D2O',5],['water',5]]},
   {k:'caff',    label:'Caffeine in water',        note:'a drug molecule solvated',          mols:[['caffeine',1],['water',10]], box:820},
   {k:'zncu',    label:'Zinc + copper ions',       note:'zinc dissolves, copper comes out',  mols:[['[Zn]',3],['[Cu+]',3],['water',6]], box:540},
@@ -13011,6 +13030,7 @@ function l3Scene(k){
   l3Push(); l3Clear();
   const bx = sc.box || 540; L3.box = L3.boxTo = bx; L3.dist = bx*3.8;
   if(sc.crystal) l3Crystal(sc.crystal);
+  if(sc.bath) l3WaterBath(sc.bath, 560);
   if(sc.temp != null) setSlider('temp', sc.temp);
   sc.mols.forEach(([m, n])=>{ for(let i=0;i<n;i++) l3BuildAny(m); });
   try{ renderLeft3D(); }catch(e){}
@@ -14061,7 +14081,8 @@ function l3CensusNow(){
   const c = {};
   l3Molecules().forEach(list=>{
     const q = list.reduce((t,a)=>t+(a.ion||0)+(a.fq||0), 0);   /* formal charges too: H3O+ and HSO4- are ions */
-    const k = benchFormula(countsOf(list))+(q ? (Math.abs(q)>1?Math.abs(q):'')+(q>0?'+':'-') : '');
+    /* the charge goes up as a superscript now: as plain text, Na8Cl13 with 5- read as Na8Cl135- */
+    const k = benchFormula(countsOf(list))+chargeSup(q);
     c[k] = (c[k]||0) + 1;
   });
   return c;
@@ -14724,6 +14745,28 @@ function l3Crystal(kind){
   const n0 = L3.atoms.length;
   try{ return l3CrystalBuild(kind); } finally { L3.atoms.slice(n0).forEach(a=>{ a.cool = 1.2; }); l3FitView(true); }
 }
+/* liquid water round whatever sits at the middle: n waters on a 290 pm grid
+   (about the spacing in the real liquid), nearest the centre first, outside r0 */
+function l3WaterBath(n, r0){
+  const sp = 290, lim = L3.box - 70, pts = [];
+  for(let x=-lim; x<=lim; x+=sp) for(let y=-lim; y<=lim; y+=sp) for(let z=-lim; z<=lim; z+=sp){
+    const r = Math.hypot(x, y, z); if(r >= r0) pts.push([x, y, z, r]);
+  }
+  pts.sort((a, b)=>a[3] - b[3]);
+  const half = 104.5/2*Math.PI/180, rOH = 96;
+  pts.slice(0, n).forEach(([x, y, z])=>{
+    /* a random plane for the molecule: two perpendicular unit vectors */
+    let u = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5], ul = Math.hypot(...u); u = u.map(c=>c/ul);
+    let v = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5];
+    const dt = v[0]*u[0] + v[1]*u[1] + v[2]*u[2]; v = v.map((c, i)=>c - dt*u[i]); const vl = Math.hypot(...v); v = v.map(c=>c/vl);
+    const jx = (Math.random()-0.5)*40, jy = (Math.random()-0.5)*40, jz = (Math.random()-0.5)*40;
+    const o = l3Add('O', x+jx, y+jy, z+jz), tag = L3.seq++;
+    const hs = [1, -1].map(sg=>l3Add('H', o.x + rOH*(Math.cos(half)*u[0] + sg*Math.sin(half)*v[0]), o.y + rOH*(Math.cos(half)*u[1] + sg*Math.sin(half)*v[1]), o.z + rOH*(Math.cos(half)*u[2] + sg*Math.sin(half)*v[2])));
+    hs.forEach(h=>l3Bond(o, h, 1, 'covalent'));
+    [o].concat(hs).forEach(a=>{ a.lib = 'water'; a.libId = tag; a.libN = 3; a.cool = 1.2; });
+  });
+  L3.dirty = true;
+}
 function l3CrystalBuild(kind){
   l3Push();
   if(kind === 'salt'){
@@ -15165,8 +15208,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 111;
+const VERSION = 112;
 const CHANGELOG = [
+  [112, 'Salt really dissolves in water on the 3D bench. Salt + water now sits the crystal in about a hundred water molecules at room temperature, and the water pulls ions off the corners and edges first. Each water touching an ion weakens its hold on the crystal, an ion with a shell of water round it no longer snaps back on, and each dissolved ion keeps waters of its own, so a little water dissolves only a little salt: when it runs out, the rest stays solid (saturated). Dissolving now shows the real ΔH of about +4 kJ/mol rather than the full lattice energy, since the water gives almost all of that back. Charges on clusters print as superscripts (Na₆Cl₉³⁻ rather than Na₆Cl₉3-), and an ion pair snapping shut in water no longer heats the atoms to a glow.'],
   [111, 'Cleaner interaction graphics on the 3D bench. Hydrogen bonds are depth-sorted with the atoms, run from surface to surface, and thin out with distance instead of floating on top of everything. The δ+/δ− labels sit on small pills sized to the atom. Ionic contacts are lighter dashes, charge halos are smaller, and charge badges no longer balloon in close-ups. Ions in a salt crystal no longer get a false expanded-octet badge.'],
   [110, 'More to Learn mode. Every topic now asks for your guess before it starts and tells you at the end whether you were right and why, then asks two Check yourself questions with the answer explained, and your score shows beside the topic. Three hands-on topics: cool water until its hydrogen-bond network forms, heat aluminium until its rows of atoms break up, and split molten salt between two electrodes; the temperature control sits in the Learn panel. Key words in the explanations (proton, pKa, lone pair, ligand, catalyst and others) have a dotted underline: point at one for what it means. The 3D bench draws much faster: each atom is painted once as a sprite and stamped, and a metal\u2019s electron-sea lines go in as one faint pass, so hot metal crystals run smoothly (drawing about 6 ms a frame instead of 20 to 30).'],
   [109, 'A Realistic press switch under Box and pressure on the 3D bench. Turn it off and the piston pushes as hard as it takes again, crushing solids, which then fly apart when let go.'],
