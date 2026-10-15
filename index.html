@@ -506,6 +506,10 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .p3-tiles b{display:block;font-family:var(--font-mono);font-weight:500;font-size:16px}
 .p3-tiles span{font-family:var(--font-mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .p3-tiles .exo b{color:#C0503A}.p3-tiles .endo b{color:#2A7A78}
+.p3-sol{display:flex;gap:11px;align-items:center;background:var(--sunk);border-radius:10px;padding:9px 11px;margin-bottom:5px}
+.p3-sol b{display:block;font-family:var(--font-mono);font-weight:500;font-size:15px}
+.p3-sol span:not(.ph-dial){font-family:var(--font-mono);font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.p3-sol-ions{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.5;margin:0 2px 9px}
 .p3-note{font-size:11.5px;color:var(--muted);margin:2px 0 10px}
 .l3-energy{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:4px 0 8px;border-bottom:1px solid var(--line)}
 .l3-energy div{display:flex;flex-direction:column}
@@ -3276,6 +3280,11 @@ function drawAtomOverlay(a){
   const e=EL[a.e], R=atomR(a), die=a.dying?Math.max(0,1-a.dying):1;
   if(a.spawn<0.45 || a._pipe) return;
   ctx.save(); ctx.globalAlpha=die*Math.min(1,(a.spawn-0.35)/0.4);
+  const Tk = kelvin();
+  if(Tk > 1300 && (isMetal(e) || a.charge > 0)){
+    const fc = flameRGB(e.sym);
+    if(fc){ drawFlameGlow(ctx, a.x, a.y, R, fc, clamp((Tk - 1300)/1200, 0, 1), a.id); flameNotice(e.sym); dirty = true; }
+  }
   if(a.charge!==0 && SHOW.charges){
     const bx=a.x+R*0.76, by=a.y-R*0.76, col=a.charge>0?'#C0503A':'#2A7A78';
     ctx.fillStyle='#fff'; ctx.strokeStyle=col; ctx.lineWidth=1.3;
@@ -5162,7 +5171,24 @@ const CONCEPTS = {
     sim:'Real water molecules pull ions off the corners and edges first. Each water touching an ion weakens its pull on the crystal, and an ion with three or more waters round it will not stick back on. Each dissolved ion keeps a shell of its own, so a little water dissolves only a little salt: when the water runs out, the rest stays solid (saturated). The Water solvent switch instead treats the whole bench as water, screening every ion–ion force 78-fold, and dissolves everything.',
     look:'Load Salt + water and watch the crystal come apart from the corners. Delete some waters first and less of it dissolves.',
     nums:[['Water dielectric constant','78'],['NaCl solubility','360 g/L']],
-    tr:{scene:'saltaq'}, rel:['ionization','coord','hbond']},
+    tr:{scene:'saltaq'}, rel:['ionization','coord','hbond','precip']},
+  flametest:{cat:'energy', g:'\u2632', name:'Flame colours', alias:'flame test emission glow colour light sodium yellow copper green lithium crimson potassium lilac fireworks',
+    one:'A hot metal atom gives out light of its own exact colour.',
+    what:['Heat a metal salt in a flame and the flame takes a colour: sodium intense yellow, lithium crimson, copper green, potassium lilac, strontium scarlet. The heat lifts an outer electron to a higher energy level; when it falls back it gives the difference out as one photon, and the energy gap fixes its colour (E = hc/\u03bb).',
+          'Every element has its own gaps, so its own colours. That is how fireworks get their reds and greens, why sodium streetlights were orange-yellow, and how chemists first found caesium and rubidium (named for the blue and red lines they saw).'],
+    sim:'Any metal atom or ion past about 1300 K glows its flame colour, from the same spectrum the Study tab\u2019s flame test draws at 2000 K, brighter the hotter it is. Zinc barely shows: its levels are too far apart for a flame to reach.',
+    look:'Turn the temperature past 1300 K with a metal or salt on the bench, or hit one atom with Add energy.',
+    nums:[['Sodium D line','589 nm'],['Lithium','671 nm'],['Potassium','766 nm']],
+    rel:['ionization','zeff']},
+  precip:{cat:'force', g:'\u2193', name:'Precipitation', alias:'precipitate insoluble solubility rules silver chloride lead iodide golden rain spectator ion',
+    one:'Two dissolved ions that hold each other more tightly than water holds them come out as a solid.',
+    what:['Mix silver nitrate solution with salt water and a white cloud appears at once: silver chloride. Every ion was dissolved a moment before, but Ag\u207a and Cl\u207b grip each other far harder than water can grip either one, so wherever they meet they stick and grow into a solid.',
+          'The ions left in solution (Na\u207a and NO\u2083\u207b here) are spectators: they are on both sides of the equation, so the net change is just Ag\u207a(aq) + Cl\u207b(aq) \u2192 AgCl(s). Chemists use these to test for ions: silver nitrate gives white with chloride, cream with bromide, yellow with iodide.',
+          'Lead(II) iodide is the famous one: bright yellow crystals that dissolve in hot water and fall back as glittering \u201cgolden rain\u201d as it cools.'],
+    sim:'For a pair of ions in the precipitate list (AgCl, AgBr, AgI, PbI\u2082, PbCl\u2082, CaF\u2082), water screens their pull far less and they pair up even with water all round them, so they find each other and clump. The solid is tinted its real colour. Every other pair dissolves as salt does.',
+    look:'Load Silver nitrate + salt water or Golden rain and watch the solid gather while the spectator ions stay spread out.',
+    nums:[['AgCl solubility','0.0019 g/L'],['NaCl solubility','360 g/L'],['Ag\u207a + Cl\u207b \u2192 AgCl','\u221265.5 kJ/mol']],
+    tr:{scene:'agcl'}, rel:['solvation','ionization']},
   acidbase:{cat:'acid', g:'H⁺', ev:1, name:'Acids, bases and proton transfer', alias:'bronsted lowry proton hydronium conjugate acid base',
     one:'An acid gives a proton (H⁺) to a base.',
     what:['In the Brønsted–Lowry picture, an acid is a proton donor and a base a proton acceptor. The acid’s H leaves its electrons behind, and the base catches the bare proton with a lone pair. What is left of the acid is its conjugate base, and the base becomes its conjugate acid.',
@@ -11953,12 +11979,16 @@ function l3AcidBase(dt){
     const metalIon = acc.ion > 0 && es.gcol >= 3 && es.gcol <= 12;
     if(!lewis && !metalIon) continue;
     const cn = metalIon ? l3Bonds(acc).filter(b=>b.type === 'dative').length : 0;
-    if(metalIon && cn >= 6) continue;
+    /* six round most metal ions; silver, gold and mercury take just two, in a line ([Ag(NH3)2]+) */
+    if(metalIon && cn >= (L3_CN2[es.sym] ? 2 : 6)) continue;
+    if(metalIon && l3Bonds(acc).some(b=>b.type === 'ionic' && l3Ppt(acc, l3Find(l3Other(b, acc.id))))) continue;   /* in a solid now */
     for(const don of A){
       if(don === acc || !L3_DONOR[EL[don.e].sym] || (don.fq||0) > 0 || l3Metal(don)) continue;
       if(don.ion > 0 || (l3Lone(don) < 1 && !(don.ion < 0))) continue;
       if(l3Bonds(acc).some(b=>l3Other(b, acc.id) === don.id)) continue;
       if(metalIon && l3Bonds(don).some(b=>b.type === 'dative')) continue;   /* one metal per donor atom */
+      if(metalIon && l3Ppt(acc, don)) continue;   /* Ag+ and Cl- come out as solid AgCl, not a complex */
+      if(metalIon && L3_CN2[es.sym] && (don.fq||0) < 0) continue;   /* silver takes water or ammonia, not nitrate */
       /* BF3 does not pair up through its fluorines (the fluorines feed boron's
          empty orbital already), though AlCl3 really does, as Al2Cl6 */
       if(es.sym === 'B' && ['F','Cl','Br','I'].includes(EL[don.e].sym) && !don.ion) continue;
@@ -12002,6 +12032,24 @@ function l3Complex(m){
   if(!ligs.size) return M+q;
   return '['+M+[...ligs].map(([f, n])=>(f.length > 1 ? '('+f+')' : f)+(n > 1 ? subPlain(String(n)) : '')).join('')+']'+q;
 }
+/* Salts water cannot pull apart: their ions hold each other more tightly than
+   water holds them (silver's bond to a halide is partly covalent), so when the
+   two ions meet in water they come straight out as a solid, a precipitate.
+   dH is for the precipitation, per mole of solid; g is the solubility in water. */
+const PPT = {
+  'Ag|Cl':{n:'silver chloride', f:'AgCl', col:'#F3F2EC', look:'white', dH:-65.5, g:'0.0019 g/L'},
+  'Ag|Br':{n:'silver bromide', f:'AgBr', col:'#EFE3B8', look:'cream', dH:-84.8, g:'0.00014 g/L'},
+  'Ag|I': {n:'silver iodide', f:'AgI', col:'#EAD86A', look:'pale yellow', dH:-112.3, g:'0.000003 g/L'},
+  'Pb|I': {n:'lead(II) iodide', f:'PbI\u2082', col:'#F4C20D', look:'bright yellow', dH:-63.0, g:'0.76 g/L'},
+  'Ca|F': {n:'calcium fluoride', f:'CaF\u2082', col:'#F1F0F4', look:'white', dH:-11.5, g:'0.016 g/L'},
+  'Pb|Cl':{n:'lead(II) chloride', f:'PbCl\u2082', col:'#F2F1EE', look:'white', dH:-23.3, g:'9.9 g/L'}
+};
+const L3_CN2 = {Ag:1, Au:1, Hg:1};
+let L3_SINK = 20;
+const l3Ppt = (p, q) => !p || !q || !p.ion || !q.ion || p.ion*q.ion >= 0 ? null : (p.ion > 0 ? PPT[EL[p.e].sym+'|'+EL[q.e].sym] : PPT[EL[q.e].sym+'|'+EL[p.e].sym]) || null;
+/* what one contact between two ions in water is worth, net of the water given up
+   or taken back: a solid has about three contacts per ion on its surface */
+const l3WetE = (p, q) => { const x = l3Ppt(p, q); return x ? -x.dH/3 : 1.3; };
 function l3Break(b, why){
   const p = l3Find(b.a), q = l3Find(b.b);
   const i = L3.bonds.indexOf(b); if(i < 0) return;
@@ -12014,7 +12062,7 @@ function l3Break(b, why){
      (about 1.3 per ionic contact broken, three for an ion on a face) */
   if(b.type === 'ionic' && (why === 'dissolved' || L3.solvent || (p && p.nW >= 0.5) || (q && q.nW >= 0.5))){
     const first = why === 'dissolved' && !L3.solNoted; if(first) L3.solNoted = true;
-    l3Note(1.3, why, p, q, first ? {c:'solvation', title:'Salt dissolving', eq:'NaCl(s) \u2192 Na\u207a(aq) + Cl\u207b(aq)   \u0394H \u2248 +4 kJ/mol',
+    l3Note(l3WetE(p, q), why, p, q, first ? {c:'solvation', title:'Salt dissolving', eq:'NaCl(s) \u2192 Na\u207a(aq) + Cl\u207b(aq)   \u0394H \u2248 +4 kJ/mol',
       why:'Pulling an ion off the crystal costs hundreds of kJ/mol, but the water molecules that turn to face it (oxygen toward Na\u207a, hydrogens toward Cl\u207b) give almost all of it back. What is left, about +4 kJ/mol, is why salt water gets very slightly colder. Each ion needs several waters of its own, so once the water is used up the rest of the salt stays solid: the solution is saturated.'} : null);
     return;
   }
@@ -12131,9 +12179,14 @@ function l3Step(dt){
      never jumps as a water drifts across a line, which would feed in false heat */
   for(const a of A) if(a.ion){ let n = 0; for(const o of L3.waterO){ if(Math.abs(o.x-a.x) > 420) continue; const r = Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z); if(r < 420) n += Math.min(1, (420 - r)/100); } a.nW = n; }
   const PR = l3Pairs(A).slice();                  /* once a step: atoms move a few pm in four substeps */
+  const IONS = A.filter(a=>a.ion);
+  /* a precipitate is denser than water and settles: its ions get a gentle pull down */
+  const SINK = new Set();
+  for(const b of L3.bonds) if(b.type === 'ionic'){ const p = l3Find(b.a), q = l3Find(b.b); if(l3Ppt(p, q) && ((p.nW||0) + (q.nW||0) > 0.5)){ SINK.add(p); SINK.add(q); } }
   const mts = A.length > 150;
   for(let s=0;s<subs;s++){
     A.forEach(a=>{ a.fx = a.fy = a.fz = 0; });
+    for(const a of SINK) a.fy += L3_SINK*l3Mass(a);
     /* bonds as springs */
     for(const b of L3.bonds){
       if(b.type === 'metallic') continue;            /* the metal is held by its pair potential, below */
@@ -12198,7 +12251,7 @@ function l3Step(dt){
         const ri = x => EL[x.e].ri != null ? EL[x.e].ri : EL[x.e].rc*(x.ion > 0 ? 0.62 : 1.35);
         const same = p.ion*q.ion > 0, core = (ri(p) + ri(q))*(same ? 1.1 : 0.9);
         const de = Math.max(d, core*0.8);
-        let f = -fES*IMF.ion*138900*p.ion*q.ion*L3_KJ/(de*de)*(L3.solvent ? 1/78 : 1)/(1 + 0.6*((p.nW||0) + (q.nW||0)));
+        let f = -fES*IMF.ion*138900*p.ion*q.ion*L3_KJ/(de*de)*(L3.solvent ? 1/78 : 1)/(1 + (l3Ppt(p, q) ? 0.12 : 0.6)*((p.nW||0) + (q.nW||0)));
         if(d < core) f -= kR*2*(core - d);
         p.fx += f*dx/d; p.fy += f*dy/d; p.fz += f*dz/d; q.fx -= f*dx/d; q.fy -= f*dy/d; q.fz -= f*dz/d;
         if(!(s===0 && (p.ion*q.ion < 0) && d < l3Len(p,q,1)*1.3 && !nb.get(p.id).includes(q))) continue;
@@ -12210,13 +12263,25 @@ function l3Step(dt){
       /* a metal bonds to something clearly more electronegative (ionic past 1.7, polar below), never to another like carbon */
       const metalOK = !(l3Metal(p) || l3Metal(q)) || Math.abs((EL[p.e].en||1.5) - (EL[q.e].en||1.5)) >= 1.0;
       const L = l3Len(p, q, 1), canB = (l3Free(p, q) > 0 && l3Free(q, p) > 0 && !p.ion && !q.ion && !(l3Metal(p) && l3Metal(q)) && metalOK) ||
-        (pairIons && !(wet(p) && wet(q)) && !shelled(p) && !shelled(q));
+        (pairIons && (l3Ppt(p, q) || (!(wet(p) && wet(q)) && !shelled(p) && !shelled(q))));
       if(s===0 && d < L*1.35 && canB && !L3.noAuto){
-        const nbd = l3Bond(p, q, 1); nb.get(p.id).push(q); nb.get(q.id).push(p);
+        const nbd = l3Bond(p, q, 1, pairIons ? 'ionic' : undefined); nb.get(p.id).push(q); nb.get(q.id).push(p);
         /* an ion coming back out of water onto a crystal: the shell it sheds costs
            back almost all the bond gives, as for dissolving run backwards */
-        const eNet = nbd.type === 'ionic' && (wet(p) || wet(q)) ? 1.3 : nbd.energy;
-        l3Kick(p, q, eNet); l3Note(-eNet, 'formed', p, q);
+        const wetPair = nbd.type === 'ionic' && (wet(p) || wet(q)), eNet = wetPair ? l3WetE(p, q) : nbd.energy;
+        const pp = wetPair ? l3Ppt(p, q) : null;
+        if(l3Ppt(p, q)){ const cat = p.ion > 0 ? p : q; L3.bonds.filter(b=>b.type === 'dative' && (b.a === cat.id || b.b === cat.id)).forEach(b=>l3Break(b, 'ligand let go')); }
+        let meta = null;
+        if(pp){
+          L3.pptNoted = L3.pptNoted || {};
+          if(!L3.pptNoted[pp.f]){
+            L3.pptNoted[pp.f] = true;
+            const cat = p.ion > 0 ? p : q, an = cat === p ? q : p, z = cat.ion;
+            meta = {c:'precip', title:'A precipitate: '+pp.n, eq:EL[cat.e].sym+chargeSup(z)+'(aq) + '+(z > 1 ? z : '')+EL[an.e].sym+'\u207b(aq) \u2192 '+pp.f+'(s)   \u0394H '+fmtDH(pp.dH),
+              why:'Two ions that are each happy dissolved in water meet and come out as a '+pp.look+' solid. Water can hold them apart only if it holds each ion more tightly than they hold each other, and here it cannot'+(EL[cat.e].sym === 'Ag' ? ': silver\u2019s bond to a halide is partly covalent, far stronger than water\u2019s pull' : '')+'. Only '+pp.g+' of '+pp.n+' dissolves. The other ions (the spectators) stay in solution.'};
+          }
+        }
+        l3Kick(p, q, eNet); l3Note(-eNet, 'formed', p, q, meta);
         continue;
       }
       /* A radical meeting a double or triple bond can open one of its pi bonds
@@ -12270,7 +12335,7 @@ function l3Step(dt){
           /* whole charges pull hard, but not harder once touching: measured from
              the contact distance, so a chloride pressed on H3O+ does not tear it */
           const dw = whole ? Math.max(d, (EL[p.e].rv + EL[q.e].rv)*0.75) : de;
-          f -= fES*(whole ? IMF.ion : IMF.coul)*138900*p.q*q.q*L3_KJ/(dw*dw)*(L3.solvent && whole ? 1/78 : 1);
+          f -= fES*(whole ? IMF.ion : IMF.coul)*138900*p.q*q.q*L3_KJ/(dw*dw)*(L3.solvent && whole ? 1/78 : 1)/(whole ? 1 + 0.6*((p.nW||0) + (q.nW||0)) : 1);
         }
         /* hydrogen bond: an H on N, O or F, lined up on a lone pair of another N, O or F */
         if(hb){
@@ -12281,6 +12346,17 @@ function l3Step(dt){
         }
         p.fx += f*dx/d; p.fy += f*dy/d; p.fz += f*dz/d; q.fx -= f*dx/d; q.fy -= f*dy/d; q.fz -= f*dz/d;
       }
+    }
+    /* Ions reach further than the pair list (600 pm): Coulomb falls off slowly, and
+       that long, water-screened pull is what draws Ag+ and Cl- together through a
+       solution. Ions are few, so every pair of them is checked. */
+    for(let i=0;i<IONS.length;i++) for(let j=i+1;j<IONS.length;j++){
+      const p = IONS[i], q = IONS[j];
+      const dx=q.x-p.x, dy=q.y-p.y, dz=q.z-p.z, d2=dx*dx+dy*dy+dz*dz;
+      if(d2 <= 360000 || d2 > 2560000) continue;
+      const d = Math.sqrt(d2);
+      const f = -fES*IMF.ion*138900*p.ion*q.ion*L3_KJ/d2*(L3.solvent ? 1/78 : 1)/(1 + (l3Ppt(p, q) ? 0.12 : 0.6)*((p.nW||0) + (q.nW||0)))*(1 - (d - 600)/1000);
+      p.fx += f*dx/d; p.fy += f*dy/d; p.fz += f*dz/d; q.fx -= f*dx/d; q.fy -= f*dy/d; q.fz -= f*dz/d;
     }
     if(mts) for(const a of A){ a.nfx = a.fx - a._sx; a.nfy = a.fy - a._sy; a.nfz = a.fz - a._sz; }
     }
@@ -12457,7 +12533,8 @@ function l3Step(dt){
     let Eeff = b.energy;
     if(b.type === 'ionic'){
       const nW = (p.nW||0) + (q.nW||0);
-      if(nW >= 1.5) Eeff = b.energy/(8 + 6*Math.min(nW, 6));
+      if(l3Ppt(p, q)) Eeff = b.energy*(nW >= 1.5 || L3.solvent ? 0.5 : 1);
+      else if(nW >= 1.5) Eeff = b.energy/(8 + 6*Math.min(nW, 6));
       else if(L3.solvent) Eeff = b.energy/26;
     }
     if(b.arom) Eeff += L3_RES;                          /* the ring's resonance holds it */
@@ -13030,6 +13107,8 @@ const SCENES = [
   {k:'kw',      label:'Potassium + water',        note:'faster still',                     mols:[['[K]',4],['water',10]]},
   {k:'mgw',     label:'Magnesium + water',        note:'hardly, until you heat it',        mols:[['[Mg]',4],['water',10]]},
   {k:'nacl2',   label:'Sodium + chlorine',        note:'burns to salt',                    mols:[['[Na]',4],['ClCl',2]]},
+  {k:'agcl',    label:'Silver nitrate + salt water', note:'a white solid, silver chloride, gathers; Na\u207a and NO\u2083\u207b stay dissolved', ions:[['Ag',1,4],['[O-][N+](=O)[O-]',0,4],['Na',1,4],['Cl',-1,4]], spread:680, bath:80, mols:[], box:820, temp:13},
+  {k:'pbi2',    label:'Golden rain',              note:'lead(II) and iodide ions meet and fall out as bright yellow lead iodide', ions:[['Pb',2,3],['I',-1,6]], spread:480, bath:70, mols:[], box:820, temp:13},
   {k:'saltaq',  label:'Salt + water',             note:'water pulls ions off the corners and edges first, until it runs out of water to give them', crystal:'salt', bath:96, mols:[], box:820, temp:13},
   {k:'d2o',     label:'Heavy water',              note:'D₂O beside H₂O',          mols:[['D2O',5],['water',5]]},
   {k:'caff',    label:'Caffeine in water',        note:'a drug molecule solvated',          mols:[['caffeine',1],['water',10]], box:820},
@@ -13050,7 +13129,8 @@ function l3Scene(k){
   l3Push(); l3Clear();
   const bx = sc.box || 540; L3.box = L3.boxTo = bx; L3.dist = bx*3.8;
   if(sc.crystal) l3Crystal(sc.crystal);
-  if(sc.bath) l3WaterBath(sc.bath, 560);
+  if(sc.ions) l3ScatterIons(sc.ions, sc.spread || 560);
+  if(sc.bath) l3WaterBath(sc.bath, sc.crystal ? 560 : 0);
   if(sc.temp != null) setSlider('temp', sc.temp);
   sc.mols.forEach(([m, n])=>{ for(let i=0;i<n;i++) l3BuildAny(m); });
   try{ renderLeft3D(); }catch(e){}
@@ -13663,6 +13743,9 @@ function l3Draw(){
       g.save(); g.strokeStyle = shade3(col, -0.15); g.globalAlpha = 0.6; g.lineWidth = lw; g.lineCap = 'round'; g.setLineDash([lw*0.35, lw*1.2]);
       g.beginPath(); for(let i=0;i<m.pts.length;i+=4){ g.moveTo(m.pts[i], m.pts[i+1]); g.lineTo(m.pts[i+2], m.pts[i+3]); } g.stroke(); g.restore(); });
   }
+  /* which ions sit in a precipitate: those bonded to a partner they cannot dissolve away from */
+  for(const a of L3.atoms) a._ppt = null;
+  for(const b of L3.bonds){ if(b.type !== 'ionic') continue; const p = l3Find(b.a), q = l3Find(b.b), x = l3Ppt(p, q); if(x){ p._ppt = x.col; q._ppt = x.col; } }
   for(const it of items){
     if(it.bond && it.bond.type === 'metallic') continue;   /* drawn above, all at once */
     const na = it.bond || it.hbond ? Math.min(nearA(it.p.z), nearA(it.q.z)) : nearA(it.p.z);
@@ -13754,7 +13837,20 @@ function l3Draw(){
       }
       /* (the symbol is painted into the sprite now: see l3Sprite) */
       const qz = (a.ion||0) + (a.fq||0);
-      if(qz && L3.view !== 'esp'){
+      if((a.Ts||0) > 1300 && (l3Metal(a) || a.ion > 0) && L3.view !== 'esp'){
+        const fc = flameRGB(EL[a.e].sym);
+        if(fc){ drawFlameGlow(g, p.x, p.y, r, fc, clamp(((a.Ts||0) - 1300)/1200, 0, 1)*na, a.id); flameNotice(EL[a.e].sym); }
+      }
+      if(a._ppt && L3.view !== 'esp'){
+        /* part of a precipitate: the ion takes on the solid's colour, and a soft cloud of
+           it sits behind (under whatever is already drawn), so the clump reads as a solid */
+        g.save();
+        g.globalAlpha *= 0.5; g.fillStyle = a._ppt; g.beginPath(); g.arc(p.x, p.y, r*0.97, 0, TAU); g.fill();
+        g.globalCompositeOperation = 'destination-over'; g.globalAlpha = 0.75*na;
+        const pg = g.createRadialGradient(p.x, p.y, r*0.5, p.x, p.y, r*1.8);
+        pg.addColorStop(0, a._ppt); pg.addColorStop(0.6, a._ppt); pg.addColorStop(0.8, 'rgba(110,112,120,.22)'); pg.addColorStop(1, 'rgba(110,112,120,0)');
+        g.fillStyle = pg; g.beginPath(); g.arc(p.x, p.y, r*1.8, 0, TAU); g.fill(); g.restore();
+      } else if(qz && L3.view !== 'esp'){
         /* a soft halo of the charge's colour, red for positive, blue for negative */
         g.save(); g.globalCompositeOperation = 'multiply';
         const ha = g.createRadialGradient(p.x, p.y, r*0.85, p.x, p.y, r*1.4);
@@ -14134,6 +14230,52 @@ function l3Census(dt){
    its name, what holds it together, its shape and angles measured live, how
    polar it is and what holds it to its neighbours. */
 const l3Measure = (p, q) => Math.hypot(q.x-p.x, q.y-p.y, q.z-p.z);
+/* The solution on the 3D bench, measured: what is dissolved, the pH and the
+   conductivity. Concentrations count against the water molecules on the bench
+   (pure water is 55.5 mol/L of them), so the bench's few cubic nanometres of
+   water are very concentrated: one H3O+ among 100 waters is 0.55 mol/L. Conductivity uses each
+   ion's limiting molar conductivity (S cm2/mol at 25 C): H3O+ and OH- run far
+   ahead because the proton hops from water to water instead of swimming. */
+const L3_LAMBDA = {H3O:349.8, HO:198.6, H4N:73.5, NO3:71.4, C2H3O2:40.9, HSO4:52, SO4:160, Li:38.7, Na:50.1, K:73.5, Rb:77.8, Cs:77.3, Ag:61.9,
+  Mg:106, Ca:119, Ba:127.2, Cu:107, Zn:105.6, Pb:142, Fe:108, F:55.4, Cl:76.3, Br:78.1, I:76.8};
+function l3Solution(){
+  const waters = (L3.waterO||[]).length, sp = new Map();
+  let h3o = 0, oh = 0, mobile = 0, kappa = 0;
+  for(const list of l3Molecules()){
+    const q = list.reduce((t,a)=>t+(a.ion||0)+(a.fq||0), 0); if(!q) continue;
+    const ionsIn = list.filter(a=>a.ion);
+    if(L3.bonds.some(b=>b.type === 'ionic' && list.some(a=>a.id === b.a))) continue;   /* part of a solid, or an ion pair */
+    /* a metal ion with its water (or ammonia) round it is still that ion */
+    let key, label;
+    if(ionsIn.length === 1){ key = EL[ionsIn[0].e].sym; label = key+chargeSup(ionsIn[0].ion); }
+    else { key = benchFormula(countsOf(list)); label = subPlain(key === 'H3O' ? 'H3O' : key === 'HO' ? 'OH' : key)+chargeSup(q); }
+    if(key === 'H3O') h3o++; if(key === 'HO') oh++;
+    mobile++;
+    const e = sp.get(label) || sp.set(label, {n:0, lam:L3_LAMBDA[key] || 50*Math.abs(q)}).get(label); e.n++;
+  }
+  const L = waters/55.5;                                  /* the water's volume, in litres per mole of it */
+  if(waters >= 3) sp.forEach(e=>{ kappa += e.n/L*e.lam; });   /* mS/cm: (mol/L)(S cm2/mol) */
+  let pH = 7;
+  if(waters >= 3 && (h3o || oh)){ const net = (h3o - oh)/L; if(Math.abs(net) > 1e-9) pH = clamp(net > 0 ? -Math.log10(net) : 14 + Math.log10(-net), 0, 14); }
+  return {waters, sp, mobile, kappa, pH, conc: waters >= 3 ? mobile/L : 0};
+}
+function l3SolutionCard(){
+  const S = l3Solution();
+  if(S.waters < 3 && !S.mobile) return '';
+  const list = [...S.sp.entries()].sort((a,b)=>b[1].n - a[1].n).map(([k,e])=>k+(e.n>1?' \u00d7'+e.n:'')).join(' \u00b7 ');
+  if(S.waters < 3){
+    /* no water: ions loose on their own are a melt or a gas, and they conduct too */
+    return '<div class="p3-sol"><span class="ph-dial" style="background:#8A8F98">\u2014</span><div><b>'+S.mobile+' free ions</b><span>no water: a melt or a gas of ions, which conducts</span></div></div>'+
+      (list ? '<div class="p3-sol-ions">'+list+'</div>' : '');
+  }
+  const k = S.kappa, like = k < 1e-6 ? 'pure water: 0.000055 mS/cm, barely conducts' : k < 1 ? 'about tap water' : k < 20 ? 'a weak solution' : k < 90 ? 'about sea water (53)' : 'very salty, past brine';
+  const ks = k < 1e-6 ? '0' : k < 10 ? k.toFixed(1) : Math.round(k);
+  return '<div class="p3-sol" title="pH from the H\u2083O\u207a and OH\u207b among the waters; conductivity from each free ion\u2019s molar conductivity">'+
+    '<span class="ph-dial" style="background:'+phColour(S.pH)+'">'+S.pH.toFixed(1)+'</span>'+
+    '<div><b>'+ks+' mS/cm</b><span>conductivity \u00b7 '+like+'</span></div></div>'+
+    '<div class="p3-sol-ions">'+(list ? list+' in '+S.waters+' waters \u2248 '+S.conc.toFixed(S.conc < 1 ? 2 : 1)+' mol/L of ions' : 'nothing dissolved in '+S.waters+' waters')+
+      ' \u00b7 '+(S.pH < 6.4 ? 'acidic' : S.pH > 7.6 ? 'basic' : 'neutral')+'</div>';
+}
 function l3Molecules(){
   const seen = new Set(), groups = [];
   for(const a of L3.atoms){
@@ -14207,7 +14349,7 @@ function renderPanel3D(){
     (L3.electrons ? '<div><b>'+L3.electrons+'</b><span>electrons through the circuit</span></div>' : '')+
     (L3.fissions||L3.fusions||L3.decays ? '<div><b>'+L3.fissions+' \u00b7 '+L3.fusions+' \u00b7 '+L3.decays+'</b><span>fissions \u00b7 fusions \u00b7 decays</span></div>' : '')+
     '<div class="'+(dH<-1?'exo':dH>1?'endo':'')+'"><b>'+(dH>0?'+':dH<0?'\u2212':'')+Math.abs(Math.round(dH))+'</b><span>\u0394H, last 8 s'+(Math.abs(dH)>1?(dH<0?' \u00b7 exo':' \u00b7 endo'):'')+'</span></div>'+
-    '</div>';
+    '</div>' + l3SolutionCard();
   /* the atom you have picked out */
   const a = L3.sel && L3.atoms.includes(L3.sel) ? L3.sel : null;
   if(a){
@@ -14346,7 +14488,7 @@ const SCENE_GROUPS = [
   ['Lewis acids and metal ions', ['bf3','cuaq']],
   ['Metals and redox', ['naw','kw','mgw','nacl2','zncu','znacid','mgacid','cuacid','agcu']],
   ['Organic', ['hbr','markov','br2','ester','hydro']],
-  ['Solutions', ['saltaq','d2o','caff']]
+  ['Solutions', ['saltaq','agcl','pbi2','d2o','caff']]
 ];
 function renderLeft3D(){
   const host = el('left3d'); if(!host) return;
@@ -14769,7 +14911,9 @@ function l3Crystal(kind){
 function l3WaterBath(n, r0){
   const sp = 290, lim = L3.box - 70, pts = [];
   for(let x=-lim; x<=lim; x+=sp) for(let y=-lim; y<=lim; y+=sp) for(let z=-lim; z<=lim; z+=sp){
-    const r = Math.hypot(x, y, z); if(r >= r0) pts.push([x, y, z, r]);
+    const r = Math.hypot(x, y, z); if(r < r0) continue;
+    if(L3.atoms.some(a=>Math.abs(a.x-x) < 240 && Math.hypot(a.x-x, a.y-y, a.z-z) < 240)) continue;   /* something already there */
+    pts.push([x, y, z, r]);
   }
   pts.sort((a, b)=>a[3] - b[3]);
   const half = 104.5/2*Math.PI/180, rOH = 96;
@@ -14784,6 +14928,24 @@ function l3WaterBath(n, r0){
     hs.forEach(h=>l3Bond(o, h, 1, 'covalent'));
     [o].concat(hs).forEach(a=>{ a.lib = 'water'; a.libId = tag; a.libN = 3; a.cool = 1.2; });
   });
+  L3.dirty = true;
+}
+/* dissolved ions, spread through the middle of the box at least 360 pm apart:
+   list is [[sym, charge, count]] or [[smiles, 0, count]] for a molecular ion */
+function l3ScatterIons(list, R){
+  const placed = [];
+  const spot = () => { for(let k=0;k<200;k++){ const c = [(Math.random()*2-1)*R, (Math.random()*2-1)*R, (Math.random()*2-1)*R];
+    if(Math.hypot(...c) <= R && placed.every(q=>Math.hypot(q[0]-c[0], q[1]-c[1], q[2]-c[2]) > 360)){ placed.push(c); return c; } } return null; };
+  /* one of each in turn, so a crowded box shortchanges no one kind */
+  const order = []; const most = Math.max(...list.map(x=>x[2]));
+  for(let i=0;i<most;i++) list.forEach(x=>{ if(i < x[2]) order.push([x[0], x[1], 1]); });
+  order.forEach(([sym, z, n])=>{ for(let i=0;i<n;i++){
+    const c = spot(); if(!c) return;
+    if(z){ const a = l3Add(sym, c[0], c[1], c[2]); l3SetIon(a, z); a.cool = 1.2; }
+    else { const made = l3BuildAny(sym) || []; if(!made.length) return;
+      const cx = made.reduce((t,a)=>t+a.x,0)/made.length, cy = made.reduce((t,a)=>t+a.y,0)/made.length, cz = made.reduce((t,a)=>t+a.z,0)/made.length;
+      made.forEach(a=>{ a.x += c[0]-cx; a.y += c[1]-cy; a.z += c[2]-cz; }); }
+  } });
   L3.dirty = true;
 }
 function l3CrystalBuild(kind){
@@ -15227,8 +15389,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 114;
+const VERSION = 115;
 const CHANGELOG = [
+  [115, 'Three new things. Precipitation on the 3D bench: load Silver nitrate + salt water and a white solid, silver chloride, gathers and slowly settles while the sodium and nitrate stay dissolved; Golden rain does the same with bright yellow lead(II) iodide. AgCl, AgBr, AgI, PbI\u2082, PbCl\u2082 and CaF\u2082 come out of water as solids tinted their real colour, with the real \u0394H of precipitation, and a new Guide card explains why. Silver ions now take two waters, not six. A solution meter on the 3D bench: with water present it shows the pH, the conductivity in mS/cm worked out from each dissolved ion\u2019s real molar conductivity, and what is dissolved and how concentrated. Flame colours on both benches: any metal atom or ion past about 1300 K glows its flame-test colour (sodium yellow, copper green, lithium crimson, potassium lilac, strontium scarlet) with flickering tongues, and says why the first time; see the Flame colours card. Dissolved ions also now feel each other from further away, so they find their partners across a solution.'],
   [114, 'Fixed sodium turning into Na\u00b2\u207a on the flat bench. When an ionic bond broke while its electron was still flying across, the bench handed the electron back anyway, so sodium sat at \u22121 for a moment, could give two electrons to the next chlorines, and ended at 2+. Electrons still in flight are now called back instead, and only ones that landed are returned.'],
   [113, 'The + and − on charge badges sit dead centre now, on both benches. They were drawn as text, and a font\u2019s plus and minus sit off the middle of their box; they are drawn as strokes instead, with the number beside a smaller sign for 2+ and 3−. The proton and electron dots that fly between atoms use the same marks.'],
   [112, 'Salt really dissolves in water on the 3D bench. Salt + water now sits the crystal in about a hundred water molecules at room temperature, and the water pulls ions off the corners and edges first. Each water touching an ion weakens its hold on the crystal, an ion with a shell of water round it no longer snaps back on, and each dissolved ion keeps waters of its own, so a little water dissolves only a little salt: when it runs out, the rest stays solid (saturated). Dissolving now shows the real ΔH of about +4 kJ/mol rather than the full lattice energy, since the water gives almost all of that back. Charges on clusters print as superscripts (Na₆Cl₉³⁻ rather than Na₆Cl₉3-), and an ion pair snapping shut in water no longer heats the atoms to a glow.'],
@@ -16080,6 +16243,45 @@ function drawEmAbs(){
 /* the flames span ten orders of magnitude, so one format will not do */
 const pctText = p => p>=10 ? Math.round(p)+'%' : p>=0.5 ? p.toFixed(1)+'%' : p>=0.001 ? p.toFixed(3)+'%' : p.toExponential(1)+'%';
 const FLAME_ORDER = ['Li','Na','K','Rb','Cs','Ca','Sr','Ba','Cu','B','In','Tl','Pb','Zn'];
+/* An element's flame colour on the benches: the colour as people report it
+   (the Study tab's spectrum, mixed straight to sRGB, saturates lithium,
+   strontium and potassium all to the same magenta, and misses copper's green,
+   which comes from CuCl bands). How bright it glows does come from that
+   spectrum at a bunsen's 2000 K, next to sodium on a log scale. */
+const FLAME_SEEN = {Li:[224,32,74], Na:[255,176,0], K:[182,140,230], Rb:[196,64,110], Cs:[122,108,224], Ca:[255,106,40], Sr:[255,42,26],
+  Ba:[154,219,74], Cu:[31,194,138], B:[76,217,100], In:[75,63,214], Tl:[91,217,74], Pb:[138,180,230]};
+const FLAME_RGB = {};
+function flameRGB(sym){
+  if(sym in FLAME_RGB) return FLAME_RGB[sym];
+  let r = null;
+  if(FLAME[sym] && FLAME_SEEN[sym]){
+    const c = spectralRGB(flameSpectrum(sym, 2000, 0, false)), ref = spectralRGB(flameSpectrum('Na', 2000, 0, false)).Y || 1, rel = c.Y/ref;
+    r = {arr:FLAME_SEEN[sym], vis:sym === 'Cu' ? 0.6 : clamp(0.6 + 0.12*Math.log10(Math.max(rel, 1e-9)), 0.25, 1), say:FLAME[sym].say};
+  }
+  return (FLAME_RGB[sym] = r);
+}
+/* A hot metal atom or ion glows its flame-test colour: a soft haze and two
+   flickering tongues rising off it. heat runs 0 to 1 (from about 1300 K to 2500 K). */
+function drawFlameGlow(c, x, y, r, col, heat, seed){
+  const t = performance.now()/1000, fl = 0.86 + 0.14*Math.sin(t*11 + seed*1.7) + 0.06*Math.sin(t*23 + seed);
+  const rgb = col.arr.join(','), A = heat*col.vis;
+  c.save();
+  const g0 = c.createRadialGradient(x, y - r*0.25, r*0.3, x, y - r*0.25, r*2.5*fl);
+  g0.addColorStop(0, 'rgba('+rgb+','+(0.72*A).toFixed(3)+')'); g0.addColorStop(0.45, 'rgba('+rgb+','+(0.36*A).toFixed(3)+')'); g0.addColorStop(1, 'rgba('+rgb+',0)');
+  c.fillStyle = g0; c.beginPath(); c.arc(x, y - r*0.25, r*2.5*fl, 0, TAU); c.fill();
+  for(let k=0;k<2;k++){
+    const ph = (t*1.3 + seed*0.37 + k*0.5) % 1, wx = x + Math.sin(t*5 + seed + k*2.1)*r*0.35, wy = y - r*(0.9 + ph*1.6);
+    c.fillStyle = 'rgba('+rgb+','+(0.42*A*(1 - ph)).toFixed(3)+')';
+    c.beginPath(); c.ellipse(wx, wy, r*0.32*(1 - ph*0.5), r*0.62*(1 - ph*0.4), 0, 0, TAU); c.fill();
+  }
+  c.restore();
+}
+function flameNotice(sym){
+  L3.flameSaid = L3.flameSaid || {};
+  if(L3.flameSaid[sym]) return; L3.flameSaid[sym] = true;
+  const f = flameRGB(sym); if(!f) return;
+  say(BY_SYM[sym].name+' glowing '+f.say+': its flame-test colour. Heat lifts its outer electron a level; falling back, it gives out light of exactly one colour.', 'light');
+}
 function renderLight(){
   const f = FLAME[flameSym];
   el('flameSeg').innerHTML = FLAME_ORDER.map(s=>
