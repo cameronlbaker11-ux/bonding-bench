@@ -983,6 +983,18 @@ kbd{display:inline-block;font-family:var(--font-mono);font-size:10.5px;padding:1
 .ld-opt[disabled]{cursor:default}
 .ld-why{font-size:11.5px;color:var(--ink-2);line-height:1.55;margin:4px 0 0;background:var(--sunk);border-radius:7px;padding:6px 8px}
 .ld-score{font-weight:700;color:#2A7A78;font-size:12.5px;margin:8px 0 0}
+.sk-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.sk-chip{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:3px 6px;text-align:left;padding:6px 8px;border-radius:8px;border:1px solid var(--hair);background:var(--surface);cursor:pointer;font:inherit}
+.sk-chip:hover{background:var(--sunk)}
+.sk-chip b{font-size:11.5px;font-weight:600;color:var(--ink);grid-column:1}.sk-chip small{font-size:10px;color:var(--muted);grid-column:2;grid-row:1}
+.sk-bar{grid-column:1 / -1;height:3px;border-radius:2px;background:var(--hair);overflow:hidden;display:block}.sk-bar i{display:block;height:100%}
+.sk-tag{display:inline-block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#2A7A78;background:rgba(42,122,120,.10);border-radius:5px;padding:2px 6px;margin-bottom:4px}
+.lp-prog{margin:2px 0 8px}.lp-prog small{font-size:10.5px;color:var(--muted)}
+.lp-next{display:flex;flex-direction:column;gap:1px;width:100%;text-align:left;margin:0 0 6px;padding:9px 12px;border-radius:10px;border:1px solid #2A7A78;background:rgba(42,122,120,.07);cursor:pointer;font:inherit}
+.lp-next small{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#2A7A78}.lp-next b{font-size:13px;color:var(--ink)}
+.lp-prac{margin:0 0 12px;border:1px solid var(--hair);border-radius:10px;padding:8px 10px}.lp-prac summary{cursor:pointer;list-style:none;display:flex;flex-direction:column}
+.lp-prac summary b{font-size:13px}.lp-prac summary span{font-size:11px;color:var(--muted)}
+.lp-try{margin:12px 0 4px}
 .ex-start{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;margin:4px 0 12px;padding:10px 12px;border-radius:10px;border:0;background:var(--ink);color:#fff;cursor:pointer;font:inherit}
 .ex-start b{font-size:13px;font-weight:600}.ex-start span{font-size:11px;opacity:.75;line-height:1.4}
 .ex-bar{height:4px;border-radius:2px;background:var(--hair);overflow:hidden;margin:2px 0 4px}.ex-bar i{display:block;height:100%;background:#2A7A78;transition:width .3s}
@@ -5889,6 +5901,224 @@ function glossify(html){
     return part.replace(/\u0001(\d+)\u0002([^\u0003]*)\u0003/g, (m0, i, w)=>'<abbr class="gl" title="'+GLOSSARY[+i][1].replace(/"/g, '&quot;')+'">'+w+'</abbr>');
   }).join('');
 }
+/* ---------------- practice questions ----------------
+   Made fresh each time from the rules the bench runs on. Every number needed is
+   in the question (electronegativities, charges, bond energies, pKa values,
+   potentials), so they test using an idea, not remembering a lesson. */
+const qPick = a => a[Math.floor(Math.random()*a.length)];
+const qName = s => BY_SYM[s].name.toLowerCase();
+const qCap = t => t.charAt(0).toUpperCase() + t.slice(1);
+const qNum = v => String(v).replace('-', '\u2212');   /* a real minus sign */
+function qMake(skill, q, right, wrongs, why){
+  const opts = [right]; wrongs.forEach(w=>{ if(w != null && opts.indexOf(w) < 0 && opts.length < 4) opts.push(w); });
+  return {skill, q, opts, a:0, why};
+}
+const SKILLS = {
+  bondtype:{name:'Bond type', g(){
+    const pool = ['H','C','N','O','F','Na','Mg','Al','Si','P','S','Cl','K','Ca','Br','I','Li','Cu','Zn','Fe'];
+    for(let k=0;k<60;k++){
+      const A = BY_SYM[qPick(pool)], B = BY_SYM[qPick(pool)];
+      if(A === B && isMetal(A)) continue;
+      const d = Math.abs(A.en - B.en), mA = isMetal(A), mB = isMetal(B);
+      if(Math.abs(d - 1.7) < 0.12 || Math.abs(d - 0.4) < 0.08) continue;   /* nothing on a borderline */
+      const t = mA && mB ? 'Metallic' : d >= 1.7 && mA !== mB ? 'Ionic' : d >= 0.4 ? 'Polar covalent' : 'Non-polar covalent';
+      if(mA !== mB && d < 1.7) continue;   /* metal with nonmetal but a small gap (MgI2, AlCl3): really in between, so left out */
+      if((A.sym === 'H' && mB) || (B.sym === 'H' && mA)) continue;   /* metal hydrides are their own story */
+      const hi = A.en >= B.en ? A : B, ds = d.toFixed(2);
+      const why = t === 'Metallic' ? 'Both are metals: they pool their outer electrons into a shared sea that holds every atom.' :
+        t === 'Ionic' ? 'ΔEN = '+ds+', past 1.7, between a metal and a nonmetal: the metal hands its electron to the '+hi.name.toLowerCase()+' outright.' :
+        t === 'Polar covalent' ? (d >= 1.7 ? 'ΔEN = '+ds+' is large, but both are nonmetals: neither gives its electrons up outright, so the pair is shared, very unequally, and the '+hi.name.toLowerCase()+' turns strongly δ−.' : 'ΔEN = '+ds+', between 0.4 and 1.7: the pair is shared, but pulled toward the '+hi.name.toLowerCase()+', which turns δ−.') :
+        'ΔEN = '+ds+', under 0.4: the pair is shared almost equally.';
+      return qMake('bondtype', A.name+' (EN '+A.en.toFixed(2)+', '+(mA ? 'a metal' : 'a nonmetal')+') bonds to '+(A === B ? 'another '+A.name.toLowerCase()+' atom' : B.name.toLowerCase()+' (EN '+B.en.toFixed(2)+', '+(mB ? 'a metal' : 'a nonmetal')+')')+'. What kind of bond forms?',
+        t, ['Ionic','Polar covalent','Non-polar covalent','Metallic'].filter(x=>x !== t), why);
+    }
+  }},
+  ioncharge:{name:'Ion charges', g(){
+    const [s, z, grp, ve] = qPick([['Li',1,1,1],['Na',1,1,1],['K',1,1,1],['Mg',2,2,2],['Ca',2,2,2],['Ba',2,2,2],['Al',3,13,3],['N',-3,15,5],['P',-3,15,5],['O',-2,16,6],['S',-2,16,6],['F',-1,17,7],['Cl',-1,17,7],['Br',-1,17,7],['I',-1,17,7]]);
+    const ion = q => s + chargeSup(q);
+    const wrong = z > 0 ? [ion(-z), ion(z + 1), ion(-(8 - ve))] : [ion(ve), ion(z - 1), ion(-z)];
+    return qMake('ioncharge', qCap(qName(s))+' is in group '+grp+' and has '+ve+' outer electron'+(ve > 1 ? 's' : '')+'. What ion does it usually form?', ion(z), wrong,
+      z > 0 ? 'A metal loses its outer electrons: giving up '+ve+' leaves the full shell beneath, so '+ion(z)+'.' : 'A nonmetal gains electrons to complete its octet: '+ve+' + '+(-z)+' = 8, so '+ion(z)+'.');
+  }},
+  formula:{name:'Ionic formulas', g(){
+    const [c, p, cn] = qPick([['Li',1,'lithium'],['Na',1,'sodium'],['K',1,'potassium'],['Mg',2,'magnesium'],['Ca',2,'calcium'],['Ba',2,'barium'],['Al',3,'aluminium']]);
+    const [an, n, aname, ael] = qPick([['F',1,'fluoride','fluorine'],['Cl',1,'chloride','chlorine'],['Br',1,'bromide','bromine'],['O',2,'oxide','oxygen'],['S',2,'sulfide','sulfur'],['N',3,'nitride','nitrogen']]);
+    const g = (a, b) => b ? g(b, a % b) : a, L = p*n/g(p, n), nc = L/p, na = L/n;
+    const f = (x, y) => subPlain(c + (x > 1 ? x : '') + an + (y > 1 ? y : ''));
+    return qMake('formula', qCap(cn)+' forms '+c+chargeSup(p)+' ions and '+ael+' forms '+an+chargeSup(-n)+' ions. What is the formula of '+cn+' '+aname+'?',
+      f(nc, na), [f(1, 1), f(na, nc), f(n, p), f(nc + 1, na), f(nc, na + 1), f(nc + 1, na + 1)],
+      'The charges must cancel: '+nc+' × (+'+p+') and '+na+' × (−'+n+') both make '+L+', so '+f(nc, na)+'.');
+  }},
+  valence:{name:'How many bonds', g(){
+    const [s, ve] = qPick([['H',1],['C',4],['Si',4],['N',5],['P',5],['O',6],['S',6],['F',7],['Cl',7],['Br',7]]);
+    const b = s === 'H' ? 1 : 8 - ve;
+    return qMake('valence', qCap(qName(s))+' has '+ve+' valence electron'+(ve > 1 ? 's' : '')+'. How many covalent bonds does it usually form?'+(s === 'H' ? ' (Hydrogen fills up at 2, not 8.)' : ''),
+      String(b), ['1','2','3','4', String(ve)].filter(x=>x !== String(b)).sort(()=>Math.random() - 0.5),
+      s === 'H' ? 'One shared pair gives hydrogen 2 electrons, a full first shell: one bond.' : 'Each bond shares one more electron with it. '+ve+' + '+b+' = 8, a full octet: '+b+' bond'+(b > 1 ? 's' : '')+'.');
+  }},
+  shape:{name:'Molecular shapes', g(){
+    const T = [[2,0,'Linear','180°','CO₂'],[3,0,'Trigonal planar','120°','BF₃'],[2,1,'Bent','about 118°','SO₂'],[4,0,'Tetrahedral','109.5°','CH₄'],
+      [3,1,'Trigonal pyramidal','about 107°','NH₃'],[2,2,'Bent','about 104.5°','H₂O'],[5,0,'Trigonal bipyramidal','90° and 120°','PCl₅'],[6,0,'Octahedral','90°','SF₆'],[4,2,'Square planar','90°','XeF₄']];
+    const [b, l, sh, ang, ex] = qPick(T), geo = {2:'a line',3:'a triangle',4:'a tetrahedron',5:'a trigonal bipyramid',6:'an octahedron'}[b + l];
+    const names = [...new Set(T.map(x=>x[2]))].filter(x=>x !== sh).sort(()=>Math.random() - 0.5);
+    return qMake('shape', 'A central atom has '+b+' bonding region'+(b > 1 ? 's' : '')+' (a double bond counts as one) and '+(l ? l+' lone pair'+(l > 1 ? 's' : '') : 'no lone pairs')+'. What shape is the molecule?',
+      sh, names, (b + l)+' regions of electrons push as far apart as they can, toward '+geo+'. '+(l ? 'Lone pairs take up room but are not part of the shape, so it is ' : 'With no lone pairs the shape is that arrangement: ')+sh.toLowerCase()+', '+ang+'. '+ex+' is one.');
+  }},
+  polarity:{name:'Polar molecules', g(){
+    const P = 'Polar: the bond dipoles do not cancel', C = 'Non-polar: the bond dipoles cancel', N = 'Non-polar: its bonds are not polar';
+    const [f, d, ans, why] = qPick([
+      ['CO₂','linear, with two polar C=O bonds pointing in opposite directions',C,'The two equal dipoles point opposite ways and cancel exactly.'],
+      ['H₂O','bent, with two polar O–H bonds',P,'In a bent shape the two O–H dipoles add up rather than cancel.'],
+      ['CH₄','tetrahedral, with four C–H bonds (ΔEN 0.35)',N,'C–H bonds are barely polar (ΔEN under 0.4), so there is no dipole to add up.'],
+      ['NH₃','trigonal pyramidal, with three polar N–H bonds',P,'The three dipoles all lean the same way, toward the nitrogen: they add up.'],
+      ['BF₃','trigonal planar, with three identical polar B–F bonds',C,'Three equal dipoles at 120° in a flat triangle cancel.'],
+      ['CCl₄','tetrahedral, with four identical polar C–Cl bonds',C,'Four equal dipoles at the corners of a tetrahedron cancel.'],
+      ['CHCl₃','tetrahedral, with three C–Cl bonds and one C–H bond',P,'The bonds are not all alike, so the dipoles are unequal and cannot cancel.'],
+      ['SF₆','octahedral, with six identical polar S–F bonds',C,'Each S–F dipole has an equal one pointing the opposite way.'],
+      ['HCN','linear, with a C–H bond at one end and a C≡N bond at the other',P,'Linear, but the two ends differ: the dipoles are unequal and do not cancel.'],
+      ['Cl₂','a single Cl–Cl bond',N,'Both atoms are the same element, so the bond is not polar at all.'],
+      ['SO₂','bent, with two polar S=O bonds',P,'Bent, so the two S=O dipoles add up.'],
+      ['HCl','a single polar H–Cl bond',P,'One polar bond and nothing to cancel it: chlorine is δ−, hydrogen δ+.']]);
+    return qMake('polarity', f+' is '+d+'. Is the molecule polar?', ans, [P, C, N].filter(x=>x !== ans), why);
+  }},
+  enthalpy:{name:'ΔH from bond energies', g(){
+    const R = qPick([
+      {eq:'H₂ + Cl₂ → 2HCl', b:[['H–H',436,1],['Cl–Cl',243,1]], m:[['H–Cl',432,2]]},
+      {eq:'2H₂ + O₂ → 2H₂O', b:[['H–H',436,2],['O=O',498,1]], m:[['O–H',463,4]]},
+      {eq:'N₂ + 3H₂ → 2NH₃', b:[['N≡N',945,1],['H–H',436,3]], m:[['N–H',391,6]]},
+      {eq:'H₂ + F₂ → 2HF', b:[['H–H',436,1],['F–F',158,1]], m:[['H–F',567,2]]},
+      {eq:'H₂ + Br₂ → 2HBr', b:[['H–H',436,1],['Br–Br',193,1]], m:[['H–Br',366,2]]},
+      {eq:'CH₄ + 2O₂ → CO₂ + 2H₂O', b:[['C–H',413,4],['O=O',498,2]], m:[['C=O',805,2],['O–H',463,4]]},
+      {eq:'C₂H₄ + H₂ → C₂H₆', b:[['C=C',614,1],['H–H',436,1]], m:[['C–C',348,1],['C–H',413,2]]},
+      {eq:'2HI → H₂ + I₂', b:[['H–I',299,2]], m:[['H–H',436,1],['I–I',151,1]]}]);
+    const B = R.b.reduce((t,x)=>t+x[1]*x[2], 0), M = R.m.reduce((t,x)=>t+x[1]*x[2], 0), dH = B - M;
+    const list = R.b.concat(R.m).map(x=>x[0]+' '+x[1]).join(', '), work = xs => xs.map(x=>(x[2] > 1 ? x[2]+' × ' : '')+x[1]).join(' + ');
+    return qMake('enthalpy', R.eq+'. Bond energies (kJ/mol): '+list+'. Counting the bonds broken and made, what is ΔH?',
+      fmtDH(dH), [fmtDH(-dH), fmtDH(-M), fmtDH(B + M), fmtDH(dH + 100)],
+      'Broken (energy in): '+work(R.b)+' = '+B+'. Made (energy out): '+work(R.m)+' = '+M+'. ΔH = '+B+' − '+M+' = '+fmtDH(dH)+': '+(dH < 0 ? 'exothermic, the new bonds are stronger.' : 'endothermic, the old bonds were stronger.'));
+  }},
+  pka:{name:'Acids and pKa', g(){
+    if(Math.random() < 0.5){
+      const A = [['HCl',-7],['H₃O⁺',-1.7],['HF',3.2],['acetic acid',4.76],['carbonic acid',6.4],['HCN',9.2],['NH₄⁺',9.25],['phenol',10],['water',15.7]];
+      let x, y; do { x = qPick(A); y = qPick(A); } while(x === y || Math.abs(x[1] - y[1]) < 1.5);
+      const s = x[1] < y[1] ? x : y, d = Math.abs(x[1] - y[1]);
+      return qMake('pka', qCap(x[0])+' has pKa '+qNum(x[1])+'; '+y[0]+' has pKa '+qNum(y[1])+'. Which is the stronger acid (lets go of its proton more easily)?',
+        qCap(s[0]), [qCap(s === x ? y[0] : x[0]), 'They are equally strong'],
+        'The lower the pKa, the more easily the proton goes. Each pKa unit is a factor of ten, so '+s[0]+' is about 10^'+Math.round(d)+' times stronger.');
+    }
+    const acids = [['HCl',-7],['HF',3.2],['acetic acid',4.76],['NH₄⁺',9.25],['water',15.7]];
+    const bases = [['water','H₃O⁺',-1.7],['ammonia','NH₄⁺',9.25],['hydroxide','water',15.7],['acetate','acetic acid',4.76],['chloride','HCl',-7]];
+    let ac, ba; do { ac = qPick(acids); ba = qPick(bases); } while(ac[0] === ba[1] || Math.abs(ac[1] - ba[2]) < 1.5);
+    const goes = ba[2] > ac[1];
+    return qMake('pka', qCap(ac[0])+' (pKa '+qNum(ac[1])+') meets '+ba[0]+'. If '+ba[0]+' takes the proton it becomes '+ba[1]+', which has pKa '+qNum(ba[2])+'. Does the proton move?',
+      goes ? 'Yes: it moves to the '+ba[0] : 'No: it stays on the '+ac[0], [goes ? 'No: it stays on the '+ac[0] : 'Yes: it moves to the '+ba[0], 'Only if the bench is heated'],
+      'A proton ends up wherever it is held most tightly: the side with the higher pKa. '+qNum(ba[2])+(goes ? ' > ' : ' < ')+qNum(ac[1])+', so '+(goes ? 'it moves.' : 'it stays put.'));
+  }},
+  redox:{name:'Redox and metals', g(){
+    const M = [['Li',-3.04,1],['K',-2.93,1],['Na',-2.71,1],['Mg',-2.37,2],['Al',-1.66,3],['Zn',-0.76,2],['Fe',-0.44,2],['Ni',-0.26,2],['Pb',-0.13,2],['Cu',0.34,2],['Ag',0.80,1],['Au',1.50,3]];
+    if(Math.random() < 0.55){
+      const solid = M.filter(m=>!['Li','K','Na'].includes(m[0]));
+      let x, y; do { x = qPick(solid); y = qPick(M.filter(m=>m[2] > 0)); } while(x === y || Math.abs(x[1] - y[1]) < 0.25);
+      const goes = y[1] > x[1], X = qName(x[0]), Y = qName(y[0]);
+      return qMake('redox', 'A piece of '+X+' (E° '+qNum(x[1])+' V) is dipped into a solution of '+y[0]+chargeSup(y[2])+' ions (E° '+qNum(y[1])+' V). What happens?',
+        goes ? qCap(X)+' dissolves and '+Y+' metal comes out' : 'Nothing happens', [goes ? 'Nothing happens' : qCap(X)+' dissolves and '+Y+' metal comes out', qCap(Y)+' dissolves and '+X+' metal comes out'],
+        'Electrons run from the lower potential to the higher. '+(goes ? qCap(X)+' ('+qNum(x[1])+' V) is lower, so it gives electrons to the '+Y+' ions: it dissolves and '+Y+' plates out.' : qCap(X)+' ('+qNum(x[1])+' V) sits higher than '+Y+' ('+qNum(y[1])+' V), so it cannot push electrons onto those ions.'));
+    }
+    const x = qPick(M.filter(m=>!['Li','K','Na'].includes(m[0]))), X = qName(x[0]), yes = x[1] < 0;
+    return qMake('redox', qCap(X)+' has E° = '+qNum(x[1])+' V, and hydrogen is the zero of the scale. Dropped into hydrochloric acid, does it give off hydrogen gas?',
+      yes ? 'Yes: it can hand electrons to H⁺' : 'No: it cannot reduce H⁺', [yes ? 'No: it cannot reduce H⁺' : 'Yes: it can hand electrons to H⁺', 'Only if the acid is boiling'],
+      (yes ? qCap(X)+' sits below hydrogen (negative E°), so it gives electrons to H⁺: H₂ fizzes off as it dissolves.' : qCap(X)+' sits above hydrogen (positive E°): H⁺ cannot take its electrons, and it sits in the acid untouched.'));
+  }},
+  imf:{name:'Boiling points', g(){
+    const [a, b, why] = qPick([
+      ['water, H₂O','hydrogen sulfide, H₂S','Water’s O–H bonds let its molecules hydrogen-bond; H₂S cannot (sulfur is not N, O or F).'],
+      ['hydrogen fluoride, HF','hydrogen chloride, HCl','HF hydrogen-bonds (H on F); HCl has only weaker dipole–dipole forces.'],
+      ['ethanol, CH₃CH₂OH','dimethyl ether, CH₃OCH₃','Same formula, C₂H₆O, but only ethanol has an O–H to hydrogen-bond with.'],
+      ['butane, C₄H₁₀','methane, CH₄','Both feel only London forces, which grow with the size of the electron cloud: the bigger molecule wins.'],
+      ['bromine, Br₂','chlorine, Cl₂','London forces grow with size: bromine’s bigger, softer electron clouds attract more.'],
+      ['sodium chloride, NaCl','hydrogen chloride, HCl','Salt is a crystal of ions held by ionic bonds throughout; HCl is small separate molecules.'],
+      ['ammonia, NH₃','methane, CH₄','Ammonia’s N–H bonds hydrogen-bond; methane has only London forces.'],
+      ['propan-1-ol, CH₃CH₂CH₂OH','propane, CH₃CH₂CH₃','The O–H lets propanol hydrogen-bond; propane has only London forces.']]);
+    const [first, second] = Math.random() < 0.5 ? [a, b] : [b, a];
+    return qMake('imf', 'Which has the higher boiling point: '+first+', or '+second+'?', qCap(a.split(',')[0]), [qCap(b.split(',')[0]), 'They boil at about the same temperature'], why);
+  }},
+  hbond:{name:'Hydrogen bonding', g(){
+    const yes = ['water, H₂O','ammonia, NH₃','hydrogen fluoride, HF','methanol, CH₃OH','ethanol, CH₃CH₂OH','methylamine, CH₃NH₂','acetic acid, CH₃COOH'];
+    const no = ['methane, CH₄','carbon dioxide, CO₂','hydrogen sulfide, H₂S','chloromethane, CH₃Cl','dimethyl ether, CH₃OCH₃','hydrogen chloride, HCl','phosphine, PH₃','ethane, C₂H₆'];
+    const sh = a => a.slice().sort(()=>Math.random() - 0.5), inv = Math.random() < 0.4;
+    const right = qCap(inv ? qPick(no) : qPick(yes)), wr = (inv ? sh(yes) : sh(no)).slice(0, 3).map(qCap);
+    return qMake('hbond', inv ? 'Three of these hydrogen-bond to molecules of their own kind. Which one cannot?' : 'Which of these can hydrogen-bond to molecules of its own kind?', right, wr,
+      'A hydrogen bond needs an H bonded to N, O or F, pointing at another N, O or F. '+qCap(right.split(',')[0])+(inv ? ' has no H on N, O or F.' : ' has one.'));
+  }},
+  moles:{name:'Molar mass', g(){
+    const Mm = {H:1, C:12, N:14, O:16, Na:23, S:32, Cl:35.5, Ca:40};
+    const [nm, f] = qPick([['water','H2O'],['carbon dioxide','CO2'],['methane','CH4'],['ethanol','C2H6O'],['glucose','C6H12O6'],['ammonia','NH3'],['sulfuric acid','H2SO4'],['sodium chloride','NaCl'],['calcium carbonate','CaCO3'],['acetic acid','C2H4O2'],['propane','C3H8'],['nitric acid','HNO3']]);
+    const parts = [...f.matchAll(/([A-Z][a-z]?)(\d*)/g)].map(m=>[m[1], +(m[2]||1)]);
+    const M = parts.reduce((t,[e,n])=>t+Mm[e]*n, 0), flat = parts.reduce((t,[e])=>t+Mm[e], 0);
+    const num = v => String(Math.round(v*10)/10);
+    const last = parts[parts.length-1], skew = M + Mm[last[0]]*(last[1] > 1 ? -1 : 1);
+    return qMake('moles', 'Using '+[...new Set(parts.map(p=>p[0]))].map(e=>e+' = '+Mm[e]).join(', ')+' g/mol, what is the molar mass of '+nm+', '+subPlain(f)+'?',
+      num(M)+' g/mol', [num(flat)+' g/mol', num(skew)+' g/mol', num(M + 16)+' g/mol', num(M*2)+' g/mol'],
+      'Add every atom: '+parts.map(([e,n])=>(n > 1 ? n+' × ' : '')+Mm[e]).join(' + ')+' = '+num(M)+' g/mol.');
+  }},
+  precip:{name:'Precipitates', g(){
+    const [a, b, prods, k] = qPick([
+      ['silver nitrate, AgNO₃','sodium chloride, NaCl',['AgCl','NaNO₃'],0], ['silver nitrate, AgNO₃','potassium bromide, KBr',['AgBr','KNO₃'],0],
+      ['silver nitrate, AgNO₃','potassium iodide, KI',['AgI','KNO₃'],0], ['lead(II) nitrate, Pb(NO₃)₂','potassium iodide, KI',['PbI₂','KNO₃'],0],
+      ['sodium chloride, NaCl','potassium nitrate, KNO₃',['NaNO₃','KCl'],-1], ['sodium bromide, NaBr','potassium iodide, KI',['NaI','KBr'],-1]]);
+    const none = 'No solid: everything stays dissolved', right = k < 0 ? none : prods[k];
+    return qMake('precip', 'Rules: every sodium, potassium and nitrate salt dissolves; silver chloride, bromide and iodide, and lead(II) iodide, do not. Solutions of '+a+' and '+b+' are mixed. What solid forms?',
+      right, [none, prods[0], prods[1]].filter(x=>x !== right),
+      'Swapping partners gives '+prods.join(' and ')+'. '+(k < 0 ? 'Both are on the dissolves list, so nothing comes out.' : prods[k]+' does not dissolve, so it falls out as a solid; '+prods[1]+' stays in solution (its ions are spectators).'));
+  }}
+};
+/* which skills each Learn topic exercises, for practising after it */
+const TOPIC_SKILLS = {acidbase:['pka'], neutral:['pka','enthalpy'], lewis:['valence','shape'], coord:['shape','valence'], ionization:['ioncharge','formula','bondtype'],
+  redox:['redox'], metalacid:['redox'], metalwater:['redox','ioncharge'], addition:['enthalpy','valence'], markov:['valence','polarity'], ester:['moles','enthalpy'],
+  hydrolysis:['moles','enthalpy'], hbond:['hbond','imf'], metallic:['bondtype','imf'], electrolysis:['redox','ioncharge']};
+let learnSkill = {};
+try{ learnSkill = JSON.parse(localStorage.getItem('bondingbench.learnskill')||'{}') || {}; }catch(e){ learnSkill = {}; }
+function skillNote(k, right){
+  const s = learnSkill[k] || (learnSkill[k] = {r:0, n:0, last:[]});
+  s.n++; if(right) s.r++; s.last = (s.last||[]).concat(right ? 1 : 0).slice(-8);
+  try{ localStorage.setItem('bondingbench.learnskill', JSON.stringify(learnSkill)); }catch(e){}
+}
+/* mastery: the share right of the last few tries (null until there have been three) */
+const skillLevel = k => { const s = learnSkill[k]; return s && s.last && s.last.length >= 3 ? s.last.reduce((t,x)=>t+x, 0)/s.last.length : null; };
+let qSeq = 0;
+function genQuestion(k){ for(let i=0;i<5;i++){ const q = SKILLS[k].g(); if(q && q.opts.length >= 2){ q.id = 'q'+(qSeq++); return q; } } return null; }
+
+/* the order to take the topics in if you are starting out */
+const LEARN_PATH = ['salt','hbond','melt','acid','neut','lewis','coord','zncu','mgacid','naw','elec','br2','markov','ester','hydro'];
+/* Practice: endless fresh questions, leaning toward the skills you get wrong */
+function practiceStart(skills, label){
+  STEP.hold = false; STEP.cur = null; LEARN.topic = null; LEARN.exam = null; LEARN.perm = {};
+  LEARN.prac = {skills, label, n:0, right:0, streak:0, best:0, q:null, ans:null};
+  LEARN.phase = 'practice'; practiceNext();
+}
+function practiceNext(){
+  const P = LEARN.prac; if(!P) return;
+  /* weakest first: untried skills, then the lowest mastery, with some chance in it */
+  const w = P.skills.map(k=>{ const lv = skillLevel(k); return [k, (lv == null ? 0.35 : lv) + Math.random()*0.45 + (P.q && P.q.skill === k && P.skills.length > 1 ? 1 : 0)]; }).sort((a,b)=>a[1] - b[1]);
+  P.q = genQuestion(w[0][0]); P.ans = null;
+  renderLearnDock();
+}
+function skillChip(k, extra){
+  const lv = skillLevel(k), pct = lv == null ? null : Math.round(lv*100);
+  return '<button type="button" class="sk-chip" data-ld="prac" data-s="'+k+'"'+(extra||'')+'><b>'+SKILLS[k].name+'</b><i class="sk-bar"><i style="width:'+(pct||0)+'%;background:'+(pct == null ? 'transparent' : pct >= 75 ? '#2A7A78' : pct >= 50 ? '#D9A62B' : '#C0503A')+'"></i></i><small>'+(pct == null ? 'not tried' : pct+'%')+'</small></button>';
+}
+function practiceHTML(){
+  const P = LEARN.prac, q = P.q, exit = '<button type="button" class="ld-exit" data-ld="exit">Exit Learn mode</button>';
+  let h = '<div class="ld-head"><button type="button" class="ld-back" data-ld="pick">\u2039 All topics</button>'+exit+'</div>'+
+    '<span class="eyebrow ld-cat" style="color:#2A7A78">Practice</span><h3 class="ld-title">'+P.label+'</h3>'+
+    '<p class="ld-hint" style="margin-top:0">'+P.n+' answered \u00b7 '+P.right+' right'+(P.streak >= 2 ? ' \u00b7 '+P.streak+' in a row' : '')+'. Every number you need is in the question.</p>';
+  if(!q) return h + '<p class="ld-p">No question could be made just now.</p>';
+  h += '<div class="ld-q"><span class="sk-tag">'+SKILLS[q.skill].name+'</span><p>'+q.q+'</p>'+learnOrder(q.id, q.opts.length).map(i=>'<button type="button" class="ld-opt'+(P.ans == null ? '' : i === q.a ? ' right' : i === P.ans ? ' wrong' : ' dim')+'" data-ld="pans" data-i="'+i+'"'+(P.ans == null ? '' : ' disabled')+'>'+q.opts[i]+'</button>').join('')+
+    (P.ans != null ? '<p class="ld-why">'+(P.ans === q.a ? '\u2713 ' : 'The answer: '+q.opts[q.a].replace(/^./, m=>m.toLowerCase())+'. ')+q.why+'</p>' : '')+'</div>'+
+    (P.ans != null ? '<div class="ld-btns"><button type="button" class="ld-go" data-ld="pnext">Next question \u25b6</button></div>' : '');
+  if(P.skills.length > 1) h += '<span class="eyebrow" style="display:block;margin-top:14px">Your skills</span><div class="sk-grid">'+P.skills.map(k=>skillChip(k)).join('')+'</div>';
+  return h;
+}
 /* ---------------- the assessment ----------------
    Everything in Learn mode at once. Part one asks one question from every
    topic; part two hands over a cleared 3D bench and asks for things to be made,
@@ -5916,11 +6146,10 @@ const EXAM_TASKS = [
     check:()=>(L3.hb||[]).length >= 3}
 ];
 function examStart(){
-  /* one question from every topic, picked at random from its guess and its quiz */
-  const qs = LEARN_TOPICS.map(t=>{ const qa = LEARN_QA[t.k]; if(!qa) return null;
-    const pool = [qa.predict].concat(qa.quiz||[]).filter(Boolean); if(!pool.length) return null;
-    return {t, q:pool[Math.floor(Math.random()*pool.length)]}; }).filter(Boolean);
-  for(let i=qs.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [qs[i], qs[j]] = [qs[j], qs[i]]; }
+  /* twelve fresh questions, each on a different skill, with all their data given:
+     they ask you to use the ideas, not to remember what happened in a lesson */
+  const ks = Object.keys(SKILLS).sort(()=>Math.random() - 0.5).slice(0, 12);
+  const qs = ks.map(k=>{ const q = genQuestion(k); return q ? {skill:k, q} : null; }).filter(Boolean);
   LEARN.topic = null; LEARN.perm = {}; STEP.hold = false; STEP.cur = null;
   LEARN.exam = {qs, i:0, ans:[], stage:'quiz', done:{}};
   LEARN.phase = 'exam'; renderLearnDock();
@@ -5989,7 +6218,7 @@ function examHTML(){
   if(X.stage === 'quiz'){
     const x = X.qs[X.i], ans = X.ans[X.i], q = x.q, last = X.i === X.qs.length - 1;
     h += '<h3 class="ld-title">Part 1: questions</h3>'+bar(X.i + (ans != null ? 1 : 0), X.qs.length)+
-      '<p class="ld-hint" style="margin-top:4px">Question '+(X.i+1)+' of '+X.qs.length+' \u00b7 from \u201c'+x.t.title+'\u201d \u00b7 '+X.ans.filter((a, i)=>a === X.qs[i].q.a).length+' right so far</p>'+
+      '<p class="ld-hint" style="margin-top:4px">Question '+(X.i+1)+' of '+X.qs.length+' \u00b7 '+SKILLS[x.skill].name+' \u00b7 '+X.ans.filter((a, i)=>a === X.qs[i].q.a).length+' right so far'+(X.i === 0 ? '<br>Everything you need to answer is in each question: no remembering the lessons.' : '')+'</p>'+
       '<div class="ld-q"><p>'+q.q+'</p>'+learnOrder('ex'+X.i, q.opts.length).map(i=>'<button type="button" class="ld-opt'+(ans == null ? '' : i === q.a ? ' right' : i === ans ? ' wrong' : ' dim')+'" data-ld="exans" data-i="'+i+'"'+(ans == null ? '' : ' disabled')+'>'+q.opts[i]+'</button>').join('')+
       (ans != null ? '<p class="ld-why">'+(ans === q.a ? '\u2713 ' : 'The answer: '+q.opts[q.a].replace(/^./, m=>m.toLowerCase())+'. ')+q.why+'</p>' : '')+'</div>'+
       (ans != null ? '<div class="ld-btns"><button type="button" class="ld-go" data-ld="exnext">'+(last ? 'On to the bench: Part 2 \u25b6' : 'Next question \u25b6')+'</button></div>' : '');
@@ -6003,12 +6232,13 @@ function examHTML(){
       '<div class="ld-btns"><button type="button" class="ld-go" data-ld="exfinish">'+(n === EXAM_TASKS.length ? 'See my result \u25b6' : 'Finish ('+n+' of '+EXAM_TASKS.length+') \u25b6')+'</button><button type="button" class="ghost-btn" data-ld="exclear">Clear the bench</button></div>';
   } else {
     const R = X.result, best = learnScore.exam;
-    const verdict = R.pct >= 90 ? 'Outstanding: you have it all.' : R.pct >= 75 ? 'Strong: a couple of things to tidy up.' : R.pct >= 50 ? 'Getting there: the topics below are worth another look.' : 'A good start: go back through the topics below, then try again.';
+    const verdict = R.pct >= 90 ? 'Outstanding: you have it all.' : R.pct >= 75 ? 'Strong: a couple of things to tidy up.' : R.pct >= 50 ? 'Getting there: practise the skills below, then try again.' : 'A good start: practise the skills below (each one explains itself as you go), then try again.';
     const missQ = X.qs.map((x, i)=>[x, i]).filter(([x, i])=>X.ans[i] !== x.q.a);
     const missB = EXAM_TASKS.filter(x=>!X.done[x.k]);
     h += '<h3 class="ld-title">Your result</h3><div class="ex-score"><b>'+R.pct+'%</b><span>'+R.qRight+' of '+X.qs.length+' questions \u00b7 '+R.built+' of '+EXAM_TASKS.length+' made on the bench</span></div>'+
       '<p class="ld-p"><b>'+verdict+'</b>'+(X.newBest ? ' A new best (it was '+X.prevBest+'%).' : X.prevBest != null && X.prevBest > R.pct ? ' Your best is '+X.prevBest+'%.' : '')+'</p>'+
-      (missQ.length ? '<span class="eyebrow" style="display:block;margin-top:10px">Questions to revisit</span>'+missQ.map(([x])=>'<div class="ex-miss"><p>'+x.q.q+'</p><p class="ld-why">'+x.q.opts[x.q.a]+'. '+x.q.why+'</p><button type="button" class="link-btn" data-ld="topic" data-k="'+x.t.k+'">Watch \u201c'+x.t.title+'\u201d again</button></div>').join('') : '')+
+      (missQ.length ? '<span class="eyebrow" style="display:block;margin-top:10px">Questions to revisit</span>'+missQ.map(([x])=>'<div class="ex-miss"><span class="sk-tag">'+SKILLS[x.skill].name+'</span><p>'+x.q.q+'</p><p class="ld-why">'+x.q.opts[x.q.a]+'. '+x.q.why+'</p></div>').join('')+
+        '<span class="eyebrow" style="display:block;margin-top:10px">Practise what you missed</span><div class="sk-grid">'+[...new Set(missQ.map(([x])=>x.skill))].map(k=>skillChip(k)).join('')+'</div>' : '')+
       (missB.length ? '<span class="eyebrow" style="display:block;margin-top:10px">Not made yet</span>'+missB.map(x=>'<div class="ex-miss"><p>'+x.t+'</p><p class="ld-why">Hint: '+x.hint+'.</p></div>').join('') : '')+
       '<div class="ld-btns"><button type="button" class="ld-go" data-ld="exam">Take it again \u25b6</button><button type="button" class="ghost-btn" data-ld="pick">All topics</button></div>';
   }
@@ -6122,13 +6352,20 @@ function renderLearnDock(){
   let h = '';
   if(LEARN.phase === 'exam' && LEARN.exam){
     h = examHTML();
+  } else if(LEARN.phase === 'practice' && LEARN.prac){
+    h = practiceHTML();
   } else if(LEARN.phase === 'pick' || !t){
     let last = null;
     h = '<div class="ld-head"><span class="eyebrow">Learn mode</span>'+exit+'</div>'+
       '<h3 class="ld-title">What would you like to watch?</h3>'+
       '<p class="ld-p">Each one sets out just the molecules it needs, runs slowly, and stops at every step to explain what happened.</p>'+
       '<p class="ld-hint" style="margin-top:0">On the '+(L3.on ? '3D bench' : 'flat bench: topics marked 3D open on the 3D bench')+'.</p>'+
-      '<button type="button" class="ex-start" data-ld="exam"><b>Take the assessment</b><span>A question from every topic, then make molecules and ionic compounds on the bench yourself'+(learnScore.exam ? ' \u00b7 best '+learnScore.exam.pct+'%' : '')+'</span></button>'+
+      (()=>{ const done = LEARN_TOPICS.filter(x=>learnDone[x.k]).length, nxt = LEARN_PATH.map(k=>LEARN_TOPICS.find(x=>x.k === k)).find(x=>x && !learnDone[x.k]);
+        return '<div class="lp-prog"><div class="ex-bar"><i style="width:'+Math.round(done/LEARN_TOPICS.length*100)+'%"></i></div><small>'+done+' of '+LEARN_TOPICS.length+' topics watched</small></div>'+
+          (nxt ? '<button type="button" class="lp-next" data-ld="topic" data-k="'+nxt.k+'"><small>'+(done ? 'Up next' : 'Start here')+'</small><b>'+nxt.title+' \u25b6</b></button>' : '<p class="ld-hint" style="margin:0 0 8px">Every topic watched. Practise, or take the assessment.</p>'); })()+
+      '<button type="button" class="ex-start" data-ld="exam"><b>Take the assessment</b><span>Twelve fresh questions with all the data given, then make molecules and ionic compounds on the bench yourself'+(learnScore.exam ? ' \u00b7 best '+learnScore.exam.pct+'%' : '')+'</span></button>'+
+      '<details class="lp-prac"'+(LEARN.pracOpen ? ' open' : '')+'><summary><b>Practice</b><span>Endless new questions, aimed at what you find hardest</span></summary>'+
+        '<button type="button" class="ld-go" data-ld="prac" style="margin:6px 0 8px">Mixed practice \u25b6</button><div class="sk-grid">'+Object.keys(SKILLS).map(k=>skillChip(k)).join('')+'</div></details>'+
       '<div class="ld-list">'+[...LEARN_TOPICS].sort((a,b)=>Object.keys(CONCEPT_CATS).indexOf(CONCEPTS[a.c].cat) - Object.keys(CONCEPT_CATS).indexOf(CONCEPTS[b.c].cat)).map(x=>{ const cc = CONCEPTS[x.c], ct = CONCEPT_CATS[cc.cat];
         const head = ct.label !== last ? '<span class="ld-grp">'+(last = ct.label)+'</span>' : '';
         return head+'<button type="button" data-ld="topic" data-k="'+x.k+'" style="--gc:'+ct.col+'"><i class="g-ic">'+cc.g+'</i><span><b>'+x.title+'</b><small>'+cc.name+(x.hands ? ' \u00b7 hands on' : '')+(!L3.on && x.flat === false ? ' \u00b7 3D' : '')+'</small></span>'+(learnDone[x.k] ? '<em>✓'+(learnScore[x.k] ? ' '+learnScore[x.k].right+'/'+learnScore[x.k].of : '')+'</em>' : '')+'</button>'; }).join('')+'</div>';
@@ -6180,6 +6417,7 @@ function renderLearnDock(){
           return '<div class="ld-q"><p>'+(qi+1)+'. '+q.q+'</p>'+learnOrder('quiz'+qi, q.opts.length).map(i=>'<button type="button" class="ld-opt'+(ans == null ? '' : i === q.a ? ' right' : i === ans ? ' wrong' : ' dim')+'" data-ld="quiz" data-q="'+qi+'" data-i="'+i+'"'+(ans == null ? '' : ' disabled')+'>'+q.opts[i]+'</button>').join('')+
             (ans != null ? '<p class="ld-why">'+(ans === q.a ? '\u2713 ' : '')+q.why+'</p>' : '')+'</div>'; }).join('')+
           (LEARN.quiz.filter(x=>x != null).length === qa.quiz.length ? '<p class="ld-score">'+LEARN.quiz.filter((x, i)=>x === qa.quiz[i].a).length+' of '+qa.quiz.length+' right</p>' : '') : '')+
+        (TOPIC_SKILLS[t.c] ? '<div class="lp-try"><span class="eyebrow">Try the ideas on new examples</span><div class="sk-grid">'+TOPIC_SKILLS[t.c].map(k=>skillChip(k)).join('')+'</div></div>' : '')+
         '<div class="ld-btns"><button type="button" class="ld-go" data-ld="topic" data-k="'+nx.k+'">Next: '+nx.title+' ▶</button>'+
         '<button type="button" class="ghost-btn" data-ld="restart">Watch again</button></div>'+
         '<div class="ld-foot"><button type="button" class="link-btn" data-ld="card">Read the full card</button></div>';
@@ -6201,9 +6439,13 @@ function wireLearnDock(){
     const k = b.dataset.ld;
     if(k === 'exit') learnMode(false);
     else if(k === 'topic') learnStart(b.dataset.k);
-    else if(k === 'pick'){ if(LEARN.phase === 'exam' && LEARN.exam && LEARN.exam.stage === 'build') stepMode(true, true); LEARN.phase = 'pick'; LEARN.topic = null; LEARN.exam = null; stepNext(); renderLearnDock(); }
+    else if(k === 'pick'){ if(LEARN.phase === 'exam' && LEARN.exam && LEARN.exam.stage === 'build') stepMode(true, true); LEARN.phase = 'pick'; LEARN.topic = null; LEARN.exam = null; LEARN.prac = null; stepNext(); renderLearnDock(); }
     else if(k === 'exam'){ if(LEARN.exam && LEARN.exam.stage === 'build') stepMode(true, true); examStart(); }
-    else if(k === 'exans'){ const X = LEARN.exam; if(X && X.ans[X.i] == null){ X.ans[X.i] = +b.dataset.i; renderLearnDock(); } }
+    else if(k === 'exans'){ const X = LEARN.exam; if(X && X.ans[X.i] == null){ X.ans[X.i] = +b.dataset.i; skillNote(X.qs[X.i].skill, X.ans[X.i] === X.qs[X.i].q.a); renderLearnDock(); } }
+    else if(k === 'prac'){ const ks = b.dataset.s ? b.dataset.s.split(',') : Object.keys(SKILLS);
+      practiceStart(ks, b.dataset.label || (ks.length === 1 ? SKILLS[ks[0]].name : ks.length === Object.keys(SKILLS).length ? 'Mixed practice' : ks.map(x=>SKILLS[x].name).join(', '))); }
+    else if(k === 'pans'){ const P = LEARN.prac; if(P && P.ans == null){ P.ans = +b.dataset.i; const ok = P.ans === P.q.a; P.n++; if(ok){ P.right++; P.streak++; } else P.streak = 0; skillNote(P.q.skill, ok); renderLearnDock(); } }
+    else if(k === 'pnext') practiceNext();
     else if(k === 'exnext'){ const X = LEARN.exam; if(!X) return; if(X.i < X.qs.length - 1){ X.i++; renderLearnDock(); } else examToBench(); }
     else if(k === 'exadd'){ examAdd(b.dataset.s); }
     else if(k === 'exbuild'){ const bi = el('exBuild'); if(bi){ examBuild(bi.value); bi.value = ''; } }
@@ -15721,8 +15963,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 116;
+const VERSION = 117;
 const CHANGELOG = [
+  [117, 'A better Learn mode. The assessment no longer asks about what happened in particular lessons: its twelve questions are made fresh each time from thirteen skills (bond type from electronegativity, ion charges, ionic formulas, how many bonds an atom makes, shapes, polarity, \u0394H from bond energies, pKa, redox potentials, boiling points, hydrogen bonding, molar mass and precipitates), and every number you need is in the question. The same questions power a new Practice section: mixed or one skill at a time, endless, leaning toward the skills you get wrong, with a mastery bar for each. The topic list shows how many topics you have watched and what to watch next (or where to start), every topic ends by offering practice on its ideas, and the assessment result points you at the skills to practise.'],
   [116, 'An assessment in Learn mode: Take the assessment asks one question from every topic, then hands you a cleared 3D bench to make eight things yourself (water, an ionic bond from neutral atoms, a double and a triple bond, magnesium chloride with its 2+ ion, a non-polar molecule built from polar bonds, a coordinate bond and three hydrogen bonds at once), ticking each the moment it exists. It ends with a score, the questions to revisit with a link back to each topic, and your best result. Learn answers are shuffled: the right one was always first. The molecule library now holds 250 compounds in eleven families, with a search box, and about 390 names can be typed into Build on either bench. Magnesium (and other group 2 metals) now give both electrons on the 3D bench, so Mg and two Cl make MgCl\u2082 rather than stopping at Mg\u207a. Learn mode no longer squashes the bench to nothing in windows between 761 and 1140 pixels wide.'],
   [115, 'Three new things. Precipitation on the 3D bench: load Silver nitrate + salt water and a white solid, silver chloride, gathers and slowly settles while the sodium and nitrate stay dissolved; Golden rain does the same with bright yellow lead(II) iodide. AgCl, AgBr, AgI, PbI\u2082, PbCl\u2082 and CaF\u2082 come out of water as solids tinted their real colour, with the real \u0394H of precipitation, and a new Guide card explains why. Silver ions now take two waters, not six. A solution meter on the 3D bench: with water present it shows the pH, the conductivity in mS/cm worked out from each dissolved ion\u2019s real molar conductivity, and what is dissolved and how concentrated. Flame colours on both benches: any metal atom or ion past about 1300 K glows its flame-test colour (sodium yellow, copper green, lithium crimson, potassium lilac, strontium scarlet) with flickering tongues, and says why the first time; see the Flame colours card. Dissolved ions also now feel each other from further away, so they find their partners across a solution.'],
   [114, 'Fixed sodium turning into Na\u00b2\u207a on the flat bench. When an ionic bond broke while its electron was still flying across, the bench handed the electron back anyway, so sodium sat at \u22121 for a moment, could give two electrons to the next chlorines, and ended at 2+. Electrons still in flight are now called back instead, and only ones that landed are returned.'],
