@@ -8750,11 +8750,12 @@ function anaReactSetup(){
   crsSetup.clear(box, ANA.temp);
   ANA.parts = ANA.list.map(e=>{ const ids = new Set(); for(let k=0;k<(e.n||1);k++) anaBuildOne(e).forEach(a=>ids.add(a.id)); return ids; });
   if(ANA.water){ const ids = new Set(); for(let k=0;k<10;k++) anaBuildOne({q:'water', sm:L3_LIB.water, lib:'water'}).forEach(a=>ids.add(a.id)); ANA.parts.water = ids; }
-  /* let what was just built settle (rings turn aromatic, bonds find their lengths) before anything is counted */
-  for(let k=0;k<45;k++) l3Step(1/60);
+  /* predict from the molecules as built, then let them settle for a few frames
+     (rings turn aromatic, bonds find their lengths) before anything is counted */
+  ANA.pred = anaPredict();
+  for(let k=0;k<8;k++) l3Step(1/60);
   ANA.held = true;
   ANA.run = {started:false, t0:L3.simT||0, census0:anaCensus(), tally0:anaTally(), events:[], series:[], dH:0, done:false};
-  ANA.pred = anaPredict();
   anaSample(true);
   setTimeout(()=>{ try{ l3FitView(true); }catch(e){} }, 40);
 }
@@ -15298,7 +15299,7 @@ function l3Preset(name){
   made.forEach(a=>{ a.cool = 1.2; });              /* folds without the strain turning into heat */
   say(name+' dropped in flat and loose — watch it fold into its real shape.','bench');
 }
-function l3Clear(){ L3.hist = []; L3.P = 0; L3.Z = 1; L3.fissions = 0; L3.fusions = 0; L3.decays = 0; L3.neutrons = []; L3.cats = []; L3.field = null; L3.electrons = 0; L3.rx = null; L3.stable = null; L3.lastSig = null; L3.atoms.length = 0; L3.bonds.length = 0; L3.sel = null; L3.flashes.length = 0; L3.ledger.length = 0; L3.solNoted = false; L3.dirty = true; }
+function l3Clear(){ L3.hist = []; L3.P = 0; L3.Z = 1; L3.fissions = 0; L3.fusions = 0; L3.decays = 0; L3.neutrons = []; L3.cats = []; L3.field = null; L3.electrons = 0; L3.rx = null; L3.stable = null; L3.lastSig = null; L3.atoms.length = 0; L3.bonds.length = 0; L3.sel = null; L3.flashes.length = 0; L3.ledger.length = 0; L3.solNoted = false; L3.datCD = null; L3.flyRecent = null; L3.dirty = true; }
 /* ---------- energy ----------
    Forming a bond gives out its bond enthalpy and breaking one takes it in. The
    energy given out does not vanish: it goes into the two atoms as motion, so a
@@ -15633,6 +15634,13 @@ function l3Organic(dt){
 }
 /* what a reaction moves, drawn as it moves: a proton, an electron, a lone pair */
 function l3Fly(kind, from, to){
+  /* the same lone pair handed between the same two atoms again within a second
+     and a half is not shown again: it read as electrons flickering back and forth */
+  if(kind === 'pair' && from && to && from.id != null && to.id != null){
+    const k = from.id+'>'+to.id, t = L3.simT||0, R = L3.flyRecent || (L3.flyRecent = new Map());
+    if(R.has(k) && t - R.get(k) < 1.5) return;
+    R.set(k, t); if(R.size > 200) R.clear();
+  }
   (L3.fly || (L3.fly = [])).push({kind, fx:from.x, fy:from.y, fz:from.z, to, t:0, dur:kind === 'pair' ? 0.55 : 0.4});
   if(L3.fly.length > 40) L3.fly.shift();
 }
@@ -15808,6 +15816,7 @@ function l3AcidBase(dt){
       if(don === acc || !L3_DONOR[EL[don.e].sym] || (don.fq||0) > 0 || l3Metal(don)) continue;
       if(don.ion > 0 || (l3Lone(don) < 1 && !(don.ion < 0))) continue;
       if(l3Bonds(acc).some(b=>l3Other(b, acc.id) === don.id)) continue;
+      { const cd = L3.datCD && L3.datCD.get(Math.min(acc.id, don.id)+'|'+Math.max(acc.id, don.id)); if(cd != null && (L3.simT||0) - cd < 2.5) continue; }
       if(metalIon && l3Bonds(don).some(b=>b.type === 'dative')) continue;   /* one metal per donor atom */
       if(metalIon && l3Ppt(acc, don)) continue;   /* Ag+ and Cl- come out as solid AgCl, not a complex */
       if(metalIon && L3_CN2[es.sym] && (don.fq||0) < 0) continue;   /* silver takes water or ammonia, not nitrate */
@@ -15875,6 +15884,8 @@ const l3WetE = (p, q) => { const x = l3Ppt(p, q); return x ? -x.dH/3 : 1.3; };
 function l3Break(b, why){
   const p = l3Find(b.a), q = l3Find(b.b);
   const i = L3.bonds.indexOf(b); if(i < 0) return;
+  /* a ligand that has just let go waits a moment before the same ion can take it back */
+  if(b.type === 'dative' || b.dat){ if(L3.datCD && L3.datCD.size > 400) L3.datCD.clear(); (L3.datCD || (L3.datCD = new Map())).set(Math.min(b.a, b.b)+'|'+Math.max(b.a, b.b), L3.simT||0); }
   L3.bonds.splice(i, 1); L3.bv = (L3.bv||0) + 1;
   /* a bond made from one side's lone pair goes back the way it came: the donor
      takes its pair home, and the formal charges it caused undo */
@@ -16352,7 +16363,10 @@ function l3Step(dt){
       continue;
     }
     if(d > L*1.9 && b.age > 1.5){ l3Break(b, 'pulled apart'); continue; }
-    const Tl = Math.max(kelvin(), ((p.Ts||0) + (q.Ts||0))/2);
+    /* a coordinate bond (water or ammonia on a metal ion) is judged at the bath's
+       temperature: the solvent round it soaks up the jolt of its forming, which
+       otherwise shook a fresh ligand straight off again and again */
+    const Tl = b.type === 'dative' ? kelvin() : Math.max(kelvin(), ((p.Ts||0) + (q.Ts||0))/2);
     /* water's dielectric cuts the pull between two ions about eightyfold; with
        water gathered round both, an ionic bond is easily shaken apart: salt dissolves */
     let Eeff = b.energy;
@@ -16362,6 +16376,7 @@ function l3Step(dt){
       else if(nW >= 1.5) Eeff = b.energy/(8 + 6*Math.min(nW, 6));
       else if(L3.solvent) Eeff = b.energy/26;
     }
+    if(b.type === 'dative') Eeff *= 1.5;                /* ligands stay put at room temperature and come off when heated */
     if(b.arom) Eeff += L3_RES;                          /* the ring's resonance holds it */
     if(l3InCat(p) || l3InCat(q)) Eeff *= 0.72;          /* a catalyst lowers the barrier */
     /* heavier isotopes sit lower in the well (less zero-point energy) and break slower */
@@ -19553,8 +19568,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 124;
+const VERSION = 125;
 const CHANGELOG = [
+  [125, 'Fixed the pair of electrons that kept flickering between molecules on the 3D bench. Water (or ammonia) on a metal ion makes a coordinate bond, shown as two electrons flying across, and those bonds were being shaken loose by the jolt of their own forming, every second or two, and taken straight back, so the animation played again and again. Coordinate bonds are now judged at the bath\u2019s temperature, as the solvent soaks up that jolt, and are sturdier: ligands stay put at room temperature and come off when you heat the bench (most are gone by 900 K). A ligand that does let go waits a moment before the same ion can take it back, and the same pair is not animated twice in quick succession. In Analysis mode, the prediction is made from the molecules exactly as built, before anything moves.'],
   [124, 'Analysis mode, from the Analyse button in the header. Pick up to four compounds (by name, formula, SMILES or ion, with suggestions as you type) and the bench and its panels step aside for one wide report. Each compound is built alone on a cold bench, relaxed and measured, then taken apart: its structure drawing, molar mass, unsaturation, rings, stereocentres and cis/trans bonds; composition by mass and the empirical formula; a card for each element; every kind of bond with its measured length, enthalpy, \u0394EN, character and infrared band, the total atomisation energy and the weakest bond with the light that would split it; the shape, electron geometry, hybridisation and measured angle at every centre; the electron count, formal charges and octets, a Lewis structure with its lone pairs drawn as dots, a molecular-orbital diagram for diatomics (O\u2082 comes out paramagnetic, with bond order 2) and the oxidation state of every atom; partial charges and the dipole, with why it is or is not polar; the forces between molecules, melting and boiling points, a comparison with an alkane of the same mass, solubility in water, an estimated logP and Lipinski\u2019s rule of five; every acidic hydrogen and basic site with its pKa, the pH of a 0.10 mol/L solution and the conjugate acid and base; functional groups with what each does, and the isomers in the library with the same formula; what it reacts with, each with a Try it button; estimated enthalpies of formation and combustion, checked against measured values where known; and simulated infrared, proton NMR (environments lettered on the structure, with integrals and n+1 splitting), carbon-13 NMR, mass (isotope pattern and fragments) and UV\u2013visible spectra with the colour it would be. Pointing at a row lights its atoms up on the bench. Compare puts two to four side by side in one table, and on the bench, and says in words what the numbers mean (isomers, which boils higher and why, which is the stronger acid and by how much). React sets them in a box of their own: before anything moves it predicts what should happen (proton transfer with K from the two pKa values, precipitates, metals with acids, water and other metals\u2019 ions with E\u00b0cell and \u0394G, Lewis adducts, ligands, additions, esters, combustion, or no reaction and whether they would mix), then runs the real engine and accounts for it: species before and now, the net equation, the bonds broken and formed with a Hess\u2019s law \u0394H beside the bench\u2019s own, every step with its reason, and charts of the species, the heat and the temperature. Also: typed names like 2-butanol and 2-pentanone now find butan-2-ol and pentan-2-one, Build understands the hand-drawn library names (oxygen, carbon dioxide) on both benches, and a lesson or analysis no longer overwrites your saved 3D bench.'],
   [123, 'H\u207a ions. Hydrogen can now give up its only electron (\u2212 e\u207b in the Atom tab, on either bench), leaving a bare proton, and a bare proton behaves like one: the first lone pair it touches takes it, so H\u207a + H\u2082O makes H\u2083O\u207a, + NH\u2083 makes NH\u2084\u207a, + OH\u207b makes water and + Cl\u207b makes HCl, each written up in the Notebook with its gas-phase proton affinity. On the 3D bench it is drawn as a bright speck you can see, its badge clear of it. Build reads ions as chemists type them: H+, H\u207a, Na+, Fe3+, Fe+3, O2-, OH-, NH4+, H3O+, SO4 2-, SO4^2-, SO\u2084\u00b2\u207b, CO32-, CH3COO-, and names like proton or sodium ion (Cl- used to build HCl). Hydrogen ion and hydride ion join the library. A prettier library: every card has a small structure drawing (carbons as corners, OH and NH\u2082 written out, rings as rings, salts as their ions side by side) and a colour dot for its family, matched on the family chips. The reactions in the left panel are colour-coded by kind, and on a narrow bench the atom count sits above the speed control instead of under the zoom buttons.'],
   [122, 'Clear away whole kinds of molecule at once. Every card in the Bench panel (one per kind of molecule, and one row per kind of lone atom on the flat bench) now has a tick box and a bin, shown when you point at it. The bin deletes every molecule of that kind; ticking kinds brings up a bar to delete them all, keep only them and delete everything else, select every kind, or clear the selection. Undo brings anything back. On the 3D bench ions are now kept apart from neutral atoms of the same element (Na\u207a has its own card from Na), so you can clear one without the other.'],
