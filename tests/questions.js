@@ -11,7 +11,7 @@ for(const k of Object.keys(api.SKILLS)){
     if(!q){ fails.push('no question'); continue; }
     if(!(q.a >= 0 && q.a < q.opts.length)) fails.push('answer out of range');
     if(new Set(q.opts).size !== q.opts.length) fails.push('duplicate options: '+q.opts.join(' | '));
-    if(q.opts.length < 3) fails.push('only '+q.opts.length+' options: '+q.q);
+    if(q.opts.length < (api.SKILLS[k].min || 3)) fails.push('only '+q.opts.length+' options: '+q.q);
     if(!q.why || !q.q) fails.push('missing text');
   }
   if(fails.length){ bad++; console.log(k.padEnd(10), 'FAIL', fails.length, fails[0]); } else console.log(k.padEnd(10), 'ok');
