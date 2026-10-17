@@ -983,6 +983,30 @@ kbd{display:inline-block;font-family:var(--font-mono);font-size:10.5px;padding:1
 .ld-opt[disabled]{cursor:default}
 .ld-why{font-size:11.5px;color:var(--ink-2);line-height:1.55;margin:4px 0 0;background:var(--sunk);border-radius:7px;padding:6px 8px}
 .ld-score{font-weight:700;color:#2A7A78;font-size:12.5px;margin:8px 0 0}
+.course-dock{z-index:9}
+.course-dock.collapsed{top:58px;bottom:auto;width:auto;max-width:70%;padding:0;background:none;border:0;box-shadow:none;overflow:visible}
+.crs-pill{display:flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;border:1px solid #2A7A78;background:rgba(255,255,255,.97);box-shadow:var(--shadow-l);font:inherit;font-size:12px;color:var(--ink-2);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.crs-pill b{color:#2A7A78}.crs-pill span{color:var(--muted);margin-left:4px}
+.crs-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.crs-acts{white-space:nowrap}.crs-acts button{font-size:11px;font-weight:600;background:none;border:0;color:var(--muted);cursor:pointer;margin-left:9px;padding:2px 0}
+.crs-acts button:hover{color:var(--ink)}
+.ld-title small{display:block;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:2px}
+.crs-dots{display:flex;gap:4px;margin:2px 0 10px}
+.crs-dots i{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;background:var(--sunk);color:var(--muted)}
+.crs-dots i.past{background:rgba(42,122,120,.15);color:#2A7A78}.crs-dots i.now{background:var(--ink);color:#fff}
+.crs-kind{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:#2F5BEA;margin:0 0 6px}
+.crs-kind.k-do{color:#2A7A78}.crs-kind.k-free{color:#B87A0E}.crs-kind.k-quiz{color:#7A4FB8}
+.crs-tools{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px}.crs-tools .ghost-btn{font-size:11.5px;padding:5px 9px}
+.crs-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--hair)}
+.crs-foot button[disabled]{opacity:.55;cursor:default}
+.crs-hint{font-size:10.5px;border:0;background:none;color:#2F5BEA;cursor:pointer;padding:0 0 0 4px}
+.crs-row{display:flex;gap:9px;align-items:center;width:100%;text-align:left;padding:5px 8px;border-radius:8px;border:0;background:none;cursor:pointer;font:inherit;font-size:12.5px;color:var(--ink)}
+.crs-row:hover,.crs-row.cur{background:var(--sunk)}
+.crs-row i{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:10px;background:var(--surface);border:1px solid var(--hair);color:var(--muted)}
+.crs-sum{margin:0 0 8px;padding-left:18px}.crs-sum li{font-size:12.5px;line-height:1.55;margin:0 0 5px;color:var(--ink-2)}
+.crs-start{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;margin:4px 0 8px;padding:11px 12px;border-radius:10px;border:0;background:#2A7A78;color:#fff;cursor:pointer;font:inherit}
+.crs-start small{font-size:10px;letter-spacing:.06em;text-transform:uppercase;opacity:.8}.crs-start b{font-size:13.5px}.crs-start span{font-size:11px;opacity:.8}
+.course-btn.on{background:#2A7A78;color:#fff;border-color:#2A7A78}
 .sk-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .sk-chip{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:3px 6px;text-align:left;padding:6px 8px;border-radius:8px;border:1px solid var(--hair);background:var(--surface);cursor:pointer;font:inherit}
 .sk-chip:hover{background:var(--sunk)}
@@ -1039,6 +1063,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     </div>
     <span class="chip" id="benchTemp">298 K</span>
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
+    <button class="ghost-btn course-btn" id="courseBtn" type="button" title="A whole chemistry course taught on the bench: lessons, guided bench time and free bench time">Course</button>
     <button class="ghost-btn learn-btn" id="learnBtn" type="button" title="A quieter view for watching one reaction at a time">Learn mode</button>
     <button class="ghost-btn" id="shareBtn" type="button">Share bench</button>
     <button class="ghost-btn" id="clearBtn" type="button">Clear bench</button>
@@ -1148,6 +1173,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
       <div id="keysSheet" class="keys-sheet" hidden role="dialog" aria-label="Keyboard shortcuts"></div>
       <div id="elTip" class="atom-tip el-tip" hidden></div>
       <div class="learn-dock" id="learnDock" hidden></div>
+      <div class="learn-dock course-dock" id="courseDock" hidden></div>
       <div class="timectl"><div class="seg" id="timeSeg" role="group" aria-label="Time scale"></div>
         <div class="stats">
           <span><b id="sAtoms">0</b> atoms</span>
@@ -6145,6 +6171,438 @@ const EXAM_TASKS = [
   {k:'hbond', t:'Three hydrogen bonds at once', hint:'H on O, N or F, pointing at another molecule\u2019s O, N or F', c:'hbond',
     check:()=>(L3.hb||[]).length >= 3}
 ];
+/* ================= the chemistry course =================
+   A whole course taught on the bench, one lesson after another. Each lesson
+   runs through short readings, guided bench time (tasks that tick themselves
+   off the moment the bench shows them), free bench time (the full sandbox, with
+   a few things worth trying) and a quick check made from the practice skills.
+   The ordinary bench stays in reach the whole time: the periodic table, the
+   tools and the temperature are the course's equipment. */
+const crsK = K => { let lo = T_MIN, hi = T_MAX; for(let i=0;i<40;i++){ const m = (lo+hi)/2; if(kelvinOf(m) < K) lo = m; else hi = m; } return (lo+hi)/2; };
+const crsQ = g => g.reduce((t,a)=>t+(a.ion||0)+(a.fq||0), 0);
+const crsSame = (c, want) => { const k1 = Object.keys(c).filter(k=>c[k]), k2 = Object.keys(want); return k1.length === k2.length && k2.every(k=>c[k] === want[k]); };
+const crsHas = (want, q) => l3Molecules().some(g=>crsSame(countsOf(g), want) && crsQ(g) === (q||0));
+const crsCount = sym => L3.atoms.filter(a=>EL[a.e].sym === sym).length;
+const crsSym = a => a && EL[a.e].sym;
+const crsBondBetween = (s1, s2, test) => L3.bonds.some(b=>{ const p = l3Find(b.a), q = l3Find(b.b); if(!p || !q) return false; const a = crsSym(p), c = crsSym(q); return ((a === s1 && c === s2) || (a === s2 && c === s1)) && test(b, p, q); });
+const crsSetup = {
+  clear(box, temp){ l3Clear(); L3.box = L3.boxTo = box || 420; L3.dist = (box || 420)*3.8; L3.target = {x:0, y:0, z:0}; setSlider('temp', temp == null ? 12 : temp); try{ renderLeft3D(); }catch(e){} },
+  topic(k){ const t = LEARN_TOPICS.find(x=>x.k === k); if(t.metal) L3.metalSym = t.metal; l3Scene({k:'course-'+k, label:t.title, note:CONCEPTS[t.c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box, temp:t.temp, crystal:t.crystal}); },
+  water(n, box){ crsSetup.clear(box || 320, 12); for(let i=0;i<n;i++) l3BuildAny('water'); }
+};
+const CRS_UNITS = ['Atoms and the periodic table','Chemical bonding','Polarity and shape','Between molecules','Energy and equations','Solutions','Acids and bases','Redox','Organic chemistry'];
+const COURSE = [
+/* ---------- unit 1 ---------- */
+{k:'atoms', u:0, title:'What everything is made of', sum:['An atom is a nucleus of protons and neutrons with electrons around it.','The number of protons decides the element.','Outer (valence) electrons decide how an atom bonds: atoms bond to fill their outer shell.'], steps:[
+  {t:'read', h:'Atoms', p:['Everything around you is made of <b>atoms</b>, about a tenth of a nanometre across. Each has a tiny, heavy <b>nucleus</b> of protons (+) and neutrons (no charge), with <b>electrons</b> (−) around it in <b>shells</b>.',
+    'The number of protons is the <b>atomic number</b>, and it decides the element: 1 is hydrogen, 6 carbon, 8 oxygen. A neutral atom has as many electrons as protons.',
+    'The bench has all 118. On the left is the periodic table: click an element to drop an atom on the bench. Drag on the bench to turn it, scroll to zoom.']},
+  {t:'do', h:'Your first atoms', setup:()=>crsSetup.clear(420), p:'Use the periodic table on the left (or the buttons here).', palette:['H','C','O'], tasks:[
+    {t:'Add a hydrogen atom', hint:'H is at the top left of the table.', check:()=>crsCount('H') >= 1},
+    {t:'Add a carbon and an oxygen', hint:'C and O are in the second row, on the right.', check:()=>crsCount('C') >= 1 && crsCount('O') >= 1},
+    {t:'Click an atom to select it, and read its card on the right', hint:'Click right on the ball. The right-hand panel shows its electronegativity, bonds and lone pairs.', check:()=>!!L3.sel}]},
+  {t:'read', h:'The periodic table is a map of electrons', p:['Each <b>row</b> (period) adds a shell. Each <b>column</b> (group) shares the same number of outer electrons, the <b>valence electrons</b>: hydrogen and sodium 1, carbon 4, nitrogen 5, oxygen 6, chlorine 7.',
+    'Atoms are most settled with a full outer shell: 8 electrons, the <b>octet</b> (2 for hydrogen). The noble gases in the last column already have one, which is why they hardly react.',
+    'Almost all of chemistry is atoms gaining, losing or sharing electrons to fill that shell. The rest of the course is that idea in action.']},
+  {t:'free', h:'Free bench time', p:'The bench is yours. Drop in whatever you like and watch what sticks to what.', palette:['H','He','C','N','O','Ne','Na','Cl','Ar'], tries:[
+    {t:'Add a noble gas: notice it never bonds', check:()=>L3.atoms.some(a=>['He','Ne','Ar','Kr','Xe'].includes(crsSym(a)))},
+    {t:'Get atoms of six different elements on the bench', check:()=>new Set(L3.atoms.map(crsSym)).size >= 6},
+    {t:'Find two atoms that bond on their own', check:()=>L3.bonds.length >= 1}]},
+  {t:'quiz', skills:['valence','valence']}]},
+{k:'ions', u:0, title:'Losing and gaining electrons: ions', sum:['Metals lose their few outer electrons and become positive ions (cations).','Nonmetals gain electrons to complete the octet and become negative ions (anions).','The charge follows the group: Na⁺, Mg²⁺, Al³⁺, Cl⁻, O²⁻.'], steps:[
+  {t:'read', h:'Ions', p:['An atom that loses or gains electrons is an <b>ion</b>. Losing electrons leaves it positive, a <b>cation</b>; gaining leaves it negative, an <b>anion</b>.',
+    'Metals, on the left of the table, have only 1 to 3 outer electrons and lose them easily. Sodium (1 outer electron) becomes Na⁺, with the full shell underneath laid bare.',
+    'Nonmetals, on the right, are a few short of 8 and take electrons in. Chlorine (7) gains one to become Cl⁻.']},
+  {t:'do', h:'Make an ionic bond', setup:()=>crsSetup.clear(420), p:'Add the atoms one after the other and watch the electron fly across.', palette:['Na','Cl','Mg'], tasks:[
+    {t:'Bring a sodium atom and a chlorine atom together', hint:'Click Na, then Cl. Each new atom lands next to the last one that can still bond.', check:()=>crsBondBetween('Na','Cl', b=>b.type === 'ionic')},
+    {t:'Now magnesium with two chlorines: make Mg²⁺', hint:'Mg has two electrons to give, so it needs two Cl atoms. Click Mg, Cl, Cl.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Mg' && a.ion === 2)}]},
+  {t:'read', h:'What just happened', p:['Sodium handed its electron to chlorine: Na → Na⁺ + e⁻, and Cl + e⁻ → Cl⁻. The two opposite charges now attract each other: that pull is an <b>ionic bond</b>.',
+    'Magnesium has two outer electrons, so it gave one to each chlorine and became Mg²⁺: magnesium chloride, MgCl₂. The charges always balance, so the formula follows from them.']},
+  {t:'free', h:'Free bench time', p:'Try other metals with other nonmetals. Watch the charge badges.', palette:['Li','Na','K','Mg','Ca','F','Cl','Br','I','O'], tries:[
+    {t:'Make lithium fluoride, LiF', check:()=>crsBondBetween('Li','F', b=>b.type === 'ionic')},
+    {t:'Make potassium bromide, KBr', check:()=>crsBondBetween('K','Br', b=>b.type === 'ionic')},
+    {t:'Make a calcium ion with a 2+ charge', check:()=>L3.atoms.some(a=>crsSym(a) === 'Ca' && a.ion === 2)}]},
+  {t:'quiz', skills:['ioncharge','ioncharge','formula']}]},
+/* ---------- unit 2 ---------- */
+{k:'covalent', u:1, title:'Sharing electrons: covalent bonds', sum:['Two nonmetals share a pair of electrons: a covalent bond.','Each atom makes as many bonds as it needs electrons: H 1, O 2, N 3, C 4.','A group of atoms joined this way is a molecule.'], steps:[
+  {t:'read', h:'Sharing', p:['Two nonmetals both want electrons, so neither hands one over. Instead they <b>share</b> a pair, one electron from each, held between the two nuclei: a <b>covalent bond</b>.',
+    'Each shared pair counts toward both atoms’ shells. Hydrogen needs 1 more electron, so it makes 1 bond; oxygen needs 2, so 2 bonds; nitrogen 3; carbon 4. A cluster of atoms held together this way is a <b>molecule</b>.']},
+  {t:'do', h:'Build molecules from atoms', setup:()=>crsSetup.clear(420), p:'Start each one with the atom that makes the most bonds; it will collect the rest. Clear the bench between them if it gets crowded.', palette:['H','C','N','O'], clearBtn:true, tasks:[
+    {t:'Hydrogen, H₂', hint:'Two H atoms.', check:()=>crsHas({H:2})},
+    {t:'Water, H₂O', hint:'O first, then H, H.', check:()=>crsHas({H:2, O:1})},
+    {t:'Methane, CH₄', hint:'C first, then four H.', check:()=>crsHas({C:1, H:4})},
+    {t:'Ammonia, NH₃', hint:'N first, then three H.', check:()=>crsHas({N:1, H:3})}]},
+  {t:'read', h:'Why those numbers', p:['Count the electrons round the centre atom of each one: carbon’s 4 plus 4 shared from hydrogens is 8, nitrogen’s 5 plus 3 is 8, oxygen’s 6 plus 2 is 8. Each ends up with an octet, which is why water is H₂O and never H₃O.',
+    'Nitrogen and oxygen also keep pairs that are not shared: <b>lone pairs</b>. They matter later, for shapes and for acids.']},
+  {t:'free', h:'Free bench time', p:'Make anything you like out of nonmetals.', palette:['H','C','N','O','F','Cl','S'], clearBtn:true, tries:[
+    {t:'Hydrogen peroxide, H₂O₂', check:()=>crsHas({H:2, O:2})},
+    {t:'Hydrogen fluoride, HF', check:()=>crsHas({H:1, F:1})},
+    {t:'Any molecule of six atoms or more', check:()=>l3Molecules().some(g=>g.length >= 6 && !crsQ(g))}]},
+  {t:'quiz', skills:['valence','valence']}]},
+{k:'multiple', u:1, title:'Double and triple bonds', sum:['Atoms can share two pairs (a double bond) or three (a triple bond).','More shared pairs: shorter and stronger. C–C 348, C=C 614, C≡C 839 kJ/mol.'], steps:[
+  {t:'read', h:'More than one pair', p:['Two oxygen atoms each need 2 electrons. One shared pair would leave both short, so they share <b>two pairs</b>: a <b>double bond</b>, O=O. Two nitrogens, each 3 short, share three pairs: a <b>triple bond</b>, N≡N.',
+    'More pairs pull the atoms closer and hold them harder. N≡N, at 945 kJ/mol, is one of the strongest bonds there is, which is why the nitrogen in air hardly reacts.']},
+  {t:'do', h:'Make them', setup:()=>crsSetup.clear(420), p:'Watch the bonds deepen as they form.', palette:['C','N','O'], clearBtn:true, tasks:[
+    {t:'Oxygen, O₂, with a double bond', hint:'Two O atoms.', check:()=>crsBondBetween('O','O', b=>b.order === 2)},
+    {t:'Nitrogen, N₂, with a triple bond', hint:'Two N atoms.', check:()=>crsBondBetween('N','N', b=>b.order === 3)},
+    {t:'Carbon dioxide, O=C=O', hint:'C first, then O, O.', check:()=>crsHas({C:1, O:2})}]},
+  {t:'free', h:'Free bench time', p:'Hunt for more multiple bonds. The Build box takes names too: try ethene or acetylene.', palette:['H','C','N','O'], build:true, clearBtn:true, tries:[
+    {t:'A carbon–carbon double bond (ethene)', check:()=>crsBondBetween('C','C', b=>b.order === 2)},
+    {t:'A carbon–carbon triple bond (acetylene)', check:()=>crsBondBetween('C','C', b=>b.order === 3)},
+    {t:'Hydrogen cyanide, H–C≡N', check:()=>crsBondBetween('C','N', b=>b.order === 3)}]},
+  {t:'quiz', skills:['valence','enthalpy']}]},
+{k:'ionic', u:1, title:'Ionic compounds and crystals', sum:['Ionic compounds are not molecules: they are vast lattices of ions.','Each ion is surrounded by ions of the other charge; that is what holds the crystal.','Strong attractions everywhere make them hard, with high melting points.'], steps:[
+  {t:'read', h:'From a pair to a crystal', p:['One Na⁺ and one Cl⁻ attract, but so does every other ion nearby. Real salt is a <b>lattice</b>: in rock salt each Na⁺ sits among six Cl⁻ and each Cl⁻ among six Na⁺, repeated billions of times.',
+    'So NaCl is not a molecule; the formula just gives the ratio, one to one. Every ion is pulled in every direction, which makes salt hard and very hard to melt (801 °C).']},
+  {t:'do', h:'Look inside a salt crystal', setup:()=>{ crsSetup.clear(540, 8); l3Crystal('salt'); }, p:'A 27-ion block of rock salt. Turn it and zoom in.', temp:true, tasks:[
+    {t:'Select a sodium ion and check its card', hint:'Click a purple Na ball. The card on the right shows its neighbours.', check:()=>L3.sel && crsSym(L3.sel) === 'Na'},
+    {t:'Melt it: heat past 1074 K', hint:'Use the temperature slider here. Salt melts at 1074 K (801 °C).', check:()=>kelvin() >= 1150}]},
+  {t:'free', h:'Free bench time', p:'Build your own ionic compounds, or load a crystal from the Build box (try "sodium chloride" a few times).', palette:['Na','K','Mg','Ca','Cl','F','O'], build:true, temp:true, clearBtn:true, tries:[
+    {t:'Put four ions together in one cluster', check:()=>l3Molecules().some(g=>g.length >= 4 && g.every(a=>a.ion))},
+    {t:'Make calcium fluoride, CaF₂', check:()=>L3.atoms.some(a=>crsSym(a) === 'Ca' && a.ion === 2) && crsCount('F') >= 2}]},
+  {t:'quiz', skills:['formula','formula','ioncharge']}]},
+{k:'metallic', u:1, title:'Metals and the sea of electrons', sum:['Metal atoms pool their outer electrons into a shared sea.','The sea holds the ions together but lets them slide: metals bend rather than shatter.','Free electrons are why metals conduct electricity and heat.'], steps:[
+  {t:'read', h:'Metallic bonding', p:['Metal atoms hold their outer electrons loosely and have many neighbours, so instead of pairing up they give their outer electrons to the whole lump: a <b>sea of electrons</b> around a lattice of positive ions.',
+    'Nothing ties one ion to one partner, so layers can slide past each other without breaking: metals are bendy and can be drawn into wire. The roaming electrons carry current and heat.']},
+  {t:'do', h:'Make a lump of metal', setup:()=>crsSetup.clear(420), p:'Sodium is soft and reactive, but a perfectly good metal.', palette:['Na','Cu','Zn'], temp:true, clearBtn:true, tasks:[
+    {t:'Add five sodium atoms and let them clump', hint:'Click Na five times.', check:()=>L3.bonds.filter(b=>b.type === 'metallic').length >= 4},
+    {t:'Melt it: sodium melts at just 371 K, so try 450 K', hint:'Slide the temperature up and watch the lump go floppy.', check:()=>kelvin() >= 450}]},
+  {t:'free', h:'Free bench time', p:'Mix metals: an alloy is just two metals sharing one sea.', palette:['Na','Al','Fe','Cu','Zn','Ag','Au'], temp:true, clearBtn:true, tries:[
+    {t:'Make an alloy: two different metals bonded', check:()=>L3.bonds.some(b=>{ if(b.type !== 'metallic') return false; const p = l3Find(b.a), q = l3Find(b.b); return p && q && p.e !== q.e; })},
+    {t:'Copper and zinc together (that is brass)', check:()=>crsBondBetween('Cu','Zn', b=>b.type === 'metallic')}]},
+  {t:'quiz', skills:['bondtype','bondtype']}]},
+/* ---------- unit 3 ---------- */
+{k:'polarity', u:2, title:'Electronegativity and polar bonds', sum:['Electronegativity (EN) is how hard an atom pulls on shared electrons.','Unequal sharing makes a polar bond, δ+ at one end and δ− at the other.','A molecule is polar only if its bond dipoles do not cancel.'], steps:[
+  {t:'read', h:'Tug of war', p:['Shared electrons are not always shared fairly. <b>Electronegativity</b> measures each atom’s pull: fluorine is the strongest (3.98), then oxygen (3.44), chlorine and nitrogen (about 3), carbon 2.55, hydrogen 2.20.',
+    'In H–Cl the pair sits nearer chlorine, which turns slightly negative (δ−) and leaves hydrogen slightly positive (δ+): a <b>polar bond</b>. A big enough gap between a metal and a nonmetal (over about 1.7) and the electron is simply taken: ionic.']},
+  {t:'do', h:'See the charges', setup:()=>crsSetup.clear(420), p:'Switch on partial charges, then build these. The Build box takes formulas.', palette:['H','C','O','Cl'], build:true, charges:true, clearBtn:true, tasks:[
+    {t:'Show partial charges', hint:'Press "Show δ charges" here.', check:()=>!!L3.showQ},
+    {t:'Build hydrogen chloride and find the δ− end', hint:'H then Cl, or type HCl.', check:()=>crsHas({H:1, Cl:1})},
+    {t:'Build water: bent, so its dipoles add up', hint:'Type water, or O, H, H.', check:()=>crsHas({H:2, O:1})},
+    {t:'Build carbon dioxide: polar bonds, but straight, so they cancel', hint:'Type CO2.', check:()=>crsHas({C:1, O:2})}]},
+  {t:'free', h:'Free bench time', p:'Polar or not? Build and look at the molecule cards on the right: each says polar or nonpolar.', build:true, charges:true, clearBtn:true, tries:[
+    {t:'Carbon tetrachloride, CCl₄: four polar bonds, non-polar molecule', check:()=>crsHas({C:1, Cl:4})},
+    {t:'Ammonia, NH₃: polar', check:()=>crsHas({N:1, H:3})},
+    {t:'Chloroform, CHCl₃: polar, because one bond is different', check:()=>crsHas({C:1, H:1, Cl:3})}]},
+  {t:'quiz', skills:['bondtype','polarity','polarity']}]},
+{k:'shapes', u:2, title:'The shapes of molecules', sum:['Electron pairs around a central atom push as far apart as they can (VSEPR).','2 regions: linear; 3: trigonal planar; 4: tetrahedral.','Lone pairs push too but are invisible in the shape: NH₃ is pyramidal, H₂O bent.'], steps:[
+  {t:'read', h:'Electron pairs repel', p:['Every bond and every lone pair around a central atom is a region of negative charge, and they keep as far apart as possible. This is <b>VSEPR</b> theory.',
+    'Two regions sit opposite (linear, 180°), three make a flat triangle (120°), four a <b>tetrahedron</b> (109.5°). Lone pairs take up room but we only "see" atoms, so NH₃ (3 bonds, 1 lone pair) is a pyramid and H₂O (2 and 2) is bent.']},
+  {t:'do', h:'Build the family', setup:()=>crsSetup.clear(480), p:'Type each into Build, then turn it with the mouse to see its shape. The cards on the right name each shape and its angle.', build:true, clearBtn:true, tasks:[
+    {t:'Methane, CH₄: tetrahedral', hint:'Type methane.', check:()=>crsHas({C:1, H:4})},
+    {t:'Ammonia, NH₃: trigonal pyramidal', hint:'Type ammonia.', check:()=>crsHas({N:1, H:3})},
+    {t:'Water, H₂O: bent', hint:'Type water.', check:()=>crsHas({H:2, O:1})},
+    {t:'Boron trifluoride, BF₃: trigonal planar', hint:'Type BF3.', check:()=>crsHas({B:1, F:3})}]},
+  {t:'free', h:'Free bench time', p:'Go beyond the octet. Some atoms in the third row and below take more than four.', build:true, clearBtn:true, tries:[
+    {t:'Sulfur hexafluoride, SF₆: octahedral', check:()=>crsHas({S:1, F:6})},
+    {t:'Phosphorus pentachloride, PCl₅: trigonal bipyramidal', check:()=>crsHas({P:1, Cl:5})},
+    {t:'Xenon tetrafluoride, XeF₄: a noble gas that bonds', check:()=>crsHas({Xe:1, F:4})}]},
+  {t:'quiz', skills:['shape','shape','shape']}]},
+/* ---------- unit 4 ---------- */
+{k:'imf', u:3, title:'Forces between molecules', sum:['Molecules attract each other: London forces (all), dipole–dipole (polar), hydrogen bonds (H on N, O or F).','A hydrogen bond is about 20 kJ/mol: far weaker than a covalent bond, far stronger than London forces in small molecules.','These forces decide melting and boiling points.'], steps:[
+  {t:'read', h:'Sticking together', p:['Bonds hold atoms together inside a molecule. Weaker <b>intermolecular forces</b> hold molecules to each other. All molecules feel <b>London forces</b>, from electron clouds sloshing; polar ones add <b>dipole–dipole</b> attraction.',
+    'The strongest is the <b>hydrogen bond</b>: an H on N, O or F, which is very δ+, drawn to a lone pair on another N, O or F. Water is full of them, which is why such a small molecule is liquid at room temperature.']},
+  {t:'do', h:'Water’s network', setup:()=>crsSetup.water(14, 300), p:'Fourteen water molecules. The blue dashes are hydrogen bonds.', temp:true, tasks:[
+    {t:'Wait until at least five hydrogen bonds hold at once', hint:'Give it a few seconds; cooling a little helps.', check:()=>(L3.hb||[]).length >= 5},
+    {t:'Cool below 260 K and grow the network to eight', hint:'Slide the temperature down: slower molecules stay hydrogen-bonded.', check:()=>kelvin() < 260 && (L3.hb||[]).length >= 8}]},
+  {t:'free', h:'Free bench time', p:'Add other molecules to the water and see who joins in.', build:true, temp:true, tries:[
+    {t:'Add methane: it never hydrogen-bonds', check:()=>crsHas({C:1, H:4})},
+    {t:'Add ammonia: it joins the network', check:()=>crsHas({N:1, H:3})},
+    {t:'Get twelve hydrogen bonds at once', check:()=>(L3.hb||[]).length >= 12}]},
+  {t:'quiz', skills:['hbond','imf','imf']}]},
+{k:'states', u:3, title:'Solids, liquids and gases', sum:['Temperature is the average motion of the particles.','Melting and boiling happen when motion overcomes the forces between particles.','Stronger forces mean higher melting and boiling points.'], steps:[
+  {t:'read', h:'Temperature is motion', p:['Every particle is always moving. <b>Temperature</b> measures how fast, on average: at 0 K (−273 °C) motion would stop altogether.',
+    'In a <b>solid</b> the attractions win and particles only jiggle in place. Heat it and they break free to slide past each other: a <b>liquid</b>. Hotter still and they escape completely: a <b>gas</b>. The stronger the forces between them, the hotter you must go.']},
+  {t:'do', h:'Boil and freeze water', setup:()=>crsSetup.water(14, 320), p:'The graph in the right panel tracks the temperature of the atoms.', temp:true, tasks:[
+    {t:'Heat past 450 K and watch the molecules scatter', hint:'Water boils at 373 K; go well past it.', check:()=>kelvin() >= 450 && (L3.Tkin||0) >= 380},
+    {t:'Now cool right down below 200 K', hint:'Slide all the way left: they huddle and barely move.', check:()=>kelvin() < 200}]},
+  {t:'free', h:'Free bench time', p:'Compare melting points: build something and find when it falls apart.', build:true, temp:true, clearBtn:true, tries:[
+    {t:'Heat something past 3000 K', check:()=>kelvin() >= 3000},
+    {t:'Cool something below 50 K', check:()=>kelvin() < 50}]},
+  {t:'quiz', skills:['imf','imf']}]},
+/* ---------- unit 5 ---------- */
+{k:'energy', u:4, title:'Bonds and energy', sum:['Making a bond releases energy; breaking one costs the same amount.','ΔH = energy of bonds broken − energy of bonds made.','Negative ΔH: exothermic, heat out. Positive: endothermic, heat in.'], steps:[
+  {t:'read', h:'Energy in, energy out', p:['Atoms in a bond sit lower in energy than apart, so <b>making</b> a bond gives energy out (as heat), and <b>breaking</b> one takes exactly that much back in. The H–H bond is worth 436 kJ/mol.',
+    'A reaction breaks some bonds and makes others. Its <b>enthalpy change</b>, ΔH, is the difference: if the new bonds are stronger, energy comes out and ΔH is negative (<b>exothermic</b>); if weaker, it is positive (<b>endothermic</b>).']},
+  {t:'do', h:'Feel it on the bench', setup:()=>crsSetup.clear(420), p:'Watch the ΔH tile on the right as you go.', palette:['H'], tasks:[
+    {t:'Join two hydrogen atoms: ΔH shows −436', hint:'Click H twice.', check:()=>crsHas({H:2})},
+    {t:'Break the bond again with the Break a bond tool', hint:'Pick the broken-link tool in the bar on the left of the bench, then click the bond.', check:()=>L3.ledger.some(e=>/broken by hand/.test(e.what))}]},
+  {t:'read', h:'Activation energy', p:['Even an exothermic reaction often needs a push to start: some bonds must loosen before new ones can form. That hill is the <b>activation energy</b>. Heat helps (faster collisions clear it more often), and so does a <b>catalyst</b>, which offers an easier route without being used up.']},
+  {t:'free', h:'Free bench time', p:'Use the Add energy (lightning) tool to shake molecules apart, and watch ΔH.', palette:['H','O','N','C','Cl'], build:true, temp:true, clearBtn:true, tries:[
+    {t:'Break a bond with the lightning tool', check:()=>L3.ledger.some(e=>e.dE > 50)},
+    {t:'Make something that gives out over 1000 kJ/mol in all', check:()=>L3.ledger.reduce((t,e)=>t+e.dE, 0) < -1000}]},
+  {t:'quiz', skills:['enthalpy','enthalpy','enthalpy']}]},
+{k:'equations', u:4, title:'Reactions and equations', sum:['In a reaction atoms are rearranged, never made or destroyed.','A balanced equation has the same atoms on both sides: 2Na + Cl₂ → 2NaCl.','Molar mass turns atom counts into grams.'], steps:[
+  {t:'read', h:'Atoms are conserved', p:['A chemical reaction breaks bonds and makes new ones, but every atom you start with is still there at the end. So a <b>chemical equation</b> must <b>balance</b>: count each element on both sides.',
+    'Sodium burning in chlorine: 2Na + Cl₂ → 2NaCl. Two sodium atoms on each side, two chlorine atoms on each side. The big numbers in front say how many of each.']},
+  {t:'do', h:'Watch a reaction write its own equation', setup:()=>crsSetup.topic('salt'), slow:true, nudge:true, p:'The bench slows down for each step and explains it. Press Next step on the card to go on. The equation appears in the right panel.', tasks:[
+    {t:'Let both sodium atoms react', hint:'If they are slow to meet, press Give them a push.', check:()=>L3.atoms.filter(a=>crsSym(a) === 'Na' && a.ion > 0).length >= 2},
+    {t:'Find the equation at the top of the right panel', hint:'Look for the line with the arrow: it balances itself.', check:()=>!!L3.rx}]},
+  {t:'free', h:'Free bench time', p:'Pick any reaction from the Reactions list on the left and read its equation when it settles.', tries:[
+    {t:'Get the bench to write any equation', check:()=>!!L3.rx}]},
+  {t:'quiz', skills:['moles','moles']}]},
+/* ---------- unit 6 ---------- */
+{k:'dissolve', u:5, title:'Dissolving', sum:['Water molecules turn to face an ion: δ− oxygens toward cations, δ+ hydrogens toward anions.','The energy of that hydration pays for pulling the ion off its crystal.','Each ion needs its own water, so a solution can only hold so much: saturated.'], steps:[
+  {t:'read', h:'How water takes salt apart', p:['Drop salt in water and it vanishes. Water is polar, and each ion at the crystal’s edge gets a crowd of water molecules turned toward it: oxygens toward Na⁺, hydrogens toward Cl⁻. That <b>hydration</b> gives back almost all the energy it costs to pull the ion away.',
+    'Corners and edges go first, where ions have fewest neighbours. And since every dissolved ion keeps waters of its own, a little water can only hold a little salt: then it is <b>saturated</b>.']},
+  {t:'do', h:'Salt meets water', setup:()=>l3Scene('saltaq'), p:'A salt crystal in about a hundred water molecules, at room temperature.', tasks:[
+    {t:'Watch until ten ions have come loose', hint:'Give it twenty seconds or so. The meter on the right counts dissolved ions.', check:()=>l3Solution().mobile >= 10},
+    {t:'Check the conductivity on the meter: free ions carry current', hint:'The Solution tile on the right.', check:()=>l3Solution().kappa > 1}]},
+  {t:'free', h:'Free bench time', p:'Try dissolving other things: build some water (type "water" a few times) and add a salt.', build:true, temp:true, tries:[
+    {t:'Dissolve a different salt', check:()=>l3Solution().sp.size >= 2 && [...l3Solution().sp.keys()].some(k=>!/^(Na|Cl)/.test(k))}]},
+  {t:'quiz', skills:['imf','ioncharge']}]},
+{k:'precip', u:5, title:'Precipitation', sum:['Some ion pairs hold each other more tightly than water can hold them apart.','When those ions meet in solution they come out as a solid: a precipitate.','Ions that stay dissolved on both sides are spectators.'], steps:[
+  {t:'read', h:'When ions refuse to stay dissolved', p:['Silver nitrate and sodium chloride both dissolve. But mix the two solutions and a white cloud appears at once: Ag⁺ and Cl⁻ grip each other harder than water grips either, so wherever they meet they stick and grow into solid <b>silver chloride</b>.',
+    'Na⁺ and NO₃⁻ stay dissolved and do nothing: they are <b>spectator ions</b>. The net change is just Ag⁺(aq) + Cl⁻(aq) → AgCl(s).']},
+  {t:'do', h:'Make a precipitate', setup:()=>l3Scene('agcl'), p:'Silver, nitrate, sodium and chloride ions, all dissolved.', tasks:[
+    {t:'Watch the silver chloride gather (three Ag–Cl contacts)', hint:'It takes up to half a minute; the solid is tinted white.', check:()=>L3.bonds.filter(b=>b.type === 'ionic' && l3Ppt(l3Find(b.a), l3Find(b.b))).length >= 3},
+    {t:'Notice the sodium ions never join in', hint:'They stay spread through the water: spectators.', check:()=>L3.bonds.filter(b=>b.type === 'ionic' && l3Ppt(l3Find(b.a), l3Find(b.b))).length >= 3 && !L3.atoms.some(a=>crsSym(a) === 'Na' && l3Bonds(a).some(b=>b.type === 'ionic'))}]},
+  {t:'free', h:'Free bench time', p:'Load Golden rain from the Reactions list (under Solutions): bright yellow lead iodide.', tries:[
+    {t:'Make some lead(II) iodide', check:()=>L3.bonds.some(b=>{ const x = b.type === 'ionic' && l3Ppt(l3Find(b.a), l3Find(b.b)); return x && x.f === 'PbI₂'; })}]},
+  {t:'quiz', skills:['precip','precip','precip']}]},
+/* ---------- unit 7 ---------- */
+{k:'acids', u:6, title:'Acids and pH', sum:['An acid gives away a proton (H⁺); a base takes one.','In water the proton lands on a water molecule: H₃O⁺, hydronium.','pH measures how much H₃O⁺ there is: below 7 acidic, 7 neutral, above 7 basic.'], steps:[
+  {t:'read', h:'Proton donors', p:['A hydrogen atom without its electron is just a <b>proton</b>, H⁺. An <b>acid</b> gives one away; a <b>base</b> takes one, using a lone pair.',
+    'Hydrogen chloride in water hands its proton straight to a water molecule, making <b>hydronium</b>, H₃O⁺, and leaving Cl⁻. How readily an acid lets go is its <b>pKa</b>: the lower, the stronger. HCl’s is −7; acetic acid’s (vinegar) 4.8.']},
+  {t:'do', h:'An acid meets water', setup:()=>crsSetup.topic('acid'), slow:true, nudge:true, p:'HCl among five waters. The bench stops at the proton transfer to explain it.', tasks:[
+    {t:'Watch HCl give its proton to water, making H₃O⁺', hint:'Press Give them a push if nothing happens for a while.', check:()=>crsHas({H:3, O:1}, 1)},
+    {t:'Read the pH on the meter: well below 7', hint:'The coloured dial in the right panel.', check:()=>crsHas({H:3, O:1}, 1) && l3Solution().pH < 7}]},
+  {t:'free', h:'Free bench time', p:'Try other acids in water. The Build box knows acetic acid, nitric acid, sulfuric acid, ammonia.', build:true, temp:true, nudge:true, tries:[
+    {t:'Make a basic solution (pH over 7): try ammonia in water', check:()=>l3Solution().waters >= 3 && l3Solution().pH > 7},
+    {t:'Get the pH below 1', check:()=>l3Solution().waters >= 3 && l3Solution().pH < 1}]},
+  {t:'quiz', skills:['pka','pka','pka']}]},
+{k:'neutral', u:6, title:'Neutralisation', sum:['An acid and a base cancel: H⁺ + OH⁻ → H₂O.','About 57 kJ of heat comes out per mole of water made.','What is left is a salt, here sodium chloride, dissolved.'], steps:[
+  {t:'read', h:'Acid plus base', p:['Mix an acid with a base like sodium hydroxide and they cancel out: the hydroxide ion takes the acid’s proton and becomes water, H⁺ + OH⁻ → H₂O. This is <b>neutralisation</b>, and it is exothermic, about 57 kJ for every mole of water.',
+    'What is left, Na⁺ and Cl⁻, is a <b>salt</b> in solution: HCl + NaOH → NaCl + H₂O.']},
+  {t:'do', h:'Neutralise', setup:()=>crsSetup.topic('neut'), slow:true, nudge:true, p:'Sodium hydroxide meets hydrochloric acid in a little water.', tasks:[
+    {t:'Watch the hydroxide become water', hint:'Give them a push if needed.', check:()=>!crsHas({H:1, O:1}, -1) && l3Molecules().filter(g=>crsSame(countsOf(g), {H:2, O:1}) && !crsQ(g)).length >= 3}]},
+  {t:'free', h:'Free bench time', p:'Neutralise something else: add HCl to a base, or a base to an acid, using the Build box.', build:true, nudge:true, tries:[
+    {t:'Neutralise ammonia with HCl (makes NH₄⁺)', check:()=>crsHas({N:1, H:4}, 1)}]},
+  {t:'quiz', skills:['pka','enthalpy']}]},
+/* ---------- unit 8 ---------- */
+{k:'redox', u:7, title:'Redox: electrons change hands', sum:['Oxidation is losing electrons; reduction is gaining them (OIL RIG).','Electrons flow from the metal with the lower electrode potential to the higher.','Zinc (−0.76 V) in copper ions (+0.34 V): zinc dissolves, copper comes out.'], steps:[
+  {t:'read', h:'OIL RIG', p:['<b>Oxidation Is Loss</b> of electrons, <b>Reduction Is Gain</b>. They always happen together: whatever loses electrons hands them to something that takes them. That is a <b>redox</b> reaction.',
+    'Each metal has an <b>electrode potential</b>, E°: how much its ions want electrons back. Electrons run from the lower to the higher. Zinc is −0.76 V and copper +0.34 V, so zinc metal gives electrons to copper ions.']},
+  {t:'do', h:'Zinc meets copper ions', setup:()=>crsSetup.topic('zncu'), slow:true, nudge:true, p:'A zinc atom and a copper ion in water.', tasks:[
+    {t:'Watch zinc hand its electrons over: copper metal appears', hint:'Give them a push if needed.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Cu' && !a.ion) && L3.atoms.some(a=>crsSym(a) === 'Zn' && a.ion > 0)}]},
+  {t:'free', h:'Free bench time', p:'Load Copper + silver ions from the Reactions list: who wins this time?', tries:[
+    {t:'Get silver metal to come out', check:()=>L3.atoms.some(a=>crsSym(a) === 'Ag' && !a.ion) && L3.atoms.some(a=>crsSym(a) === 'Cu' && a.ion > 0)}]},
+  {t:'quiz', skills:['redox','redox','redox']}]},
+{k:'reactive', u:7, title:'Reactive metals and flame colours', sum:['Metals low on the potential scale react even with water, freeing hydrogen.','Heated metal atoms give out light of their own colours: the flame test.'], steps:[
+  {t:'read', h:'Sodium and water', p:['Sodium sits at −2.71 V, far below hydrogen, so it can push electrons even onto water: 2Na + 2H₂O → 2NaOH + H₂. It fizzes, races about and can catch fire.',
+    'Heat any metal hot enough and its outer electron is lifted to a higher level; falling back, it gives out light of exactly one colour. That is the <b>flame test</b>: sodium yellow, copper green, lithium crimson.']},
+  {t:'do', h:'Sodium in water', setup:()=>crsSetup.topic('naw'), slow:true, nudge:true, p:'Two sodium atoms with four waters.', tasks:[
+    {t:'Watch sodium set hydrogen free from water', hint:'Give them a push if needed.', check:()=>crsHas({H:2}) || L3.atoms.some(a=>crsSym(a) === 'H' && !l3Bonds(a).length)}]},
+  {t:'free', h:'Free bench time: flame colours', setup:()=>crsSetup.clear(420, 12), p:'Add metals, then heat past 1300 K and watch them glow.', palette:['Li','Na','K','Ca','Sr','Ba','Cu'], temp:true, clearBtn:true, tries:[
+    {t:'See sodium’s yellow', check:()=>L3.atoms.some(a=>crsSym(a) === 'Na' && (a.Ts||0) > 1400)},
+    {t:'See copper’s green', check:()=>L3.atoms.some(a=>crsSym(a) === 'Cu' && (a.Ts||0) > 1400)},
+    {t:'See lithium’s crimson', check:()=>L3.atoms.some(a=>crsSym(a) === 'Li' && (a.Ts||0) > 1400)}]},
+  {t:'quiz', skills:['redox','ioncharge']}]},
+/* ---------- unit 9 ---------- */
+{k:'carbon', u:8, title:'Carbon: the chemistry of life', sum:['Carbon makes four bonds and bonds to itself: chains, branches and rings.','Alkanes have only single bonds; alkenes have a C=C.','Functional groups (–OH, –COOH, –NH₂) give molecules their behaviour.'], steps:[
+  {t:'read', h:'Why carbon', p:['Carbon makes four bonds and holds on to other carbons strongly, so it builds chains, branches and rings of any size: nearly ten million known compounds, and every molecule in you.',
+    'Chains with only single bonds are <b>alkanes</b> (methane, ethane, propane). One C=C makes an <b>alkene</b> (ethene). Swap a hydrogen for a <b>functional group</b> and the behaviour changes: –OH makes an alcohol (ethanol), –COOH an acid (vinegar).']},
+  {t:'do', h:'Build the series', setup:()=>crsSetup.clear(520), p:'Type each name into Build. The molecule library (the book button on the bench) has 250 more.', build:true, clearBtn:true, tasks:[
+    {t:'Ethane, C₂H₆', hint:'Type ethane.', check:()=>crsHas({C:2, H:6})},
+    {t:'Ethene, C₂H₄, with its double bond', hint:'Type ethene.', check:()=>crsHas({C:2, H:4})},
+    {t:'Ethanol, C₂H₅OH', hint:'Type ethanol.', check:()=>crsHas({C:2, H:6, O:1}) && crsBondBetween('O','H', ()=>true)}]},
+  {t:'free', h:'Free bench time', p:'Build anything from the library: caffeine, aspirin, glucose, cholesterol…', build:true, clearBtn:true, tries:[
+    {t:'A molecule with twenty atoms or more', check:()=>l3Molecules().some(g=>g.length >= 20)},
+    {t:'An aromatic ring (benzene, aspirin, caffeine…)', check:()=>L3.bonds.some(b=>b.arom)}]},
+  {t:'quiz', skills:['valence','moles']}]},
+{k:'addition', u:8, title:'Organic reactions: addition', sum:['A C=C double bond can open, and each carbon takes a new partner: addition.','Bromine adds to ethene: C₂H₄ + Br₂ → C₂H₄Br₂.','Bromine water losing its colour is the test for a C=C.'], steps:[
+  {t:'read', h:'Opening a double bond', p:['The second bond of a C=C, the <b>π bond</b>, is weaker than the first and sits exposed above and below the carbons. Something hungry for electrons, like bromine, can open it, and each carbon gains a new atom: an <b>addition</b> reaction.',
+    'Brown bromine water loses its colour as it adds across a double bond: the classic test for alkenes.']},
+  {t:'do', h:'Bromine meets ethene', setup:()=>crsSetup.topic('br2'), slow:true, nudge:true, p:'The bench stops at each step of the addition.', tasks:[
+    {t:'Watch the bromine add across the double bond', hint:'Give them a push if needed.', check:()=>crsHas({C:2, H:4, Br:2})}]},
+  {t:'free', h:'Free bench time', p:'Try the other organic reactions in the Reactions list: Markovnikov addition, making an ester, splitting one with water.', tries:[
+    {t:'Make an ester (Esterification in the Reactions list)', check:()=>crsHas({C:4, H:8, O:2})}]},
+  {t:'quiz', skills:['valence','enthalpy']}]},
+/* ---------- the end ---------- */
+{k:'lab', u:8, title:'Your own lab', sum:['You have used every idea in the course on the bench.'], steps:[
+  {t:'read', h:'You made it', p:['That is the whole course: atoms, ions, bonds, shapes, forces between molecules, energy, solutions, acids, redox and organic chemistry. Everything you saw on the bench follows the same few rules you learned.',
+    'One last free session, with the challenges from the assessment to try. When you are ready, take the assessment from Learn mode, or keep practising there.']},
+  {t:'free', h:'Free bench time: the challenges', setup:()=>crsSetup.clear(460), p:'Everything is unlocked.', palette:['H','C','N','O','F','Na','Mg','Cl','B','Br'], build:true, temp:true, clearBtn:true, tries:EXAM_TASKS.map(x=>({t:x.t, check:x.check}))}]}
+];
+/* ---------- the course engine ---------- */
+const CRS = {on:false, li:0, si:0, done:{}, ticks:[], tries:[], hint:{}, quiz:null, keep:null, hidden:false, view:'step', mem:{}, t0:0};
+try{ const s = JSON.parse(localStorage.getItem('bondingbench.course')||'null'); if(s){ CRS.li = Math.min(s.li||0, COURSE.length - 1); CRS.si = s.si||0; CRS.done = s.done||{}; } }catch(e){}
+const crsSave = () => { try{ localStorage.setItem('bondingbench.course', JSON.stringify({li:CRS.li, si:CRS.si, done:CRS.done})); }catch(e){} };
+const crsLesson = () => COURSE[CRS.li];
+const crsStep = () => crsLesson().steps[CRS.si] || null;
+function courseStart(li){
+  if(LEARN.on) learnMode(false);
+  if(!CRS.on){
+    /* your own bench is kept and comes back, as it was, when you leave the course */
+    CRS.keep = {temp:P.temp, bench:L3.on ? '3D' : '2D', snap:JSON.stringify(L3.on ? l3Snap() : snapshot()), step:STEP.on};
+    CRS.on = true; document.body.classList.add('coursing');
+  }
+  if(!L3.on) set3D(true);
+  if(li != null){ CRS.li = li; CRS.si = 0; }
+  CRS.hidden = false; CRS.view = 'step';
+  crsEnter();
+}
+function courseExit(){
+  if(!CRS.on) return;
+  CRS.on = false; document.body.classList.remove('coursing');
+  stepMode(CRS.keep && CRS.keep.step, true);
+  if(CRS.keep){
+    if(CRS.keep.bench === '3D'){ if(!L3.on) set3D(true); try{ l3Restore(JSON.parse(CRS.keep.snap)); }catch(e){} }
+    else { if(L3.on) set3D(false); try{ loadState(JSON.parse(CRS.keep.snap)); }catch(e){} }
+    setSlider('temp', CRS.keep.temp);
+  }
+  L3.shiftX = 0; try{ renderLeft3D(); }catch(e){}
+  renderCourse(); say('Course paused at '+crsLesson().title+'. Your own bench is back. Continue any time from the Course button.', 'learn');
+}
+/* arriving at a step: set out its bench, its pace and its questions */
+function crsEnter(){
+  const st = crsStep();
+  CRS.ticks = []; CRS.tries = []; CRS.hint = {}; CRS.quiz = null; CRS.mem = {}; CRS.t0 = performance.now(); LEARN.perm = {};
+  if(st){
+    if(st.setup){ try{ st.setup(); }catch(e){ console.warn(e); } }
+    stepMode(!!st.slow, true);
+    if(st.t === 'quiz') CRS.quiz = {qs:st.skills.map(k=>genQuestion(k)).filter(Boolean), ans:[]};
+  } else stepMode(false, true);
+  crsSave(); renderCourse(true);
+}
+function crsGo(d){
+  const L = crsLesson();
+  if(d > 0 && CRS.si >= L.steps.length){
+    /* on to the next lesson */
+    if(CRS.li < COURSE.length - 1){ CRS.li++; CRS.si = 0; } else return;
+  } else CRS.si = clamp(CRS.si + d, 0, L.steps.length);
+  if(CRS.si >= L.steps.length){ CRS.done[L.k] = true; crsSave(); stepMode(false, true); say('✓ Lesson done: '+L.title, 'learn'); renderCourse(true); return; }
+  crsEnter();
+}
+/* is the step finished, so Next is the natural thing to press? */
+function crsStepDone(){
+  const st = crsStep(); if(!st) return true;
+  if(st.t === 'do') return st.tasks.every((x, i)=>CRS.ticks[i]);
+  if(st.t === 'quiz') return CRS.quiz && CRS.quiz.ans.filter(a=>a != null).length >= CRS.quiz.qs.length;
+  return true;
+}
+function crsTick(){
+  if(!CRS.on) return;
+  const st = crsStep(); let changed = false;
+  if(st && (st.t === 'do' || st.t === 'free')){
+    const list = st.t === 'do' ? st.tasks : st.tries, got = st.t === 'do' ? CRS.ticks : CRS.tries;
+    list.forEach((x, i)=>{ if(!got[i]){ let ok = false; try{ ok = x.check(); }catch(e){} if(ok){ got[i] = true; changed = true; say('✓ '+x.t, 'learn'); } } });
+  }
+  renderCourse(changed);
+}
+const CRS_KIND = {read:['Lesson','▤'], do:['Guided bench','⚒'], free:['Free bench','✦'], quiz:['Quick check','?']};
+function courseHTML(){
+  const L = crsLesson(), st = crsStep(), n = COURSE.length, doneN = COURSE.filter(x=>CRS.done[x.k]).length;
+  const top = '<div class="crs-top"><span class="eyebrow">Unit '+(L.u+1)+' · '+CRS_UNITS[L.u]+'</span><span class="crs-acts">'+
+    '<button type="button" data-c="contents">Contents</button><button type="button" data-c="hide">Hide</button><button type="button" data-c="exit">Exit</button></span></div>';
+  if(CRS.view === 'contents'){
+    return top + '<h3 class="ld-title">The course</h3><div class="ex-bar"><i style="width:'+Math.round(doneN/n*100)+'%"></i></div><p class="ld-hint" style="margin-top:2px">'+doneN+' of '+n+' lessons done</p>'+
+      CRS_UNITS.map((u, ui)=>'<span class="ld-grp">Unit '+(ui+1)+' · '+u+'</span>'+COURSE.map((x, i)=>[x, i]).filter(([x])=>x.u === ui).map(([x, i])=>
+        '<button type="button" class="crs-row'+(i === CRS.li ? ' cur' : '')+'" data-c="jump" data-i="'+i+'"><i>'+(CRS.done[x.k] ? '✓' : i+1)+'</i><span>'+x.title+'</span></button>').join('')).join('')+
+      '<div class="ld-btns"><button type="button" class="ld-go" data-c="back2">Back to the lesson ▶</button></div>';
+  }
+  let h = top + '<h3 class="ld-title"><small>Lesson '+(CRS.li+1)+' of '+n+'</small>'+L.title+'</h3>'+
+    '<div class="crs-dots">'+L.steps.map((s, i)=>'<i class="'+(i < CRS.si ? 'past' : i === CRS.si ? 'now' : '')+'" title="'+CRS_KIND[s.t][0]+'">'+CRS_KIND[s.t][1]+'</i>').join('')+'<i class="'+(CRS.si >= L.steps.length ? 'now' : '')+'" title="Done">✓</i></div>';
+  if(!st){
+    const nx = COURSE[CRS.li + 1];
+    h += '<div class="crs-kind">Lesson complete</div><p class="ld-p">What you now know:</p><ul class="crs-sum">'+L.sum.map(x=>'<li>'+glossify(x)+'</li>').join('')+'</ul>'+
+      (nx ? '<div class="ld-btns"><button type="button" class="ld-go" data-c="next">Next lesson: '+nx.title+' ▶</button></div><p class="ld-hint">Or stay and play on this bench as long as you like: the course waits here.</p>'
+          : '<p class="ld-p"><b>That is the whole course.</b> Test yourself with the assessment, or keep practising the skills.</p><div class="ld-btns"><button type="button" class="ld-go" data-c="assess">Take the assessment ▶</button><button type="button" class="ghost-btn" data-c="practice">Practice</button></div>');
+    return h + '<div class="crs-foot"><button type="button" class="link-btn" data-c="prev">‹ Back</button></div>';
+  }
+  h += '<div class="crs-kind k-'+st.t+'">'+CRS_KIND[st.t][0]+(st.h ? ': '+st.h : '')+'</div>';
+  if(st.t === 'read') h += st.p.map(x=>'<p class="ld-p">'+glossify(x)+'</p>').join('');
+  if(st.t === 'do' || st.t === 'free'){
+    if(st.p) h += '<p class="ld-p">'+glossify(st.p)+'</p>';
+    const list = st.t === 'do' ? st.tasks : st.tries, got = st.t === 'do' ? CRS.ticks : CRS.tries;
+    h += '<div class="ld-checks">'+(st.t === 'free' ? '<span class="eyebrow">Things to try (optional)</span>' : '')+list.map((x, i)=>'<div class="ld-check'+(got[i] ? ' on' : '')+'"><i>'+(got[i] ? '✓' : '')+'</i><span>'+x.t+
+      (!got[i] && x.hint ? (CRS.hint[i] ? '<small class="ex-hint">'+x.hint+'</small>' : ' <button type="button" class="crs-hint" data-c="hint" data-i="'+i+'">hint</button>') : '')+'</span></div>').join('')+'</div>';
+    if(st.palette) h += '<div class="ex-pal">'+st.palette.map(sy=>'<button type="button" data-c="add" data-s="'+sy+'" style="--ec:'+BY_SYM[sy].col+'">'+sy+'</button>').join('')+'</div>';
+    if(st.build) h += '<div class="ex-build"><input id="crsBuild" type="text" placeholder="Build: water, CO2, caffeine…" autocomplete="off"><button type="button" data-c="build">Build</button></div>';
+    if(st.temp) h += '<div class="ld-ctrl"><label>Temperature <b id="crsTempVal"></b></label><input type="range" class="temp-range" id="crsTemp" min="'+T_MIN+'" max="'+T_MAX+'"></div>';
+    const tools = [st.charges ? '<button type="button" class="ghost-btn" data-c="charges">'+(L3.showQ ? 'Hide' : 'Show')+' δ charges</button>' : '', st.nudge ? '<button type="button" class="ghost-btn" data-c="nudge">Give them a push</button>' : '',
+      st.clearBtn ? '<button type="button" class="ghost-btn" data-c="clear">Clear the bench</button>' : '', st.setup ? '<button type="button" class="ghost-btn" data-c="reset">Start this again</button>' : ''].filter(Boolean);
+    if(tools.length) h += '<div class="crs-tools">'+tools.join('')+'</div>';
+  }
+  if(st.t === 'quiz'){
+    const Q = CRS.quiz || {qs:[], ans:[]};
+    h += '<p class="ld-hint" style="margin-top:0">Everything you need is in each question.</p>'+Q.qs.map((q, qi)=>{ const ans = Q.ans[qi];
+      return '<div class="ld-q"><span class="sk-tag">'+SKILLS[q.skill].name+'</span><p>'+(qi+1)+'. '+q.q+'</p>'+learnOrder(q.id, q.opts.length).map(i=>'<button type="button" class="ld-opt'+(ans == null ? '' : i === q.a ? ' right' : i === ans ? ' wrong' : ' dim')+'" data-c="ans" data-q="'+qi+'" data-i="'+i+'"'+(ans == null ? '' : ' disabled')+'>'+q.opts[i]+'</button>').join('')+
+        (ans != null ? '<p class="ld-why">'+(ans === q.a ? '✓ ' : 'The answer: '+q.opts[q.a].replace(/^./, m=>m.toLowerCase())+'. ')+q.why+'</p>' : '')+'</div>'; }).join('');
+  }
+  const done = crsStepDone(), last = CRS.si === L.steps.length - 1;
+  const nextLbl = st.t === 'free' ? (last ? 'Finish the lesson ▶' : 'Carry on with the lesson ▶') : done ? (last ? 'Finish the lesson ▶' : 'Next ▶') : (st.t === 'quiz' ? 'Answer them all to go on' : 'Skip this ▶');
+  h += '<div class="crs-foot">'+(CRS.si > 0 ? '<button type="button" class="link-btn" data-c="prev">‹ Back</button>' : '<span></span>')+
+    '<button type="button" class="'+(done ? 'ld-go' : 'ghost-btn')+'" data-c="next"'+(st.t === 'quiz' && !done ? ' disabled' : '')+'>'+nextLbl+'</button></div>';
+  return h;
+}
+function renderCourse(force){
+  const host = el('courseDock'), btn = el('courseBtn');
+  if(btn){ btn.classList.toggle('on', CRS.on); btn.textContent = CRS.on ? 'Course · '+(CRS.li+1)+'/'+COURSE.length : 'Course'; }
+  if(!host) return;
+  if(!CRS.on){ host.hidden = true; host._html = ''; L3.shiftX = LEARN.on ? L3.shiftX : 0; return; }
+  host.hidden = false;
+  host.classList.toggle('collapsed', CRS.hidden);
+  const st = crsStep();
+  const h = CRS.hidden ? '<button type="button" class="crs-pill" data-c="show"><b>Course</b> · '+crsLesson().title+(st ? ' · '+CRS_KIND[st.t][0] : ' · done')+' <span>Show ▾</span></button>' : courseHTML();
+  if(force || host._html !== h){
+    const bi = el('crsBuild'), bv = bi ? bi.value : '', bf = bi && document.activeElement === bi;
+    host.innerHTML = h; host._html = h;
+    const b2 = el('crsBuild'); if(b2 && bv){ b2.value = bv; if(bf) b2.focus(); }
+  }
+  const ti = el('crsTemp');
+  if(ti){ if(document.activeElement !== ti) ti.value = P.temp; ti.style.setProperty('--pct', ((P.temp-T_MIN)/(T_MAX-T_MIN)*100)+'%'); const tv = el('crsTempVal'); if(tv) tv.textContent = kelvin()+' K · '+(kelvin()-273)+' °C'; }
+  /* the molecules sit left of the panel rather than behind it */
+  L3.shiftX = L3.on && !CRS.hidden ? Math.round((host.offsetWidth || 340)/2 + 8) : 0;
+}
+/* A gentle push: each molecule moves part of the way toward the middle, never
+   closer than about 240 pm, and a move that would land on another molecule is
+   undone. Pressed again and again it gathers them without smashing them. */
+function crsNudge(){
+  const ms = l3Molecules(), all = L3.atoms;
+  const cen = g => { let x = 0, y = 0, z = 0; g.forEach(a=>{ x += a.x; y += a.y; z += a.z; }); return {x:x/g.length, y:y/g.length, z:z/g.length}; };
+  const G = cen(all);
+  ms.sort((p, q)=>{ const a = cen(p), b = cen(q); return Math.hypot(b.x-G.x, b.y-G.y, b.z-G.z) - Math.hypot(a.x-G.x, a.y-G.y, a.z-G.z); }).forEach(g=>{
+    const c = cen(g), d = Math.hypot(c.x-G.x, c.y-G.y, c.z-G.z); if(d < 260) return;
+    const f = Math.min(0.4, (d - 240)/d), dx = (G.x-c.x)*f, dy = (G.y-c.y)*f, dz = (G.z-c.z)*f;
+    const set = new Set(g);
+    const clash = g.some(a=>all.some(o=>!set.has(o) && Math.hypot(a.x+dx-o.x, a.y+dy-o.y, a.z+dz-o.z) < 190));
+    if(clash) return;
+    g.forEach(a=>{ a.x += dx; a.y += dy; a.z += dz; });
+  });
+  L3.dirty = true;
+}
+function wireCourse(){
+  const host = el('courseDock'); if(!host) return;
+  host.addEventListener('click', ev=>{
+    const b = ev.target.closest('[data-c]'); if(!b) return;
+    const k = b.dataset.c;
+    if(k === 'exit') courseExit();
+    else if(k === 'hide'){ CRS.hidden = true; renderCourse(true); }
+    else if(k === 'show'){ CRS.hidden = false; renderCourse(true); }
+    else if(k === 'contents'){ CRS.view = 'contents'; renderCourse(true); }
+    else if(k === 'back2'){ CRS.view = 'step'; renderCourse(true); }
+    else if(k === 'jump'){ courseStart(+b.dataset.i); }
+    else if(k === 'next') crsGo(1);
+    else if(k === 'prev') crsGo(-1);
+    else if(k === 'hint'){ CRS.hint[+b.dataset.i] = true; renderCourse(true); }
+    else if(k === 'add'){ l3AddNear(b.dataset.s, CRS.mem); }
+    else if(k === 'build'){ const bi = el('crsBuild'); if(bi && bi.value.trim()){ l3Push(); l3BuildAny(bi.value.trim()); bi.value = ''; } }
+    else if(k === 'charges'){ L3.showQ = !L3.showQ; L3.dirty = true; renderCourse(true); }
+    else if(k === 'nudge'){ crsNudge(); say('Nudged the molecules closer together.', 'bench', true); }
+    else if(k === 'clear'){ l3Push(); l3Clear(); CRS.mem = {}; }
+    else if(k === 'reset'){ crsEnter(); }
+    else if(k === 'ans'){ const Q = CRS.quiz, qi = +b.dataset.q; if(Q && Q.ans[qi] == null){ Q.ans[qi] = +b.dataset.i; skillNote(Q.qs[qi].skill, Q.ans[qi] === Q.qs[qi].a); renderCourse(true); } }
+    else if(k === 'assess'){ courseExit(); learnMode(true); examStart(); }
+    else if(k === 'practice'){ courseExit(); learnMode(true); practiceStart(Object.keys(SKILLS), 'Mixed practice'); }
+  });
+  host.addEventListener('keydown', ev=>{ if(ev.target.id === 'crsBuild' && ev.key === 'Enter' && ev.target.value.trim()){ l3Push(); l3BuildAny(ev.target.value.trim()); ev.target.value = ''; } });
+  host.addEventListener('input', ev=>{ if(ev.target.id === 'crsTemp'){ setSlider('temp', +ev.target.value); renderCourse(); } });
+  const btn = el('courseBtn');
+  if(btn) btn.onclick = ()=>{ if(!CRS.on) courseStart(); else { CRS.hidden = !CRS.hidden; renderCourse(true); } };
+  setInterval(crsTick, 600);
+}
+
 function examStart(){
   /* twelve fresh questions, each on a different skill, with all their data given:
      they ask you to use the ideas, not to remember what happened in a lesson */
@@ -6165,21 +6623,26 @@ function examToBench(){
   renderLearnDock();
 }
 /* an atom from the palette, dropped somewhere clear near the middle */
-function examAdd(sym){
+function examAdd(sym){ l3AddNear(sym, LEARN.exam || {}); }
+function l3AddNear(sym, X){
   /* atoms added one after another land beside whichever recent one still has the
-     most bonds to give, so O, H, H gather round the oxygen and make water */
-  const X = LEARN.exam || {}, now = performance.now();
-  X.recent = (X.recent||[]).filter(r=>L3.atoms.includes(r.a) && now - r.t < 10000);
-  const cand = X.recent.slice().sort((p, q)=>(l3Free(q.a) - l3Free(p.a)) || (q.t - p.t));
+     most bonds to give, just past bonding distance, so O, H, H bond to the oxygen
+     and make water rather than wandering off to pair with each other */
+  const now = performance.now();
+  X.recent = (X.recent||[]).filter(r=>L3.atoms.includes(r.a) && now - r.t < 30000);
+  /* what an atom can still take on: its free bonds, or for Mg+ the electron it has left to give */
+  const avail = a => Math.max(0, l3Free(a)) + (a.ion > 0 && isMetal(EL[a.e]) && a.ion < l3MetalVal(a) ? l3MetalVal(a) - a.ion : 0);
+  const cand = X.recent.slice().sort((p, q)=>(avail(q.a) - avail(p.a)) || (q.t - p.t));
   const prev = cand.length ? cand[0].a : null;
   let best = null;
   for(let k=0;k<40;k++){
-    const u = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5], ul = Math.hypot(...u) || 1, r = 190 + Math.random()*40;
+    const u = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5], ul = Math.hypot(...u) || 1;
+    const r = prev ? (EL[prev.e].rc + BY_SYM[sym].rc)*(avail(prev) > 0 ? 1.22 : 1.9) : 0;
     const c = prev ? {x:prev.x + u[0]/ul*r, y:prev.y + u[1]/ul*r, z:prev.z + u[2]/ul*r} : {x:(Math.random()-0.5)*420, y:(Math.random()-0.5)*300, z:(Math.random()-0.5)*420};
     if(Math.max(Math.abs(c.x), Math.abs(c.y), Math.abs(c.z)) > L3.box - 60) continue;
     const dmin = Math.min(1e9, ...L3.atoms.filter(a=>a !== prev).map(a=>Math.hypot(a.x-c.x, a.y-c.y, a.z-c.z)));
     if(!best || dmin > best.d) best = {c, d:dmin};
-    if(dmin > 260) break;
+    if(dmin > (prev ? r*0.95 : 260)) break;
   }
   if(!best) best = {c:{x:0, y:0, z:0}};
   l3Push(); const a = l3Add(sym, best.c.x, best.c.y, best.c.z); a.cool = 0.6; L3.dirty = true;
@@ -6250,6 +6713,7 @@ try{ learnDone = JSON.parse(localStorage.getItem('bondingbench.learndone')||'{}'
 const learnHeld = () => LEARN.on && (LEARN.phase === 'exam' ? !(LEARN.exam && LEARN.exam.stage === 'build') : (LEARN.phase !== 'watch' || LEARN.paused));
 function learnMode(on){
   if(!!on === LEARN.on) return;
+  if(on && CRS.on) courseExit();
   if(on){
     /* it runs on whichever bench is up; your own bench comes back, just as it was, when you leave */
     LEARN.keep = {step:STEP.on, temp:P.temp, bench:L3.on ? '3D' : '2D', snap:JSON.stringify(L3.on ? l3Snap() : snapshot()), gear:JSON.stringify(L3.gear||[]), metal:L3.metalSym};
@@ -6360,6 +6824,7 @@ function renderLearnDock(){
       '<h3 class="ld-title">What would you like to watch?</h3>'+
       '<p class="ld-p">Each one sets out just the molecules it needs, runs slowly, and stops at every step to explain what happened.</p>'+
       '<p class="ld-hint" style="margin-top:0">On the '+(L3.on ? '3D bench' : 'flat bench: topics marked 3D open on the 3D bench')+'.</p>'+
+      '<button type="button" class="crs-start" data-ld="course"><small>'+(CRS.li || CRS.si || Object.keys(CRS.done).length ? 'Continue the chemistry course' : 'New: the chemistry course')+'</small><b>'+(CRS.li || CRS.si ? 'Lesson '+(CRS.li+1)+': '+crsLesson().title : COURSE.length+' lessons from atoms to organic chemistry')+' \u25b6</b><span>Lessons, guided bench time and free bench time, one after another</span></button>'+
       (()=>{ const done = LEARN_TOPICS.filter(x=>learnDone[x.k]).length, nxt = LEARN_PATH.map(k=>LEARN_TOPICS.find(x=>x.k === k)).find(x=>x && !learnDone[x.k]);
         return '<div class="lp-prog"><div class="ex-bar"><i style="width:'+Math.round(done/LEARN_TOPICS.length*100)+'%"></i></div><small>'+done+' of '+LEARN_TOPICS.length+' topics watched</small></div>'+
           (nxt ? '<button type="button" class="lp-next" data-ld="topic" data-k="'+nxt.k+'"><small>'+(done ? 'Up next' : 'Start here')+'</small><b>'+nxt.title+' \u25b6</b></button>' : '<p class="ld-hint" style="margin:0 0 8px">Every topic watched. Practise, or take the assessment.</p>'); })()+
@@ -6440,6 +6905,7 @@ function wireLearnDock(){
     if(k === 'exit') learnMode(false);
     else if(k === 'topic') learnStart(b.dataset.k);
     else if(k === 'pick'){ if(LEARN.phase === 'exam' && LEARN.exam && LEARN.exam.stage === 'build') stepMode(true, true); LEARN.phase = 'pick'; LEARN.topic = null; LEARN.exam = null; LEARN.prac = null; stepNext(); renderLearnDock(); }
+    else if(k === 'course'){ learnMode(false); courseStart(); }
     else if(k === 'exam'){ if(LEARN.exam && LEARN.exam.stage === 'build') stepMode(true, true); examStart(); }
     else if(k === 'exans'){ const X = LEARN.exam; if(X && X.ans[X.i] == null){ X.ans[X.i] = +b.dataset.i; skillNote(X.qs[X.i].skill, X.ans[X.i] === X.qs[X.i].q.a); renderLearnDock(); } }
     else if(k === 'prac'){ const ks = b.dataset.s ? b.dataset.s.split(',') : Object.keys(SKILLS);
@@ -15963,8 +16429,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 117;
+const VERSION = 118;
 const CHANGELOG = [
+  [118, 'A whole chemistry course, taught on the bench. Press Course (top right) for twenty-one lessons in nine units: atoms and the periodic table, ions, covalent, multiple, ionic and metallic bonding, polarity, shapes, forces between molecules, states of matter, energy, equations, dissolving, precipitation, acids, neutralisation, redox, reactive metals and flame colours, carbon chemistry and addition reactions, ending in your own lab. Each lesson runs straight on from the last: short readings, guided bench time with tasks that tick off the moment the bench shows them (with hints, and a gentle push for slow reactions), free bench time with things worth trying, and a quick check whose questions carry all their own data. The whole bench stays usable throughout, the course remembers where you are, the contents let you jump to any lesson, and your own bench comes back when you leave. Atoms added one after another now land at bonding distance from the atom that can still take them, so building NH\u2083 or MgCl\u2082 atom by atom works every time.'],
   [117, 'A better Learn mode. The assessment no longer asks about what happened in particular lessons: its twelve questions are made fresh each time from thirteen skills (bond type from electronegativity, ion charges, ionic formulas, how many bonds an atom makes, shapes, polarity, \u0394H from bond energies, pKa, redox potentials, boiling points, hydrogen bonding, molar mass and precipitates), and every number you need is in the question. The same questions power a new Practice section: mixed or one skill at a time, endless, leaning toward the skills you get wrong, with a mastery bar for each. The topic list shows how many topics you have watched and what to watch next (or where to start), every topic ends by offering practice on its ideas, and the assessment result points you at the skills to practise.'],
   [116, 'An assessment in Learn mode: Take the assessment asks one question from every topic, then hands you a cleared 3D bench to make eight things yourself (water, an ionic bond from neutral atoms, a double and a triple bond, magnesium chloride with its 2+ ion, a non-polar molecule built from polar bonds, a coordinate bond and three hydrogen bonds at once), ticking each the moment it exists. It ends with a score, the questions to revisit with a link back to each topic, and your best result. Learn answers are shuffled: the right one was always first. The molecule library now holds 250 compounds in eleven families, with a search box, and about 390 names can be typed into Build on either bench. Magnesium (and other group 2 metals) now give both electrons on the 3D bench, so Mg and two Cl make MgCl\u2082 rather than stopping at Mg\u207a. Learn mode no longer squashes the bench to nothing in windows between 761 and 1140 pixels wide.'],
   [115, 'Three new things. Precipitation on the 3D bench: load Silver nitrate + salt water and a white solid, silver chloride, gathers and slowly settles while the sodium and nitrate stay dissolved; Golden rain does the same with bright yellow lead(II) iodide. AgCl, AgBr, AgI, PbI\u2082, PbCl\u2082 and CaF\u2082 come out of water as solids tinted their real colour, with the real \u0394H of precipitation, and a new Guide card explains why. Silver ions now take two waters, not six. A solution meter on the 3D bench: with water present it shows the pH, the conductivity in mS/cm worked out from each dissolved ion\u2019s real molar conductivity, and what is dissolved and how concentrated. Flame colours on both benches: any metal atom or ion past about 1300 K glows its flame-test colour (sodium yellow, copper green, lithium crimson, potassium lilac, strontium scarlet) with flickering tongues, and says why the first time; see the Flame colours card. Dissolved ions also now feel each other from further away, so they find their partners across a solution.'],
@@ -20074,7 +20541,7 @@ function start(data){
   initGutters();
   buildTable(); buildLadder(); buildTools(); buildControls(); buildTabs(); setTool('move');
   el('clearLog').onclick=()=>{ LOG.length=0; renderLog(); };
-  wireLog(); wireGuide(); wireStepCard(); wireLearnDock(); wireElementCards();
+  wireLog(); wireGuide(); wireStepCard(); wireLearnDock(); wireCourse(); wireElementCards();
   resize();
   pistonInit();
   if(window.ResizeObserver) new ResizeObserver(resize).observe(stage);
