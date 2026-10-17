@@ -638,7 +638,17 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 #libBody .lib{padding:6px 8px;border-radius:8px;min-width:0}
 #libBody .lib b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #libBody .lib span{font-size:10.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#libBody .lib-moreb{background:none;border:1px dashed var(--hair)}#libBody .lib-moreb b{color:var(--muted)}
+#libBody .lib-moreb{background:none;border:1px dashed var(--line);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}#libBody .lib-moreb b{color:var(--muted)}
+#libBody .lib-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px}
+#libBody .lib{position:relative;padding:5px 5px 7px;border-radius:10px}
+#libBody .lib b,#libBody .lib span{padding:0 4px}
+.lib-pic{display:block;font-style:normal;height:50px;margin:0 0 6px;border-radius:7px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair);overflow:hidden}
+.lib-pic svg{display:block;width:100%;height:100%;padding:2px 3px}
+#libBody .lib:hover .lib-pic{box-shadow:inset 0 0 0 1px var(--line)}
+#libBody .lib[data-i]::after{content:'';position:absolute;top:10px;right:10px;width:5px;height:5px;border-radius:50%;background:var(--lc,transparent)}
+.lc-simple{--lc:#5E7FA8}.lc-inorganic{--lc:#8C7B55}.lc-hydrocarbon{--lc:#4A4F57}.lc-oxygen{--lc:#C0503A}.lc-acid{--lc:#C2711C}.lc-nitrogen{--lc:#2F5BEA}
+.lc-halogen{--lc:#3B8F5A}.lc-aromatic{--lc:#8A5BB0}.lc-bio{--lc:#2A7A78}.lc-drug{--lc:#B04A7A}.lc-ionic{--lc:#A98411}.lc-salt{--lc:#6B7A8A}
+.lib-chips button[data-lc]:not([data-lc="all"])::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--lc);margin-right:5px;vertical-align:1px}
 #libBody .lib-cat{margin:12px 0 6px}.lib-showall{margin:8px 0 0}
 .lib-search{width:100%;box-sizing:border-box;margin:0 0 12px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--sunk);font:inherit;font-size:13px;color:var(--ink)}
 .lib-more{font-size:11.5px;color:var(--muted);margin:14px 2px 2px}
@@ -1126,6 +1136,12 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
 .l3-pres.sm{display:flex;flex-wrap:wrap;gap:4px}
 .l3-pres.sm button{font-size:11px;padding:3px 9px;border-radius:999px;line-height:1.35;flex:0 1 auto}
 .l3-grp{margin:7px 0 3px;font-size:10px}
+.stage.narrow .timectl .stats{position:absolute;left:6px;bottom:calc(100% + 8px)}
+/* each kind of reaction keeps a colour: a dot by its heading and a faint tint on its chips */
+.rg0{--gc:#C0503A}.rg1{--gc:#2F5BEA}.rg2{--gc:#C2711C}.rg3{--gc:#3B8F5A}.rg4{--gc:#2A7A78}.rg5{--gc:#8E949C}
+.l3-grp[class*="rg"]::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gc);margin-right:6px;vertical-align:1px}
+.l3-pres.sm[class*="rg"] button{background:color-mix(in srgb, var(--gc) 7%, var(--sunk));transition:background .15s, box-shadow .15s, transform .15s var(--ease)}
+.l3-pres.sm[class*="rg"] button:hover{background:color-mix(in srgb, var(--gc) 15%, var(--sunk));box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--gc) 30%, transparent);transform:translateY(-1px)}
 .l3-sec > summary{padding:8px 2px 6px}
 .p3-tiles{gap:6px}.p3-tiles div{padding:7px 9px;border-radius:9px}.p3-tiles b{font-size:14.5px}
 .slider .note{line-height:1.35}
@@ -1177,8 +1193,8 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
       <div class="acc">
         <button class="acc-head" type="button" data-acc="build2d"><span class="eyebrow">Build a compound</span><i>&rsaquo;</i></button>
         <div class="acc-body">
-          <div class="l3-build"><input id="build2dIn" type="text" placeholder="name, SMILES or formula: caffeine, CCO&hellip;" spellcheck="false" autocomplete="off"><button type="button" id="build2dBtn">Build</button></div>
-          <p class="vault-tip" title="A formula alone does not fix a structure, so one outside the library is built as a best guess.">A name, a SMILES string or a formula.</p>
+          <div class="l3-build"><input id="build2dIn" type="text" placeholder="caffeine, H2SO4, H+, SO4 2-&hellip;" spellcheck="false" autocomplete="off"><button type="button" id="build2dBtn">Build</button></div>
+          <p class="vault-tip" title="A formula alone does not fix a structure, so one outside the library is built as a best guess.">A name, a SMILES string, a formula or an ion (H+, Fe3+, OH-).</p>
           <span class="eyebrow sub-head">Reactions</span>
           <div id="scenes2d"></div>
         </div>
@@ -2193,6 +2209,8 @@ function bondPlan(a,b){
     return {ok:true, type:'metallic', order:1, den:Math.abs(A.en-B.en), energy:(ea+eb)/2,
       reason:A.name+' and '+B.name+' pool their valence electrons into a shared sea.'};
   }
+  const hp = protonPlan(a,b);
+  if(hp) return hp;
   const fa=freeCap(a), fb=freeCap(b);
   if(fa<=0||fb<=0){
     const dp = dativePlan(a,b);
@@ -2222,6 +2240,24 @@ function bondPlan(a,b){
       Math.round(lengthPm)+' pm, '+Math.round(energy)+' kJ/mol, '+Math.round(ionicChar(den)*100)+'% ionic character.'};
 }
 
+/* A bare proton (H+) has no electrons at all: a lone pair on a base takes it,
+   and the pair becomes an ordinary bond with the + charge left on the base
+   (H2O + H+ -> H3O+, NH3 -> NH4+, OH- -> H2O, Cl- -> HCl) */
+const PA_2D = {'H\u2082O':691, 'NH\u2083':854, 'OH\u207b':1633, 'Cl\u207b':1395, 'F\u207b':1554, 'Br\u207b':1354, 'I\u207b':1315, 'CH\u2083OH':754, 'H\u2082S':705, 'PH\u2083':785};
+const isBareProton = a => EL[a.e].z === 1 && (a.charge||0) === 1 && !bondsOf(a).length;
+function protonPlan(a,b){
+  for(const [h,d] of [[a,b],[b,a]]){
+    if(!isBareProton(h)) continue;
+    const D = EL[d.e];
+    if(!['N','O','F','Cl','Br','I','S','P'].includes(D.sym) || (d.charge||0) > 0 || lonePairs(d) < 1) continue;
+    if(bondsOf(d).some(x=>x.type==='ionic' || x.type==='dative')) continue;
+    if(!bondsOf(d).length && !(d.charge < 0)) continue;   /* a lone neutral atom is a radical, not a base */
+    const energy = bondEnthalpy('H', D.sym, 1), den = Math.abs((D.en||2) - EL[h.e].en);
+    return {ok:true, type:'covalent', order:1, den, polar:den>=0.4, energy, proton:{h:h.id, d:d.id},
+      reason:'A bare proton has an empty orbital and nothing else: '+D.name+' gives it a lone pair, which becomes an ordinary bond, and '+D.sym+' takes on the + charge.'};
+  }
+  return null;
+}
 function makeBond(a,b,force){
   if(!a||!b||a.id===b.id) return null;
   const existing = pairBond(a,b);
@@ -2243,6 +2279,8 @@ function makeBond(a,b,force){
   }
   const plan = bondPlan(a,b);
   if(!plan.ok){ if(force) say(plan.reason,'no bond'); return null; }
+  /* the proton's charge passes to the base whose pair it took */
+  if(plan.proton){ const h = findAtom(plan.proton.h), d = findAtom(plan.proton.d); setCharge2D(h, 0); setCharge2D(d, (d.charge||0) + 1); }
   const bond = {id:uid++, a:a.id, b:b.id, type:plan.type, order:plan.order, den:plan.den,
     polar:!!plan.polar, energy:finiteEnergy(plan.energy, 150), phase:Math.random()*6.28, flash:1, settle:0};
   if(plan.type==='dative'){ bond.donor = plan.donorId; bond.acceptor = plan.acceptorId; }
@@ -2865,9 +2903,22 @@ function scanDative(){
     const a=atoms[i]; if(a.dying) continue;
     for(let j=i+1;j<atoms.length;j++){
       const b=atoms[j]; if(b.dying) continue;
-      /* an empty orbital reaches for a lone pair from a little further than a shared bond forms */
-      if(Math.hypot(b.x-a.x,b.y-a.y) > pmToPx((EL[a.e].rc+EL[b.e].rc)*1.08)*1.65) continue;
+      /* an empty orbital reaches for a lone pair from a little further than a shared bond
+         forms; a bare proton, with no electrons to push back, from first contact */
+      const bare = isBareProton(a) || isBareProton(b);
+      if(Math.hypot(b.x-a.x,b.y-a.y) > (bare ? pmToPx(EL[a.e].rv+EL[b.e].rv)*1.1 : pmToPx((EL[a.e].rc+EL[b.e].rc)*1.08)*1.65)) continue;
       if(pairBond(a,b) || onCooldown(a,b)) continue;
+      if(bare && protonPlan(a,b)){
+        const don = isBareProton(a) ? b : a, s0 = species2D(don);
+        const bd = makeBond(a,b,true);
+        if(bd && !building && !presetBuilding){ const s1 = species2D(don);
+          logRx({c:'acidbase', bench:'2D', atoms:[a.id, b.id], dH:-(PA_2D[s0.f] || bd.energy),
+            title: capFirst(nameOrF(s0))+' took a bare proton and became '+nameOrF(s1)+'.',
+            eq: s0.f+' + H\u207a \u2192 '+s1.f,
+            why:'H\u207a is a hydrogen atom with its only electron gone: a bare proton, with an empty orbital and nothing else. '+capFirst(nameOrF(s0))+' has a lone pair, so the proton lands on it and the pair becomes an ordinary bond to '+EL[don.e].sym+', which takes on the + charge.'+
+              (PA_2D[s0.f] ? ' In the gas phase this gives out about '+PA_2D[s0.f]+' kJ/mol, its proton affinity; in water a free proton never lasts, so H\u207a(aq) and H\u2083O\u207a mean the same thing.' : '')}); }
+        continue;
+      }
       if(dativePlan(a,b)){
         /* written up in the notebook as the 3D bench does: a Lewis adduct, or a ligand joining a metal ion */
         const s0 = new Map([[a, species2D(a)], [b, species2D(b)]]), cx0 = new Map([[a, complex2D(a)], [b, complex2D(b)]]);
@@ -3101,6 +3152,8 @@ function resize(){
   /* keep whatever was in the middle of the view in the middle of it */
   const midX = cam.x + W/(2*cam.z), midY = cam.y + viewH()/(2*cam.z);
   W = Math.max(320, r.width); H = Math.max(280, r.height);
+  /* a narrow stage lifts the atom count above the speed control, clear of the zoom buttons */
+  stage.classList.toggle('narrow', r.width < 780);
   cam.x = midX - W/(2*cam.z); cam.y = midY - viewH()/(2*cam.z);
   cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
   applyWorld();
@@ -4588,7 +4641,7 @@ function renderPanel(){
     el('phDial').style.background = phColour(v);
     el('phText').textContent = v<6.4 ? 'acidic' : v>7.6 ? 'basic' : 'neutral';
     el('condText').textContent = 'conductivity '+cond.toFixed(1)+' \u00b7 '+
-      atoms.filter(a=>!a.dying&&a.charge).length+' free ions';
+      (n=>n+' free ion'+(n === 1 ? '' : 's'))(atoms.filter(a=>!a.dying&&a.charge).length);
   }
   renderReaction();
   renderPhase();
@@ -9510,15 +9563,145 @@ function libEntries(){
   });
   return (LIB_ALL = all);
 }
+/* ---------- structure thumbnails for the library ----------
+   Drawn the way chemists sketch them: carbons are corners, other atoms are
+   written with their hydrogens (OH, NH2), double and triple bonds doubled
+   and tripled. A molecule with at most one heavy atom (water, ammonia, an ion)
+   shows every atom. The layout is stress majorization on target distances:
+   bonded 1, two bonds apart 1.73 (a 120 degree zigzag), and members of one
+   ring at the chords of a regular polygon, so rings come out as hexagons. */
+const THUMB = new Map();
+const THUMB_COL = {O:'#C0503A', N:'#2F5BEA', S:'#A98411', P:'#C2711C', F:'#3B8F5A', Cl:'#3B8F5A', Br:'#8A3B2B', I:'#6A3B8A', B:'#A0705A', Se:'#A98411', Si:'#7A6A4A'};
+function thumbLayout(n, adj){
+  if(n === 1) return [[0, 0]];
+  /* graph distances */
+  const G = Array.from({length:n}, ()=>new Array(n).fill(Infinity));
+  for(let s=0;s<n;s++){ G[s][s] = 0; const q = [s]; for(let k=0;k<q.length;k++){ const u = q[k]; for(const v of adj[u]) if(G[s][v] === Infinity){ G[s][v] = G[s][u] + 1; q.push(v); } } }
+  /* the smallest ring through each bond, up to eight atoms */
+  const rings = [], seenR = new Set();
+  for(let u=0;u<n;u++) for(const v of adj[u]){ if(v < u) continue;
+    const prev = new Array(n).fill(-1); prev[u] = u; const q = [u]; let found = false;
+    for(let k=0;k<q.length && !found;k++){ const x = q[k]; for(const y of adj[x]){ if(x === u && y === v) continue; if(prev[y] < 0){ prev[y] = x; if(y === v){ found = true; break; } q.push(y); } } }
+    if(!found) continue; const ring = [v]; while(ring[ring.length-1] !== u) ring.push(prev[ring[ring.length-1]]);
+    if(ring.length > 8) continue; const key = ring.slice().sort((a, b)=>a - b).join(','); if(!seenR.has(key)){ seenR.add(key); rings.push(ring); } }
+  const zig = g => g % 2 === 0 ? 0.866*g : Math.sqrt(0.75*g*g + 0.25);
+  const D = G.map(r=>r.map(g=>g === Infinity ? 0 : zig(g))), W = D.map(r=>r.map(d=>d ? 1/(d*d) : 0));
+  rings.sort((a, b)=>b.length - a.length).forEach(r=>{ const k = r.length, R = 0.5/Math.sin(Math.PI/k);
+    for(let i=0;i<k;i++) for(let j=i+1;j<k;j++){ const m = Math.min(j - i, k - j + i), d = 2*R*Math.sin(Math.PI*m/k); D[r[i]][r[j]] = D[r[j]][r[i]] = d; W[r[i]][r[j]] = W[r[j]][r[i]] = 3/(d*d); } });
+  /* Start from classical scaling of the target distances (the two leading
+     eigenvectors of the double-centred squared-distance matrix), which puts
+     fused rings side by side; a start round a circle can leave one folded over
+     the other. Both are refined and the lower-stress drawing kept. */
+  const mds = ()=>{
+    const B = D.map(r=>r.map(d=>-0.5*d*d)), rm = B.map(r=>r.reduce((t, v)=>t + v, 0)/n), am = rm.reduce((t, v)=>t + v, 0)/n;
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++) B[i][j] += -rm[i] - rm[j] + am;
+    const vecs = [];
+    for(let k=0;k<2;k++){
+      let v = Array.from({length:n}, (_, i)=>Math.sin(i*1.7 + k*2.3) + 0.01*i), lam = 0;
+      for(let it=0; it<120; it++){
+        let w = B.map(r=>r.reduce((t, x, j)=>t + x*v[j], 0));
+        vecs.forEach(([u, l])=>{ const dp = u.reduce((t, x, j)=>t + x*v[j], 0); w = w.map((x, j)=>x - l*dp*u[j]); });
+        const nm = Math.hypot(...w) || 1; lam = nm; v = w.map(x=>x/nm);
+      }
+      vecs.push([v, lam]);
+    }
+    return Array.from({length:n}, (_, i)=>[vecs[0][0][i]*Math.sqrt(vecs[0][1]) + 0.001*i, vecs[1][0][i]*Math.sqrt(vecs[1][1]) + 0.0007*(i%3)]);
+  };
+  const ring0 = ()=>{
+    const order = [], seen = new Array(n).fill(false);
+    for(let s=0;s<n;s++){ if(seen[s]) continue; const q = [s]; seen[s] = true; for(let k=0;k<q.length;k++){ order.push(q[k]); for(const v of adj[q[k]]) if(!seen[v]){ seen[v] = true; q.push(v); } } }
+    const P = new Array(n); order.forEach((a, k)=>{ const t = k/n*Math.PI*2*0.92; P[a] = [Math.cos(t)*n*0.25 + (k%3)*0.01, Math.sin(t)*n*0.25 + (k%2)*0.01]; });
+    return P;
+  };
+  const refine = P => {
+    for(let it=0; it<240; it++){
+      for(let i=0;i<n;i++){ let sx = 0, sy = 0, sw = 0;
+        for(let j=0;j<n;j++){ const w = W[i][j]; if(!w) continue;
+          const dx = P[i][0] - P[j][0], dy = P[i][1] - P[j][1], d = Math.hypot(dx, dy) || 1e-3;
+          sx += w*(P[j][0] + D[i][j]*dx/d); sy += w*(P[j][1] + D[i][j]*dy/d); sw += w; }
+        if(sw){ P[i][0] = sx/sw; P[i][1] = sy/sw; } }
+    }
+    let st = 0; for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) if(W[i][j]){ const d = Math.hypot(P[i][0]-P[j][0], P[i][1]-P[j][1]); st += W[i][j]*(d - D[i][j])*(d - D[i][j]); }
+    return [P, st];
+  };
+  const a1 = refine(mds());
+  if(n <= 3 || a1[1] < 0.02*n) return a1[0];
+  const a2 = refine(ring0());
+  return a2[1] < a1[1] ? a2[0] : a1[0];
+}
+function thumbSVG(g){
+  const N = g.syms.length;
+  const heavyIdx = g.syms.map((s, i)=>s !== 'H' ? i : -1).filter(i=>i >= 0);
+  const explicit = heavyIdx.length <= 1;
+  const keep = explicit ? g.syms.map((s, i)=>i) : heavyIdx, map = new Map(keep.map((v, k)=>[v, k]));
+  const n = keep.length, adj = Array.from({length:n}, ()=>[]), hN = new Array(N).fill(0), bonds = [];
+  g.bl.forEach(b=>{ const A = map.get(b.a), B = map.get(b.b);
+    if(A != null && B != null){ adj[A].push(B); adj[B].push(A); bonds.push([A, B, b.o]); }
+    else { if(g.syms[b.a] === 'H' && A == null) hN[b.b]++; if(g.syms[b.b] === 'H' && B == null) hN[b.a]++; } });
+  /* lay each fragment out on its own, then set them side by side (a salt's ions) */
+  const comp = new Array(n).fill(-1); let nc = 0;
+  for(let s=0;s<n;s++){ if(comp[s] >= 0) continue; const q = [s]; comp[s] = nc; for(let k=0;k<q.length;k++) for(const v of adj[q[k]]) if(comp[v] < 0){ comp[v] = nc; q.push(v); } nc++; }
+  const P = new Array(n); let x0 = 0;
+  for(let c=0;c<nc;c++){
+    const ids = []; for(let i=0;i<n;i++) if(comp[i] === c) ids.push(i);
+    const loc = new Map(ids.map((v, k)=>[v, k])), sub = ids.map(i=>adj[i].map(j=>loc.get(j)));
+    let Q = thumbLayout(ids.length, sub);
+    /* turn the long axis level */
+    const mx = Q.reduce((t, p)=>t + p[0], 0)/Q.length, my = Q.reduce((t, p)=>t + p[1], 0)/Q.length;
+    let sxx = 0, syy = 0, sxy = 0; Q.forEach(([x, y])=>{ sxx += (x-mx)*(x-mx); syy += (y-my)*(y-my); sxy += (x-mx)*(y-my); });
+    const th = -0.5*Math.atan2(2*sxy, sxx - syy), c1 = Math.cos(th), s1 = Math.sin(th);
+    Q = Q.map(([x, y])=>[(x-mx)*c1 - (y-my)*s1, (x-mx)*s1 + (y-my)*c1]);
+    const lo = Math.min(...Q.map(p=>p[0])), hi = Math.max(...Q.map(p=>p[0]));
+    ids.forEach((id, k)=>{ P[id] = [Q[k][0] - lo + x0, Q[k][1]]; });
+    x0 += hi - lo + 1.25;
+  }
+  const carbons = keep.filter(i=>g.syms[i] === 'C').length;
+  const labelled = k => { const i = keep[k], s = g.syms[i]; return explicit || s !== 'C' || carbons <= 1 || (g.chg[i]||0) !== 0 || !adj[k].length; };
+  /* fit the box: 112 x 44, bonds no longer than 20 px */
+  const xs = P.map(p=>p[0]), ys = P.map(p=>p[1]);
+  const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
+  const L = Math.min(20, w ? 96/w : 20, h ? 32/h : 20), cx = (Math.max(...xs) + Math.min(...xs))/2, cy = (Math.max(...ys) + Math.min(...ys))/2;
+  const X = k => 60 + (P[k][0] - cx)*L, Y = k => 23 + (P[k][1] - cy)*L;
+  const fs = n === 1 ? 16 : Math.max(7, Math.min(11.5, L*0.6)), r0 = fs*0.5;
+  let out = '';
+  bonds.forEach(([a, b, o])=>{
+    let x1 = X(a), y1 = Y(a), x2 = X(b), y2 = Y(b); const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1;
+    if(labelled(a)){ x1 += dx/d*r0; y1 += dy/d*r0; } if(labelled(b)){ x2 -= dx/d*r0; y2 -= dy/d*r0; }
+    const nx = -dy/d, ny = dx/d, off = Math.max(1.3, L*0.11);
+    const line = k => '<line x1="'+(x1+nx*k).toFixed(1)+'" y1="'+(y1+ny*k).toFixed(1)+'" x2="'+(x2+nx*k).toFixed(1)+'" y2="'+(y2+ny*k).toFixed(1)+'"/>';
+    out += o >= 3 ? line(-off*1.3) + line(0) + line(off*1.3) : o >= 2 ? line(-off) + line(off) : line(0);
+  });
+  let txt = '';
+  keep.forEach((i, k)=>{ if(!labelled(k)) return;
+    const s = g.syms[i], q = g.chg[i] || 0, nh = explicit ? 0 : hN[i];
+    const hs = nh ? 'H' + (nh > 1 ? '<tspan font-size="'+(fs*0.7).toFixed(1)+'" dy="2">'+nh+'</tspan>' : '') : '';
+    const left = nh && adj[k].length && adj[k].every(j=>P[j][0] > P[k][0] + 0.2);
+    const qs = q ? '<tspan font-size="'+(fs*0.72).toFixed(1)+'" dy="'+(nh > 1 ? -6 : -4)+'">'+(Math.abs(q) > 1 ? Math.abs(q) : '')+(q > 0 ? '+' : '−')+'</tspan>' : '';
+    const body = left ? hs + (nh > 1 ? '<tspan dy="-2">' : '<tspan>') + s + '</tspan>' + qs : s + hs + qs;
+    txt += '<text x="'+X(k).toFixed(1)+'" y="'+(Y(k) + fs*0.36).toFixed(1)+'" fill="'+(THUMB_COL[s] || (s === 'C' || s === 'H' ? '#30343A' : '#6B5A8A'))+'" text-anchor="'+(nh && !left && adj[k].length ? 'start' : nh && left ? 'end' : 'middle')+'" dx="'+(nh && adj[k].length ? (left ? fs*0.4 : -fs*0.4).toFixed(1) : 0)+'">'+body+'</text>';
+  });
+  return '<svg viewBox="0 0 120 46" aria-hidden="true"><g stroke="#3A3F46" stroke-width="1.15" stroke-linecap="round">'+out+'</g><g font-size="'+fs.toFixed(1)+'" font-weight="600" font-family="Archivo, system-ui, sans-serif">'+txt+'</g></svg>';
+}
+function libThumb(e){
+  const k = e.n; if(THUMB.has(k)) return THUMB.get(k);
+  let g = null;
+  try{
+    if(e.sm) g = l3SmilesGraph(e.sm);
+    else if(e.spec) g = {syms:e.spec.atoms.map(a=>a[0]), chg:e.spec.atoms.map(a=>a[3]||0), bl:(e.spec.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1}))};
+  }catch(err){ g = null; }
+  /* all 1000 take under half a second, once; after that they come from the cache */
+  const svg = g && g.syms.length && g.syms.length <= 400 ? thumbSVG(g) : '';
+  THUMB.set(k, svg); return svg;
+}
 const LIB_UI = {cat:'all', q:'', more:false};
 function buildLibrary(){
   const all = libEntries();
   const counts = {}; all.forEach(e=>{ counts[e.cat] = (counts[e.cat]||0) + 1; });
   el('libBody').innerHTML = '<div class="lib-top"><input type="search" id="libSearch" class="lib-search" placeholder="Search '+all.length+' molecules by name or formula" autocomplete="off"></div>'+
-    '<div class="lib-chips" id="libChips"><button type="button" data-lc="all">All <i>'+all.length+'</i></button>'+LIB_CATS.filter(([c])=>counts[c]).map(([c, l])=>'<button type="button" data-lc="'+c+'">'+l+' <i>'+counts[c]+'</i></button>').join('')+'</div>'+
+    '<div class="lib-chips" id="libChips"><button type="button" data-lc="all">All <i>'+all.length+'</i></button>'+LIB_CATS.filter(([c])=>counts[c]).map(([c, l])=>'<button type="button" class="lc-'+c+'" data-lc="'+c+'">'+l+' <i>'+counts[c]+'</i></button>').join('')+'</div>'+
     '<div id="libList"></div><p class="lib-more">Not here? Build understands '+Object.keys(L3_LIB).length+' names, any formula and any SMILES string. Press Enter in the search box to build the first match.</p>';
   const plain = f => f.replace(/[⁰-₟²³¹]/g, d=>'0123456789+-'['⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'.indexOf(d)] || '');
-  const card = (e, i) => '<button class="lib" type="button" data-i="'+i+'" title="'+e.n.replace(/"/g, '&quot;')+'"><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>';
+  const card = (e, i) => '<button class="lib lc-'+e.cat+'" type="button" data-i="'+i+'" title="'+e.n.replace(/"/g, '&quot;')+'"><i class="lib-pic">'+libThumb(e)+'</i><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>';
   const draw = () => {
     const q = LIB_UI.q.trim().toLowerCase(), qf = q.replace(/\s/g, '');
     el('libChips').querySelectorAll('[data-lc]').forEach(b=>b.classList.toggle('on', b.dataset.lc === LIB_UI.cat && !q));
@@ -11133,8 +11316,10 @@ function changeElectrons(a, delta){
   const before = a.charge||0;
   const next = before - delta;                       /* removing one raises the charge */
   const total = EL[a.e].z - next;
-  if(total < 1 || next > 7 || next < -4){
-    say('That would leave nothing to work with.','note');
+  /* hydrogen is the one atom that can give up every electron: what is left is a
+     bare proton, H+, the acid in every acid */
+  if(total < (EL[a.e].z === 1 ? 0 : 1) || next > 7 || next < -4){
+    say(EL[a.e].z === 1 && next > 1 ? 'H\u207a is already a bare proton: there is no electron left to take.' : 'That would leave nothing to work with.','note');
     return;
   }
   pushUndo();
@@ -14077,6 +14262,10 @@ function l3BasePKa(b){
   return null;
 }
 const L3_DONOR = {N:1, O:1, F:1, Cl:1, Br:1, I:1, S:1, P:1};
+/* a hydrogen with no electron left: a bare proton */
+const l3Bare = a => a.ion > 0 && EL[a.e].sym === 'H' && !l3Bonds(a).length;
+/* gas-phase proton affinities, kJ/mol (NIST) */
+const L3_PA = {'H\u2082O':691, 'NH\u2083':854, 'OH\u207b':1633, 'Cl\u207b':1395, 'F\u207b':1554, 'Br\u207b':1354, 'I\u207b':1315, 'CH\u2083OH':754, 'H\u2082S':705, 'PH\u2083':785};
 function l3AcidBase(dt){
   L3.abClock = (L3.abClock||0) + dt;
   if(L3.abClock < 0.1) return;
@@ -14090,6 +14279,35 @@ function l3AcidBase(dt){
   const near3 = a => { const seen = new Set([a.id]); let edge = [a];
     for(let k=0;k<3;k++){ const nx = []; for(const x of edge) for(const b of l3Bonds(x)){ const o = l3Other(b, x.id); if(!seen.has(o)){ seen.add(o); const y = l3Find(o); if(y) nx.push(y); } } edge = nx; }
     return seen; };
+  /* A bare proton (H+) has no electrons at all, the strongest Lewis acid there
+     is: the first base it touches takes it on a lone pair, which becomes an
+     ordinary bond (H2O + H+ -> H3O+, NH3 -> NH4+, OH- -> H2O, Cl- -> HCl).
+     In real water a free proton never lasts even a picosecond, which is why
+     H+(aq) and H3O+ mean the same thing. */
+  for(const h of A){
+    if(!l3Bare(h) || h.dying) continue;
+    let don = null, best = Infinity;
+    for(const b of A){
+      if(b === h || b.dying || !L3_DONOR[EL[b.e].sym] || l3Metal(b) || b.ion > 0 || (b.fq||0) > 0 || l3BasePKa(b) == null) continue;
+      if(l3Bonds(b).some(x=>x.type === 'ionic')) continue;   /* a chloride held in a crystal stays there */
+      const d = Math.hypot(b.x-h.x, b.y-h.y, b.z-h.z);
+      if(d < Math.max(l3Len(h, b, 1)*1.8, (EL[h.e].rv + EL[b.e].rv)*0.9) && d < best){ don = b; best = d; }
+    }
+    if(!don) continue;
+    const sDon0 = species3D(don), L0 = l3Len(h, don, 1)*1.05;
+    if(best > L0){ const sh = (best - L0)/best; h.x += (don.x-h.x)*sh; h.y += (don.y-h.y)*sh; h.z += (don.z-h.z)*sh; }
+    h.vx = don.vx; h.vy = don.vy; h.vz = don.vz; h.cool = Math.max(h.cool||0, 0.8); don.cool = Math.max(don.cool||0, 0.8);
+    /* the charge moves onto the base: a lone ion becomes a bonded atom, so it carries it as a formal charge */
+    const q = (don.ion||0) + (don.fq||0) + 1;
+    l3SetIon(h, 0); if(don.ion){ l3SetIon(don, 0); } l3SetFq(don, q);
+    const nb = l3Bond(h, don, 1, 'covalent'); l3Fly('pair', don, h);
+    const sNew = species3D(don), PA = L3_PA[sDon0.f];
+    l3Note(-(PA || nb.energy), 'a bare proton landed on '+EL[don.e].sym, h, don, {c:'acidbase',
+      title: capFirst(nameOrF(sDon0))+' took a bare proton and became '+nameOrF(sNew)+'.',
+      eq: sDon0.f+' + H\u207a \u2192 '+sNew.f,
+      why: 'H\u207a is a hydrogen atom with its only electron gone: a bare proton, with an empty orbital and nothing else. '+capFirst(nameOrF(sDon0))+' has a lone pair, so the proton lands on it and the pair becomes an O\u2013H style bond to '+EL[don.e].sym+', which takes on the + charge.'+
+        (PA ? ' In the gas phase this gives out about '+PA+' kJ/mol, its proton affinity; in water most of that is already spent holding the proton, so free H\u207a is never really free.' : '')});
+  }
   /* proton transfer */
   const bases = A.filter(b=>L3_DONOR[EL[b.e].sym] && l3BasePKa(b) != null);
   if(bases.length) for(const h of A){
@@ -14402,7 +14620,7 @@ function l3Step(dt){
       if(close(p, q)) continue;
       const d = Math.sqrt(d2)||1;
       /* two opposite ions that meet pair up again as an ionic bond */
-      const pairIons = (p.ion||0)*(q.ion||0) < 0 && !nb.get(p.id).includes(q);
+      const pairIons = (p.ion||0)*(q.ion||0) < 0 && !nb.get(p.id).includes(q) && !l3Bare(p) && !l3Bare(q);   /* H+ makes a real bond instead (l3AcidBase) */
       /* Metal to metal: a Morse well at the metallic distance, felt by every pair,
          not a spring between chosen partners. Each atom gains most by having as
          many neighbours as possible at that distance, which is exactly what packs
@@ -15193,7 +15411,7 @@ const LIB_HAND = {
     ['adenosine monophosphate','C1=NC(=C2C(=N1)N(C=N2)C3C(C(C(O3)COP(=O)(O)O)O)O)N','C10H14N5O7P'],['maltose','OCC1OC(OC2C(CO)OC(O)C(O)C2O)C(O)C(O)C1O','C12H22O11'],['trehalose','OCC1OC(OC2OC(CO)C(O)C(O)C2O)C(O)C(O)C1O','C12H22O11'],
     ['glucosamine','NC1C(O)OC(CO)C(O)C1O','C6H13NO5'],['xylitol','OCC(O)C(O)C(O)CO','C5H12O5'],['erythritol','OCC(O)C(O)CO','C4H10O4'],['alpha-linolenic acid','CCC=CCC=CCC=CCCCCCCCC(=O)O','C18H30O2'],
     ['arachidonic acid','CCCCCC=CCC=CCC=CCC=CCCCC(=O)O','C20H32O2'],['eicosapentaenoic acid','CCC=CCC=CCC=CCC=CCC=CCCCC(=O)O','C20H30O2'],['docosahexaenoic acid','CCC=CCC=CCC=CCC=CCC=CCC=CCCC(=O)O','C22H32O2']],
-  ionic:[['chlorate','[O-]Cl(=O)=O','ClO3-'],['perchlorate','[O-]Cl(=O)(=O)=O','ClO4-'],['chlorite','[O-]Cl=O','ClO2-'],['hypochlorite','[O-]Cl','ClO-'],['bromate','[O-]Br(=O)=O','BrO3-'],['iodate','[O-]I(=O)=O','IO3-'],
+  ionic:[['hydrogen ion','[H+]','H+'],['hydride ion','[H-]','H-'],['chlorate','[O-]Cl(=O)=O','ClO3-'],['perchlorate','[O-]Cl(=O)(=O)=O','ClO4-'],['chlorite','[O-]Cl=O','ClO2-'],['hypochlorite','[O-]Cl','ClO-'],['bromate','[O-]Br(=O)=O','BrO3-'],['iodate','[O-]I(=O)=O','IO3-'],
     ['nitrite','[O-]N=O','NO2-'],['sulfite','[O-]S(=O)[O-]','SO3 2-'],['thiosulfate','[O-]S(=O)(=S)[O-]','S2O3 2-'],['hydrogen sulfate','OS(=O)(=O)[O-]','HSO4-'],['dihydrogen phosphate','OP(=O)(O)[O-]','H2PO4-'],['hydrogen phosphate','OP(=O)([O-])[O-]','HPO4 2-'],
     ['permanganate','[O-][Mn](=O)(=O)=O','MnO4-'],['chromate','[O-][Cr](=O)(=O)[O-]','CrO4 2-'],['dichromate','[O-][Cr](=O)(=O)O[Cr](=O)(=O)[O-]','Cr2O7 2-'],['cyanate','[O-]C#N','OCN-'],['thiocyanate','[S-]C#N','SCN-'],
     ['azide','[N-]=[N+]=[N-]','N3-'],['peroxide','[O-][O-]','O2 2-'],['oxalate','[O-]C(=O)C(=O)[O-]','C2O4 2-'],['formate','[O-]C=O','HCOO-'],['benzoate','[O-]C(=O)c1ccccc1','C6H5COO-'],['methoxide','C[O-]','CH3O-'],
@@ -15232,6 +15450,51 @@ function libLookup(key){
   if(L3_LIB[key]) return key;
   if(!LIB_NORM){ LIB_NORM = {}; Object.keys(L3_LIB).forEach(n=>{ LIB_NORM[libNormKey(n)] = n; }); Object.keys(L3_ALIAS).forEach(a=>{ const t = L3_ALIAS[a]; if(L3_LIB[t] && !LIB_NORM[libNormKey(a)]) LIB_NORM[libNormKey(a)] = t; }); }
   return LIB_NORM[libNormKey(key)] || null;
+}
+/* An ion typed the way chemists write it: H+, H⁺, Na+, Fe3+, Fe+3, Fe+++, O2-,
+   NO3-, SO4 2-, SO4^2-, SO₄²⁻, NH4+, H3O+, CH3COO-, or a name: proton, sodium ion.
+   Without a space, "SO42-" could be SO4 with 2- or SO42 with 1-; the reading that
+   names a known ion wins, and a single element takes the digits as its charge.
+   Returns {sm, name}, {err} for an ion it cannot make, or null for anything else. */
+const ION_NAMES = {'proton':'hydrogen ion', 'hydron':'hydrogen ion', 'hydrogen cation':'hydrogen ion', 'h ion':'hydrogen ion', 'free proton':'hydrogen ion', 'hydride':'hydride ion'};
+let ION_BY_F = null;
+function ionTyped(str){
+  const t = String(str||'').trim().replace(/\u2212/g, '-'); if(!t) return null;
+  const low = libNormKey(t);
+  if(ION_NAMES[low] && L3_LIB[ION_NAMES[low]]) return {sm:L3_LIB[ION_NAMES[low]], name:ION_NAMES[low]};
+  const netQ = sm => { try{ return l3SmilesGraph(sm).chg.reduce((a, q)=>a + (q||0), 0); }catch(e){ return 0; } };
+  if(/ ion$/.test(low)){ const n = libLookup(low.slice(0, -4)); if(n && netQ(L3_LIB[n])) return {sm:L3_LIB[n], name:n}; }
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹', cands = [];
+  let m = t.match(/^(.*[^⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻\s])\s*([⁰¹²³⁴⁵⁶⁷⁸⁹]*)([⁺⁻])$/);
+  if(m) cands.push([m[1], (m[3] === '⁺' ? 1 : -1)*(m[2] ? +[...m[2]].map(c=>SUP.indexOf(c)).join('') : 1)]);
+  else if((m = t.match(/^(.*[A-Za-z0-9)\]₀-₉])(?:\s+|\s*\^\s*)(\d*)([+-])$/))) cands.push([m[1], (m[3] === '+' ? 1 : -1)*(+m[2] || 1)]);
+  else if((m = t.match(/^(.*[A-Za-z)\]₀-₉])(\d*)([+-])$/))){
+    const sg = m[3] === '+' ? 1 : -1, d = m[2];
+    if(!d) cands.push([m[1], sg]);
+    else { cands.push([m[1] + d, sg]); cands.push([m[1] + d.slice(0, -1), sg*(+d.slice(-1) || 1)]); }
+  }
+  else if((m = t.match(/^(.*[A-Za-z0-9)\]₀-₉])\s*([+-])(\d+)$/))) cands.push([m[1], (m[2] === '+' ? 1 : -1)*+m[3]]);
+  else if((m = t.match(/^(.*[A-Za-z0-9)\]₀-₉])\s*(\++|-+)$/))) cands.push([m[1], (m[2][0] === '+' ? 1 : -1)*m[2].length]);
+  if(!cands.length) return null;
+  if(!ION_BY_F){ ION_BY_F = {};
+    Object.keys(L3_LIB).forEach(n=>{ const sm = L3_LIB[n]; if(sm.includes('.')) return;
+      try{ const g = l3SmilesGraph(sm), c = {}; g.syms.forEach(x=>{ c[x] = (c[x]||0) + 1; }); const q = g.chg.reduce((a, v)=>a + (v||0), 0);
+        const k = benchFormula(c)+'|'+q; if(q && !ION_BY_F[k]) ION_BY_F[k] = n; }catch(e){} }); }
+  /* a known ion first, under either reading */
+  for(const [b, q] of cands){ const c = l3ParseFormula(b); if(!c) continue; const n = ION_BY_F[benchFormula(c)+'|'+q]; if(n) return {sm:L3_LIB[n], name:n}; }
+  /* then one atom carrying the charge: Fe3+, H+, Cl- */
+  let bad = null;
+  for(const [b, q] of cands){
+    const c = l3ParseFormula(b), ks = c ? Object.keys(c) : [];
+    if(ks.length !== 1 || c[ks[0]] !== 1 || !BY_SYM[ks[0]]) continue;
+    const e = BY_SYM[ks[0]];
+    if(q > e.z || q > 7 || q < -4){ bad = bad || {err:q > 0 ? capFirst(e.name)+' has only '+e.z+' electron'+(e.z > 1 ? 's' : '')+' to give: '+e.sym+chargeSup(q)+' cannot be made.' : e.sym+chargeSup(q)+' would hold more electrons than any atom can.'}; continue; }
+    return {sm:'['+e.sym+(q > 0 ? '+' : '-')+(Math.abs(q) > 1 ? Math.abs(q) : '')+']', name:null};
+  }
+  if(bad && cands.length === 1) return bad;
+  const c0 = l3ParseFormula(cands[0][0]);
+  if(!c0) return bad;
+  return {err:'I do not know '+subPlain(benchFormula(c0))+chargeSup(cands[0][1])+' as an ion. Single-atom ions (H\u207a, Fe\u00b3\u207a, Cl\u207b) and the ions in the library (OH\u207b, NH\u2084\u207a, SO\u2084\u00b2\u207b and more) can be typed; for anything else, write it as SMILES with its charge in brackets, like [O-][N+](=O)[O-].'};
 }
 function smilesKey(sm){
   let g; try{ g = l3SmilesGraph(sm); }catch(e){ return null; }
@@ -15605,6 +15868,8 @@ function scene2D(k){
 }
 function l3BuildAny(str){
   str = str.trim(); const key = str.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+  const ion = ionTyped(str);
+  if(ion){ if(ion.err){ say(ion.err,'bench'); return null; } return l3BuildSmiles(ion.sm, ion.name || undefined); }
   const name = libLookup(key);
   if(name) return l3BuildSmiles(L3_LIB[name], name);
   /* SMILES look: brackets, bonds, ring digits after letters, aromatic lowercase, or an element twice running */
@@ -15647,8 +15912,11 @@ function buildCompound2D(str, ox, oy){
   const key = str.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
   let graph = null, label = null, note = '';
   const libOf = k => { try{ return benchFormula(l3SmilesCounts(L3_LIB[k])); } catch(e){ return null; } };
-  const name = libLookup(key);
-  if(name){ graph = l3SmilesGraph(L3_LIB[name]); label = name; }
+  const ion = ionTyped(str);
+  if(ion && ion.err){ say(ion.err,'bench'); return null; }
+  const name = ion ? null : libLookup(key);
+  if(ion){ graph = l3SmilesGraph(ion.sm); label = ion.name; }
+  else if(name){ graph = l3SmilesGraph(L3_LIB[name]); label = name; }
   else {
     const counts = l3ParseFormula(str);
     const smilesish = /[()=#\[\]@\/\\%.]/.test(str) || /(Cl|Br|[BCNOPSFI])\1/.test(str) || !counts;
@@ -16020,7 +16288,8 @@ function l3Unproject(dx, dy, s){
 /* how big an atom is drawn. Ball-and-stick: half the covalent radius. Space-filling:
    the van der Waals radius, the size the molecule really takes up. Sticks: a joint. */
 const L3_VIEWS = {ball:'Ball & stick', space:'Space-filling', stick:'Sticks', esp:'Charge cloud'};
-const l3R = (a, s) => L3.view === 'space' ? Math.max(5, EL[a.e].rv*0.92*s)
+const l3R = (a, s) => a.ion > 0 && EL[a.e].z === 1 && L3.view !== 'stick' ? Math.max(6, 14*s)   /* a bare proton: far too small to see at its true size, so drawn as a bright speck */
+                    : L3.view === 'space' ? Math.max(5, EL[a.e].rv*0.92*s)
                     : L3.view === 'stick' || L3.view === 'esp' ? Math.max(2.5, 16*s)
                     : a.ion ? Math.max(4, (EL[a.e].ri != null ? EL[a.e].ri : EL[a.e].rc*(a.ion > 0 ? 0.62 : 1.35))*0.5*s)   /* an ion at its own size: Na+ small, Cl- large */
                     : Math.max(4, EL[a.e].rc*0.5*s);
@@ -16308,7 +16577,8 @@ function l3Draw(){
       }
       if(qz){
         /* a small badge on the atom's shoulder: capped, so a near atom's does not cover the view */
-        const br = clamp(r*(a.ion ? 0.26 : 0.22), 5, 9), bx = p.x + r*0.7, by = p.y - r*0.7, ic = qz > 0 ? '#C0503A' : '#2A7A78';
+        /* on a small atom (a proton, a hydrogen) it sits clear of the ball rather than over it */
+        const br = clamp(r*(a.ion ? 0.26 : 0.22), 5, 9), off = Math.max(r*0.7, r*0.45 + br), bx = p.x + off, by = p.y - off, ic = qz > 0 ? '#C0503A' : '#2A7A78';
         g.fillStyle = ic; g.globalAlpha = 0.18; g.beginPath(); g.arc(bx, by, br*1.5, 0, TAU); g.fill(); g.globalAlpha = 1;
         g.fillStyle = '#fff'; g.strokeStyle = ic; g.lineWidth = 1.6;
         g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill(); g.stroke();
@@ -16715,7 +16985,7 @@ function l3SolutionCard(){
   const list = [...S.sp.entries()].sort((a,b)=>b[1].n - a[1].n).map(([k,e])=>k+(e.n>1?' \u00d7'+e.n:'')).join(' \u00b7 ');
   if(S.waters < 3){
     /* no water: ions loose on their own are a melt or a gas, and they conduct too */
-    return '<div class="p3-sol"><span class="ph-dial" style="background:#8A8F98">\u2014</span><div><b>'+S.mobile+' free ions</b><span>no water: a melt or a gas of ions, which conducts</span></div></div>'+
+    return '<div class="p3-sol"><span class="ph-dial" style="background:#8A8F98">\u2014</span><div><b>'+S.mobile+' free ion'+(S.mobile === 1 ? '' : 's')+'</b><span>no water: a melt or a gas of ions, which conducts</span></div></div>'+
       (list ? '<div class="p3-sol-ions">'+list+'</div>' : '');
   }
   const k = S.kappa, like = k < 1e-6 ? 'pure water: 0.000055 mS/cm, barely conducts' : k < 1 ? 'about tap water' : k < 20 ? 'a weak solution' : k < 90 ? 'about sea water (53)' : 'very salty, past brine';
@@ -16966,10 +17236,10 @@ function renderLeft3D(){
   const sec = (k, title, inner, n) => '<details class="l3-sec" data-sec="'+k+'"'+(open[k] ? ' open' : '')+'><summary>'+title+(n ? '<em>'+n+'</em>' : '')+'</summary><div class="l3-sec-in">'+inner+'</div></details>';
   const grouped = new Set(), groups = SCENE_GROUPS.map(([t, ks])=>{ ks.forEach(k=>grouped.add(k)); return [t, ks.map(k=>SCENES.find(x=>x.k === k)).filter(Boolean)]; });
   const rest = SCENES.filter(x=>!grouped.has(x.k)); if(rest.length) groups.push(['Other', rest]);
-  const rx = groups.map(([t, list])=>'<span class="l3-grp">'+t+'</span><div class="l3-pres sm">'+list.map(sc=>'<button type="button" data-l3scene="'+sc.k+'" title="'+sc.note+'">'+sc.label+'</button>').join('')+'</div>').join('');
+  const rx = groups.map(([t, list], gi)=>'<span class="l3-grp rg'+gi+'">'+t+'</span><div class="l3-pres sm rg'+gi+'">'+list.map(sc=>'<button type="button" data-l3scene="'+sc.k+'" title="'+sc.note+'">'+sc.label+'</button>').join('')+'</div>').join('');
   host.innerHTML = '<span class="eyebrow">3D bench · every element</span>'+
     '<div class="l3-table l3-full" style="margin-top:10px">'+table+'</div>'+
-    '<div class="l3-build" style="margin-top:10px"><input id="l3Formula" type="text" placeholder="Build: caffeine, CCO, H2SO4…" spellcheck="false" autocomplete="off"><button type="button" data-l3build="1">Build</button><button type="button" class="ghost-sm" data-l3undo="1" title="Undo (Ctrl/Cmd + Z)">Undo</button></div>'+
+    '<div class="l3-build" style="margin-top:10px"><input id="l3Formula" type="text" placeholder="Build: caffeine, H2SO4, H+, SO4 2-…" spellcheck="false" autocomplete="off"><button type="button" data-l3build="1">Build</button><button type="button" class="ghost-sm" data-l3undo="1" title="Undo (Ctrl/Cmd + Z)">Undo</button></div>'+
     '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C</span>'+
       '<input type="range" class="temp-range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
     sec('rx', 'Reactions', rx, SCENES.length)+
@@ -17842,8 +18112,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 122;
+const VERSION = 123;
 const CHANGELOG = [
+  [123, 'H\u207a ions. Hydrogen can now give up its only electron (\u2212 e\u207b in the Atom tab, on either bench), leaving a bare proton, and a bare proton behaves like one: the first lone pair it touches takes it, so H\u207a + H\u2082O makes H\u2083O\u207a, + NH\u2083 makes NH\u2084\u207a, + OH\u207b makes water and + Cl\u207b makes HCl, each written up in the Notebook with its gas-phase proton affinity. On the 3D bench it is drawn as a bright speck you can see, its badge clear of it. Build reads ions as chemists type them: H+, H\u207a, Na+, Fe3+, Fe+3, O2-, OH-, NH4+, H3O+, SO4 2-, SO4^2-, SO\u2084\u00b2\u207b, CO32-, CH3COO-, and names like proton or sodium ion (Cl- used to build HCl). Hydrogen ion and hydride ion join the library. A prettier library: every card has a small structure drawing (carbons as corners, OH and NH\u2082 written out, rings as rings, salts as their ions side by side) and a colour dot for its family, matched on the family chips. The reactions in the left panel are colour-coded by kind, and on a narrow bench the atom count sits above the speed control instead of under the zoom buttons.'],
   [122, 'Clear away whole kinds of molecule at once. Every card in the Bench panel (one per kind of molecule, and one row per kind of lone atom on the flat bench) now has a tick box and a bin, shown when you point at it. The bin deletes every molecule of that kind; ticking kinds brings up a bar to delete them all, keep only them and delete everything else, select every kind, or clear the selection. Undo brings anything back. On the 3D bench ions are now kept apart from neutral atoms of the same element (Na\u207a has its own card from Na), so you can clear one without the other.'],
   [121, 'The molecule library now holds 1000 compounds, and about 1080 names can be typed into Build. New are whole homologous series named the IUPAC way (alkanes to icosane, alkenes, alkynes, alcohols, aldehydes, ketones, carboxylic and dicarboxylic acids, thirty esters, ethers, amines, nitriles, amides, thiols, haloalkanes, rings and branched alkanes), substituted benzenes (chloro-, bromo-, nitro- and methyl- phenols, anilines, benzoic acids, toluenes and anisoles), a hundred salts with their charges balanced (and nothing that does not exist), and about a hundred more by hand: medicines, natural products and flavours, vitamins, nucleosides, fatty acids, oxyanions and other ions, and inorganic molecules, each checked against its molecular formula. The library sheet is rebuilt for its size: family chips with counts, a compact grid, search by name or formula with the best matches first, and Enter to build the top one. Names are found whatever their case or hyphens (pentan-2-ol, Pentan 2 ol, IRON(III) SULFATE), which also fixes typed names with hyphens on both benches. A compact pass on the interface, with nothing taken away: a slimmer header (Share and Clear keep their full descriptions as tooltips), the reactions as small chips instead of large boxes, tighter readout tiles and a shorter chart.'],
   [120, 'The chemistry course, rebuilt from the ground up for someone who knows nothing yet. Fifty-one lessons in twelve units: matter, atoms, the periodic table\u2019s patterns, ionic bonding, covalent and metallic bonding, shape and polarity, forces between molecules, counting (formulas, equations and the mole), gases, energy and rates and equilibrium, solutions and acids, and redox, organic and nuclear chemistry, each unit ending in a check. Lessons now carry 39 diagrams drawn for them (atoms, shells, the periodic table coloured by trend, Lewis structures, energy profiles, the pH scale and more), a key idea to take away, worked examples revealed a line at a time with one of your own to try, and predictions to make before the bench shows what happens. A recap opens lessons that build on earlier ones; every term the course teaches is collected in Words; the Map shows your progress unit by unit with your check scores. On the bench you can now look inside atoms (the readout draws the selected atom\u2019s shells, protons, neutrons and isotope), heat and squeeze a gas and read its pressure, watch a liquid and its vapour reach equilibrium, run electrolysis, and split uranium with a neutron. Fourteen new practice skills (particles, shells, counting atoms, balancing, reacting masses, gas laws, pH, trends, classifying matter, physical or chemical change, states, rates, equilibrium, nuclear) join Practice and the assessment.'],
@@ -22102,7 +22373,7 @@ function start(data){
   el('build2dBtn').onclick = ()=>buildCompound2D(el('build2dIn').value);
   { const seen = new Set(), gs = SCENE_GROUPS.map(([t, ks])=>{ ks.forEach(k=>seen.add(k)); return [t, ks.map(k=>SCENES.find(x=>x.k === k)).filter(Boolean)]; });
     const rest = SCENES.filter(x=>!seen.has(x.k)); if(rest.length) gs.push(['Other', rest]);
-    el('scenes2d').innerHTML = gs.map(([t, list])=>'<span class="l3-grp">'+t+'</span><div class="l3-pres sm">'+list.map(sc=>'<button type="button" data-scene="'+sc.k+'" title="'+sc.note+'">'+sc.label+'</button>').join('')+'</div>').join(''); }
+    el('scenes2d').innerHTML = gs.map(([t, list], gi)=>'<span class="l3-grp rg'+gi+'">'+t+'</span><div class="l3-pres sm rg'+gi+'">'+list.map(sc=>'<button type="button" data-scene="'+sc.k+'" title="'+sc.note+'">'+sc.label+'</button>').join('')+'</div>').join(''); }
   el('scenes2d').onclick = ev=>{ const b = ev.target.closest('[data-scene]'); if(b) scene2D(b.dataset.scene); };
   el('build2dIn').onkeydown = ev=>{ ev.stopPropagation(); if(ev.key === 'Enter') buildCompound2D(el('build2dIn').value); };
   el('mode3d').onclick = ()=>{ if(!L3.on) set3D(true); };
