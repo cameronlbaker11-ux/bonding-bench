@@ -362,6 +362,22 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 }
 .mol:hover .save-mol{opacity:1}
 .save-mol:hover{background:var(--surface);color:var(--accent)}
+.mol-acts{position:absolute;top:8px;right:34px;display:flex;gap:3px;opacity:0;transition:opacity .16s;z-index:2}
+.mol:hover .mol-acts,.mol-acts.live,.mol.picked .mol-acts{opacity:1}
+.p3-panel .mol-acts,#panel3d .mol-acts{right:8px}
+.mol-acts button{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint);background:var(--surface);border:1px solid var(--hair);font-size:12px;font-weight:700;padding:0;cursor:pointer}
+.mol-acts .mol-pick.on{background:var(--accent,#2F5BEA);border-color:var(--accent,#2F5BEA);color:#fff}
+.mol-acts .mol-del:hover{color:#C0503A;border-color:#C0503A}
+.mol-acts.inline{position:static;display:inline-flex;margin-left:6px;vertical-align:middle;opacity:1}
+.mol-acts.inline button{width:18px;height:18px;border-radius:5px}
+.mol.picked{box-shadow:0 0 0 2px var(--accent,#2F5BEA)}
+#readout .mol-top{padding-right:76px}#panel3d .mol-top{padding-right:52px}
+#purgeBar2{position:sticky;top:50px;z-index:3}#purgeBar2 .purge-bar{position:static}
+.purge-bar{position:sticky;top:50px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:7px 9px;border-radius:10px;background:var(--ink);color:#fff;font-size:11.5px}
+.purge-bar span{margin-right:auto}.purge-bar b{font-weight:600}
+.purge-bar button{padding:4px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.25);background:none;color:#fff;font:inherit;font-size:11px;cursor:pointer}
+.purge-bar button:hover{background:rgba(255,255,255,.12)}
+.purge-bar .purge-go{background:#C0503A;border-color:#C0503A}
 .save-mol.done{opacity:1;color:var(--accent);transform:scale(1.1)}
 .acc + .acc{border-top:1px solid var(--hair)}
 .preset-grid,.frag-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -4447,6 +4463,15 @@ function renderPanel(){
     const e = kindMap.get(k); if(e){ e.n++; e.all.push(g); } else kindMap.set(k, {g, n:1, all:[g], k});
   });
   const kindArr = [...kindMap.values()];
+  /* the lone atoms, by kind, for the same select-and-delete as the molecules */
+  const freeKinds = {};
+  singles.forEach(g=>{ const a = g.atoms[0], k = '2f:'+EL[a.e].sym+'|'+a.charge; (freeKinds[k] = freeKinds[k] || []).push(g.atoms); });
+  purgeRefresh('2', kindArr.map(({g, n, all, k:kk})=>['2k:'+kk, {lists:all.map(x=>x.atoms), n, label:g.text}]).concat(
+    Object.keys(freeKinds).map(k=>{ const a = freeKinds[k][0][0]; return [k, {lists:freeKinds[k], n:freeKinds[k].length, label:EL[a.e].sym+(a.charge ? chargeSup(a.charge) : '')}]; })));
+  let pbar = el('purgeBar2');
+  const pb = purgeBarHTML('2');
+  if(pb){ if(!pbar){ pbar = document.createElement('div'); pbar.id = 'purgeBar2'; } if(readout.firstChild !== pbar) readout.insertBefore(pbar, readout.firstChild); if(pbar._h !== pb){ pbar.innerHTML = pb; pbar._h = pb; } }
+  else if(pbar) pbar.remove();
   kindArr.forEach(({g, n, all, k:kk}, gi)=>{
     const cardId = 'k:'+kk;
     seen.add(cardId);
@@ -4501,10 +4526,10 @@ function renderPanel(){
       '</div></div>'+
       (open ? structSVG(g)+(rows.length?'<dl>'+rows.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>':'') : '<p class="mol-sum">'+cardSummary(rows)+'</p>')+
       '<button class="save-mol" type="button" data-save="'+g.key+'" title="Keep this in your library" '+
-        'aria-label="Save this species to your library">'+SAVE_ICON+'</button>';
+        'aria-label="Save this species to your library">'+SAVE_ICON+'</button>'+purgeActs('2k:'+kk, n);
     let node=cards.get(cardId);
     if(!node){ node=document.createElement('div'); node.className='mol'; cards.set(cardId,node); readout.appendChild(node); }
-    node.classList.toggle('open', open); node.classList.toggle('shut', !open);
+    node.classList.toggle('open', open); node.classList.toggle('shut', !open); node.classList.toggle('picked', PURGE.sel.has('2k:'+kk));
     if(node._html!==html){ node.innerHTML=html; node._html=html; }
   });
   wireCardToggles(readout, renderPanel);
@@ -4515,14 +4540,14 @@ function renderPanel(){
     const kinds={};
     singles.forEach(g=>{
       const a=g.atoms[0], k=EL[a.e].sym+'|'+a.charge;
-      if(!kinds[k]) kinds[k]={n:0, label:EL[a.e].sym+(a.charge?'<sup>'+chargeTxt(a.charge)+'</sup>':''), name:atomName(a)};
+      if(!kinds[k]) kinds[k]={n:0, label:EL[a.e].sym+(a.charge?'<sup>'+chargeTxt(a.charge)+'</sup>':''), name:atomName(a), key:'2f:'+k};
       kinds[k].n++;
     });
     const list=Object.keys(kinds).map(k=>kinds[k]);
     const html='<div class="mol-top"><span class="formula" style="font-size:13px;font-weight:500">'+
       list.map(x=>x.n+' × '+x.label).join('  ·  ')+
       '</span><span class="mol-name">unbonded</span></div>'+
-      '<dl>'+list.map(x=>'<dt>'+x.label+'</dt><dd>'+x.name+'</dd>').join('')+'</dl>';
+      '<dl>'+list.map(x=>'<dt>'+x.label+'</dt><dd>'+x.name+purgeActs(x.key, x.n, true)+'</dd>').join('')+'</dl>';
     let node=cards.get('free');
     if(!node){ node=document.createElement('div'); node.className='mol'; cards.set('free',node); readout.appendChild(node); }
     if(node._html!==html){ node.innerHTML=html; node._html=html; }
@@ -5672,13 +5697,76 @@ function wireElementCards(){
    With one or two kinds of molecule on the bench every card stays open; with
    more, only the first is, and the rest show their headline until clicked.
    Whatever you open or close stays that way. */
+/* ---------- clearing away whole kinds of molecule ----------
+   Every card in the Bench panel stands for one kind of molecule (or lone atom),
+   however many of it there are. Each card can be ticked or binned outright; the
+   bar that appears with a selection deletes every molecule of the ticked kinds,
+   or everything but them. Keys start 2 or 3 for the bench they belong to. */
+const PURGE = {sel:new Set(), map:new Map()};
+const TRASH_ICON = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h9M5.5 4V2.6h3V4M3.6 4l.6 7.8h5.6l.6-7.8M6 6.2v3.6M8 6.2v3.6"/></svg>';
+function purgeActs(key, n, inline){
+  const on = PURGE.sel.has(key);
+  return '<span class="mol-acts'+(inline ? ' inline' : '')+(PURGE.sel.size ? ' live' : '')+'">'+
+    '<button type="button" class="mol-pick'+(on ? ' on' : '')+'" data-pick="'+escAttr(key)+'" title="'+(on ? 'Unselect' : 'Select')+' this kind" aria-pressed="'+on+'">'+(on ? '\u2713' : '')+'</button>'+
+    '<button type="button" class="mol-del" data-del="'+escAttr(key)+'" title="Delete all '+(n > 1 ? n+' of these' : 'of this')+'">'+TRASH_ICON+'</button></span>';
+}
+/* the bar over the cards while anything is ticked */
+function purgeBarHTML(bench){
+  const keys = [...PURGE.sel].filter(k=>k[0] === bench); if(!keys.length) return '';
+  const n = keys.reduce((t,k)=>t + ((PURGE.map.get(k)||{}).n||0), 0);
+  return '<div class="purge-bar"><span><b>'+keys.length+' kind'+(keys.length > 1 ? 's' : '')+'</b> \u00b7 '+n+' molecule'+(n === 1 ? '' : 's')+'</span>'+
+    '<button type="button" class="purge-go" data-purge="del">Delete</button><button type="button" data-purge="keep" title="Delete everything else on the bench">Keep only these</button>'+
+    '<button type="button" data-purge="all">Select all</button><button type="button" data-purge="none">Clear</button></div>';
+}
+function purgeDelete(keys, bench){
+  const groups = []; let label = [];
+  keys.forEach(k=>{ const e = PURGE.map.get(k); if(!e) return; groups.push(...e.lists); label.push((e.n > 1 ? e.n+' \u00d7 ' : '')+e.label); });
+  if(!groups.length) return;
+  if(bench === '2'){
+    pushUndo();
+    groups.forEach(g=>g.forEach(a=>{ if(!a.dying) removeAtom(a); }));
+    dirty = true;
+  } else {
+    l3Push();
+    const ids = new Set(); groups.forEach(g=>g.forEach(a=>ids.add(a.id)));
+    L3.bonds = L3.bonds.filter(b=>!ids.has(b.a) && !ids.has(b.b));
+    L3.atoms = L3.atoms.filter(a=>!ids.has(a.id));
+    if(L3.sel && ids.has(L3.sel.id)) L3.sel = null;
+    L3.measure = (L3.measure||[]).filter(a=>!ids.has(a.id)); L3.dirty = true; L3.bv = (L3.bv||0) + 1;
+  }
+  keys.forEach(k=>PURGE.sel.delete(k));
+  const txt = label.length > 3 ? label.slice(0, 3).join(', ')+' and '+(label.length - 3)+' more kinds' : label.join(', ');
+  say('Deleted '+txt.replace(/<[^>]+>/g, '')+'. Undo (\u2318/Ctrl Z) brings them back.', 'bench');
+  purgeRerender(bench);
+}
+function purgeRerender(bench){ if(bench === '2'){ try{ renderPanel(); }catch(e){} } else { try{ renderPanel3D(); }catch(e){} } }
+function wirePurge(){
+  document.addEventListener('click', ev=>{
+    const p = ev.target.closest('[data-pick]'), d = ev.target.closest('[data-del]'), bar = ev.target.closest('[data-purge]');
+    if(!p && !d && !bar) return;
+    ev.stopPropagation();
+    if(p){ const k = p.dataset.pick; if(PURGE.sel.has(k)) PURGE.sel.delete(k); else PURGE.sel.add(k); purgeRerender(k[0]); return; }
+    if(d){ const k = d.dataset.del; purgeDelete([k], k[0]); return; }
+    const bench = L3.on ? '3' : '2', act = bar.dataset.purge, mine = [...PURGE.map.keys()].filter(k=>k[0] === bench);
+    if(act === 'del') purgeDelete([...PURGE.sel].filter(k=>k[0] === bench), bench);
+    else if(act === 'keep'){ const drop = mine.filter(k=>!PURGE.sel.has(k)); mine.forEach(k=>PURGE.sel.delete(k)); if(drop.length) purgeDelete(drop, bench); else purgeRerender(bench); }
+    else if(act === 'all'){ mine.forEach(k=>PURGE.sel.add(k)); purgeRerender(bench); }
+    else if(act === 'none'){ mine.forEach(k=>PURGE.sel.delete(k)); purgeRerender(bench); }
+  }, true);
+}
+/* forget kinds that are gone, and remember what each key holds now */
+function purgeRefresh(bench, entries){
+  [...PURGE.map.keys()].forEach(k=>{ if(k[0] === bench) PURGE.map.delete(k); });
+  entries.forEach(([k, v])=>PURGE.map.set(k, v));
+  [...PURGE.sel].forEach(k=>{ if(k[0] === bench && !PURGE.map.has(k)) PURGE.sel.delete(k); });
+}
 const CARD_OPEN = new Map();
 const cardOpen = (key, i, total) => CARD_OPEN.has(key) ? CARD_OPEN.get(key) : (total <= 2 || i === 0);
 const cardSummary = rows => rows.filter(r=>/^(Phase|Dipole|Molar mass|Lattice|Neighbours)$/.test(r[0])).map(r=>r[0] === 'Molar mass' ? r[1] : r[0] === 'Dipole' ? (/cancels/.test(r[1]) ? 'nonpolar' : 'dipole '+r[1]) : r[0] === 'Neighbours' ? r[1].split(' \u00b7 ')[0] : r[1].split(' (')[0]).join(' \u00b7 ');
 function wireCardToggles(host, rerender){
   if(host._cards) return; host._cards = true;
   host.addEventListener('click', ev=>{
-    if(ev.target.closest('.save-mol')) return;
+    if(ev.target.closest('.save-mol, .mol-acts, .purge-bar')) return;
     const h = ev.target.closest('[data-cardkey]'); if(!h) return;
     const card = h.closest('.mol'), k = h.dataset.cardkey;
     CARD_OPEN.set(k, !card.classList.contains('open')); rerender();
@@ -16730,13 +16818,16 @@ function renderPanel3D(){
   /* one card per kind of molecule */
   const kinds = new Map();
   groups.forEach(list=>{
-    const key = benchFormula(countsOf(list))+'|'+l3Bonds(list[0]).length+'|'+list.map(x=>l3Bonds(x).length).sort().join('');
-    if(kinds.has(key)) kinds.get(key).n++; else kinds.set(key, {list, n:1});
+    /* charge is part of the kind: Na and Na+ are different things to keep or clear */
+    const q = list.reduce((t,x)=>t+(x.ion||0)+(x.fq||0), 0);
+    const key = benchFormula(countsOf(list))+'|'+q+'|'+l3Bonds(list[0]).length+'|'+list.map(x=>l3Bonds(x).length).sort().join('');
+    if(kinds.has(key)){ const k = kinds.get(key); k.n++; k.all.push(list); } else kinds.set(key, {list, n:1, all:[list], key});
   });
+  purgeRefresh('3', [...kinds.values()].map(k=>{ const q = k.list.reduce((t,x)=>t+(x.ion||0)+(x.fq||0), 0); return ['3:'+k.key, {lists:k.all, n:k.n, label:benchFormula(countsOf(k.list))+(q ? chargeSup(q) : '')}]; }));
   const W3 = 1300, H3 = 975;
   let cards = '';
   const kindList = [...kinds.values()].slice(0, 12);
-  kindList.forEach(({list, n}, ci)=>{
+  kindList.forEach(({list, n, key:kkey}, ci)=>{
     const ids = new Set(list.map(x=>x.id));
     const bl = L3.bonds.filter(b=>ids.has(b.a));
     const nm = l3Named(list, bl);
@@ -16813,14 +16904,14 @@ function renderPanel3D(){
     const sketch = list.length > 1 && list.length <= 150 ? structSVG({key:'3d'+list[0].id+'-'+Math.round(L3.yaw*4)+Math.round(L3.pitch*4), atoms:proj, bonds:bl}) : '';
     const netQ = list.reduce((t,x)=>t+(x.ion||0)+(x.fq||0), 0);
     const ck = '3|'+benchFormula(countsOf(list))+'|'+(nm.name||''), open = cardOpen(ck, ci, kindList.length);
-    cards += '<div class="mol '+(open ? 'open' : 'shut')+'"><div class="mol-head" data-cardkey="'+escAttr(ck)+'" role="button" tabindex="0" aria-expanded="'+open+'"><div class="mol-top"><span class="formula">'+subHtml(benchFormula(countsOf(list)))+(netQ ? '<sup>'+(Math.abs(netQ) > 1 ? Math.abs(netQ) : '')+(netQ > 0 ? '+' : '\u2212')+'</sup>' : '')+
+    cards += '<div class="mol '+(open ? 'open' : 'shut')+(PURGE.sel.has('3:'+kkey) ? ' picked' : '')+'">'+purgeActs('3:'+kkey, n)+'<div class="mol-head" data-cardkey="'+escAttr(ck)+'" role="button" tabindex="0" aria-expanded="'+open+'"><div class="mol-top"><span class="formula">'+subHtml(benchFormula(countsOf(list)))+(netQ ? '<sup>'+(Math.abs(netQ) > 1 ? Math.abs(netQ) : '')+(netQ > 0 ? '+' : '\u2212')+'</sup>' : '')+
       (n>1?'<span style="font-size:11px;color:var(--muted)"> \u00d7'+n+'</span>':'')+
       '</span><span class="mol-name">'+(nm.name||'')+'<i class="chev">\u203a</i></span></div>'+
       '<div class="badges">'+badges+'</div></div>'+
       (open ? sketch+'<dl>'+rows.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>' : '<p class="mol-sum">'+cardSummary(rows)+'</p>')+'</div>';
   });
-  if(kinds.size > 12) cards += '<p class="p3-note">and '+(kinds.size-12)+' more kinds</p>';
-  html += cards ? '<div class="readout">'+cards+'</div>' : '<p class="p3-note">The 3D bench is empty. Add an element or drop in a molecule from the bar above it.</p>';
+  if(kinds.size > 12) cards += '<p class="p3-note">and '+(kinds.size-12)+' more kinds (Select all and Keep only these include them)</p>';
+  html += cards ? '<div class="readout">'+purgeBarHTML('3')+cards+'</div>' : '<p class="p3-note">The 3D bench is empty. Add an element or drop in a molecule from the bar above it.</p>';
   /* the last few things that happened, newest first */
   const feed = L3.ledger.slice(-6).reverse().filter(e=>!/^(formed|shaken apart|pulled apart|made a pi bond|lost a pi bond)$/.test(e.what));
   if(feed.length) html += '<div class="p3-feed"><span class="eyebrow">Recent events</span>'+feed.slice(0, 5).map(e=>{
@@ -17751,8 +17842,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 121;
+const VERSION = 122;
 const CHANGELOG = [
+  [122, 'Clear away whole kinds of molecule at once. Every card in the Bench panel (one per kind of molecule, and one row per kind of lone atom on the flat bench) now has a tick box and a bin, shown when you point at it. The bin deletes every molecule of that kind; ticking kinds brings up a bar to delete them all, keep only them and delete everything else, select every kind, or clear the selection. Undo brings anything back. On the 3D bench ions are now kept apart from neutral atoms of the same element (Na\u207a has its own card from Na), so you can clear one without the other.'],
   [121, 'The molecule library now holds 1000 compounds, and about 1080 names can be typed into Build. New are whole homologous series named the IUPAC way (alkanes to icosane, alkenes, alkynes, alcohols, aldehydes, ketones, carboxylic and dicarboxylic acids, thirty esters, ethers, amines, nitriles, amides, thiols, haloalkanes, rings and branched alkanes), substituted benzenes (chloro-, bromo-, nitro- and methyl- phenols, anilines, benzoic acids, toluenes and anisoles), a hundred salts with their charges balanced (and nothing that does not exist), and about a hundred more by hand: medicines, natural products and flavours, vitamins, nucleosides, fatty acids, oxyanions and other ions, and inorganic molecules, each checked against its molecular formula. The library sheet is rebuilt for its size: family chips with counts, a compact grid, search by name or formula with the best matches first, and Enter to build the top one. Names are found whatever their case or hyphens (pentan-2-ol, Pentan 2 ol, IRON(III) SULFATE), which also fixes typed names with hyphens on both benches. A compact pass on the interface, with nothing taken away: a slimmer header (Share and Clear keep their full descriptions as tooltips), the reactions as small chips instead of large boxes, tighter readout tiles and a shorter chart.'],
   [120, 'The chemistry course, rebuilt from the ground up for someone who knows nothing yet. Fifty-one lessons in twelve units: matter, atoms, the periodic table\u2019s patterns, ionic bonding, covalent and metallic bonding, shape and polarity, forces between molecules, counting (formulas, equations and the mole), gases, energy and rates and equilibrium, solutions and acids, and redox, organic and nuclear chemistry, each unit ending in a check. Lessons now carry 39 diagrams drawn for them (atoms, shells, the periodic table coloured by trend, Lewis structures, energy profiles, the pH scale and more), a key idea to take away, worked examples revealed a line at a time with one of your own to try, and predictions to make before the bench shows what happens. A recap opens lessons that build on earlier ones; every term the course teaches is collected in Words; the Map shows your progress unit by unit with your check scores. On the bench you can now look inside atoms (the readout draws the selected atom\u2019s shells, protons, neutrons and isotope), heat and squeeze a gas and read its pressure, watch a liquid and its vapour reach equilibrium, run electrolysis, and split uranium with a neutron. Fourteen new practice skills (particles, shells, counting atoms, balancing, reacting masses, gas laws, pH, trends, classifying matter, physical or chemical change, states, rates, equilibrium, nuclear) join Practice and the assessment.'],
   [119, 'The course is now a mode of its own. While it runs, everything a lesson does not need steps aside: the side panels, the bench\u2019s top bar and toolbar, the header buttons, the stats. The bench fills the window beside the course panel. What the side panels used to show appears in a small readout card on the bench, and only what the step needs: the selected atom, what is on the bench (with names, shapes and polarity), the last reaction\u2019s equation, the solution meter, the energy given out or taken in, hydrogen bonds, or temperature. Reactions to try are buttons in the course panel, and the Break a bond and Add energy tools appear only in the lessons that use them. Everything comes back when you leave the course.'],
@@ -21866,7 +21958,7 @@ function start(data){
   initGutters();
   buildTable(); buildLadder(); buildTools(); buildControls(); buildTabs(); setTool('move');
   el('clearLog').onclick=()=>{ LOG.length=0; renderLog(); };
-  wireLog(); wireGuide(); wireStepCard(); wireLearnDock(); wireCourse(); wireElementCards();
+  wireLog(); wireGuide(); wireStepCard(); wireLearnDock(); wireCourse(); wirePurge(); wireElementCards();
   resize();
   pistonInit();
   if(window.ResizeObserver) new ResizeObserver(resize).observe(stage);
