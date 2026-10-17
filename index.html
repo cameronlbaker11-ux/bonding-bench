@@ -613,6 +613,17 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .lib-cat{margin:16px 0 8px;display:block}
 .lib-cat:first-child{margin-top:0}
 .lib-cat i{font-style:normal;color:var(--faint);margin-left:4px}
+.lib-top{position:sticky;top:-1px;z-index:2;background:var(--surface,#fff);padding:0 0 8px}
+.lib-chips{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px}
+.lib-chips button{padding:4px 9px;border-radius:999px;border:1px solid var(--hair);background:var(--surface);font:inherit;font-size:11px;cursor:pointer;color:var(--ink-2)}
+.lib-chips button i{font-style:normal;color:var(--faint);margin-left:2px}
+.lib-chips button.on{background:var(--ink);color:#fff;border-color:var(--ink)}.lib-chips button.on i{color:rgba(255,255,255,.7)}
+#libBody .lib-grid{grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:5px}
+#libBody .lib{padding:6px 8px;border-radius:8px;min-width:0}
+#libBody .lib b{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#libBody .lib span{font-size:10.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#libBody .lib-moreb{background:none;border:1px dashed var(--hair)}#libBody .lib-moreb b{color:var(--muted)}
+#libBody .lib-cat{margin:12px 0 6px}.lib-showall{margin:8px 0 0}
 .lib-search{width:100%;box-sizing:border-box;margin:0 0 12px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--sunk);font:inherit;font-size:13px;color:var(--ink)}
 .lib-more{font-size:11.5px;color:var(--muted);margin:14px 2px 2px}
 #peek{
@@ -1089,6 +1100,21 @@ body.coursing .course-dock.collapsed{top:14px}
 .ld-ctrl label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);margin-bottom:6px}
 .ld-ctrl label b{font-family:var(--font-mono);font-weight:500;font-size:11px;color:var(--ink)}
 abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
+/* ---- compact pass: the same controls and text, in less room ---- */
+.bar{padding:7px 16px;padding-top:calc(7px + env(safe-area-inset-top,0px));gap:10px}
+.brand{gap:9px}.brand svg{width:22px;height:22px}
+.brand h1{font-size:19px}
+.brand .tag{display:inline;margin:0 6px 0 0}
+.brand .vchip{display:inline-block;margin-top:2px;vertical-align:baseline}
+.bar .ghost-btn{padding:5px 10px;font-size:12px}
+.l3-pres.sm{display:flex;flex-wrap:wrap;gap:4px}
+.l3-pres.sm button{font-size:11px;padding:3px 9px;border-radius:999px;line-height:1.35;flex:0 1 auto}
+.l3-grp{margin:7px 0 3px;font-size:10px}
+.l3-sec > summary{padding:8px 2px 6px}
+.p3-tiles{gap:6px}.p3-tiles div{padding:7px 9px;border-radius:9px}.p3-tiles b{font-size:14.5px}
+.slider .note{line-height:1.35}
+.l3-charts{padding:6px 7px 3px;margin-bottom:8px}.l3-charts canvas{height:118px}
+@media (max-width:1180px){ .bar{gap:7px;padding-left:12px;padding-right:12px} .brand .tag{letter-spacing:.05em} .bar .ghost-btn{padding:5px 8px} .stats{gap:8px} }
 </style>
 
 <div class="app">
@@ -1115,8 +1141,8 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
     <button class="ghost-btn course-btn" id="courseBtn" type="button" title="A whole chemistry course taught on the bench: lessons, guided bench time and free bench time">Course</button>
     <button class="ghost-btn learn-btn" id="learnBtn" type="button" title="A quieter view for watching one reaction at a time">Learn mode</button>
-    <button class="ghost-btn" id="shareBtn" type="button">Share bench</button>
-    <button class="ghost-btn" id="clearBtn" type="button">Clear bench</button>
+    <button class="ghost-btn" id="shareBtn" type="button" title="Share this bench as a link">Share</button>
+    <button class="ghost-btn" id="clearBtn" type="button" title="Clear everything off the bench (Undo brings it back)">Clear</button>
   </header>
 
   <div class="workspace">
@@ -9368,59 +9394,79 @@ function onFragUp(ev){
   stage.classList.remove('drop-on');
   fragDrag=null;
 }
-const LIB_CATS = [['simple','Small molecules'],['inorganic','Inorganic'],['hydrocarbon','Hydrocarbons'],['oxygen','Alcohols, ethers, aldehydes and ketones'],
-  ['acid','Acids and esters'],['nitrogen','Amines, amides and nitriles'],['halogen','Halogen compounds'],['aromatic','Aromatics and rings'],
-  ['bio','Molecules of life'],['drug','Medicines, scents and flavours'],['ionic','Ions, salts and adducts']];
-/* how many of each family the library shows: 250 in all with the hand-drawn
-   ones. Anything past a family's share can still be built by typing its name. */
-const LIB_CAP = {simple:12, inorganic:18, hydrocarbon:18, oxygen:16, acid:22, nitrogen:16, halogen:14, aromatic:30, bio:36, drug:26, ionic:14};
+const LIB_CATS = [['simple','Small molecules'],['inorganic','Inorganic'],['hydrocarbon','Hydrocarbons'],['oxygen','Alcohols, ethers, aldehydes, ketones'],
+  ['acid','Acids and esters'],['nitrogen','Nitrogen and sulfur compounds'],['halogen','Halogen compounds'],['aromatic','Aromatics and rings'],
+  ['bio','Molecules of life'],['drug','Medicines and natural products'],['ionic','Ions and adducts'],['salt','Salts']];
+const LIB_SIZE = 1000;                    /* the library shows exactly this many; the rest can still be typed into Build */
 const LIB_ORG = {'formaldehyde':'oxygen', 'methanol':'oxygen', 'ethane':'hydrocarbon', 'ethene':'hydrocarbon', 'ethyne':'hydrocarbon', 'benzene':'aromatic', 'carbon tetrachloride':'halogen'};
 let LIB_ALL = null;
+/* the same fingerprint for a hand-drawn library card */
+function specKey(m){
+  const syms = m.atoms.map(a=>a[0]), chg = m.atoms.map(a=>a[3]||0), n = syms.length, nb = Array.from({length:n}, ()=>[]);
+  (m.bonds||[]).forEach(b=>{ nb[b[0]].push([b[1], b[2]||1]); nb[b[1]].push([b[0], b[2]||1]); });
+  let lab = syms.map((s, i)=>s + (chg[i] || ''));
+  const h = t => { let x = 5381; for(let i=0;i<t.length;i++) x = ((x << 5) + x + t.charCodeAt(i)) | 0; return (x >>> 0).toString(36); };
+  for(let it=0; it<4; it++) lab = lab.map((l, i)=>h(l + '|' + nb[i].map(([j, o])=>o + lab[j]).sort().join(',')));
+  return n + ':' + lab.slice().sort().join('');
+}
 function libEntries(){
   if(LIB_ALL) return LIB_ALL;
-  const all = LIBRARY.map(m=>({n:m.n, f:m.f, cat:m.cat === 'organic' ? (LIB_ORG[m.n] || 'oxygen') : m.cat, spec:m}));
-  const have = new Set(all.map(e=>e.n)), aliasOf = n => Object.keys(L3_ALIAS).filter(k=>L3_ALIAS[k] === n);
-  const per = {};
-  Object.keys(LIB_CAT_OF).forEach(n=>{
-    const cat = LIB_CAT_OF[n], sm = L3_LIB[n];
-    if(!sm || have.has(n) || aliasOf(n).some(a=>have.has(a))) return;
-    per[cat] = per[cat] || 0; if(per[cat] >= (LIB_CAP[cat] || 0)) return; per[cat]++;
-    let f = LIB_FORMULA[n];
-    if(!f){ try{ const g = l3SmilesGraph(sm), c = {}; g.syms.forEach(x=>{ c[x] = (c[x]||0) + 1; }); f = benchFormula(c) + chargeSup(g.chg.reduce((t,q)=>t+(q||0), 0)); } catch(e){ return; } }
-    all.push({n, f, cat, sm}); have.add(n);
+  const seen = new Set(), all = [];
+  const push = e => { if(all.length >= LIB_SIZE || !e.key || seen.has(e.key)) return; seen.add(e.key); all.push(e); };
+  LIBRARY.forEach(m=>push({n:m.n, f:m.f, cat:m.cat === 'organic' ? (LIB_ORG[m.n] || 'oxygen') : m.cat, spec:m, key:specKey(m)}));
+  const names = Object.keys(LIB_CAT_OF).filter(n=>L3_LIB[n]);
+  names.map((n, i)=>[n, LIB_PRI[n] != null ? LIB_PRI[n] : 100 + i*0.01]).sort((a, b)=>a[1] - b[1]).forEach(([n])=>{
+    const sm = L3_LIB[n]; let f = LIB_FORMULA[n];
+    if(!f){ try{ const g = l3SmilesGraph(sm), c = {}; g.syms.forEach(x=>{ c[x] = (c[x]||0) + 1; }); f = benchFormula(c) + chargeSup(g.chg.reduce((t,q)=>t+(q||0), 0)); }catch(e){ return; } }
+    push({n, f, cat:LIB_CAT_OF[n], sm, key:smilesKey(sm)});
   });
   return (LIB_ALL = all);
 }
+const LIB_UI = {cat:'all', q:'', more:false};
 function buildLibrary(){
   const all = libEntries();
-  el('libBody').innerHTML = '<input type="search" id="libSearch" class="lib-search" placeholder="Search '+all.length+' molecules: name or formula" autocomplete="off">'+
-    '<div id="libList"></div><p class="lib-more">Not here? Type any of '+Object.keys(L3_LIB).length+' names, a formula or a SMILES string into Build.</p>';
-  const draw = q => {
-    q = (q||'').trim().toLowerCase();
-    const plain = f => f.replace(/[⁰-₟²³¹]/g, d=>'0123456789+-'['⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'.indexOf(d)] || '');
-    const hit = e => !q || e.n.toLowerCase().includes(q) || plain(e.f).toLowerCase().includes(q.replace(/\s/g, ''));
-    el('libList').innerHTML = LIB_CATS.map(([c,label])=>{
-      const list = all.map((e,i)=>[e,i]).filter(([e])=>e.cat === c && hit(e)); if(!list.length) return '';
-      return '<span class="eyebrow lib-cat">'+label+' <i>'+list.length+'</i></span><div class="lib-grid">'+
-        list.map(([e,i])=>'<button class="lib" type="button" data-i="'+i+'"><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>').join('')+'</div>';
-    }).join('') || '<p class="lib-more">Nothing in the library matches. Try typing it into Build: it may still know it.</p>';
-    el('libList').querySelectorAll('.lib').forEach(b=>{
-      b.onclick=()=>{
-        const m = all[+b.dataset.i];
-        if(m.spec){
-          if(L3.on){ specTo3D(m.spec, m.n.toLowerCase()); closeLib(); return; }
-          pushUndo();
-          buildSpec(m.spec, viewCX()+(Math.random()-0.5)*150, viewCY()+(Math.random()-0.5)*110, false);
-          say(m.n+' built — '+subPlain(m.f)+'.','added');
-        } else if(L3.on){ l3Push(); l3BuildSmiles(m.sm, m.n); }
-        else buildCompound2D(m.n, (Math.random()-0.5)*150, (Math.random()-0.5)*110);
-        el('hint').classList.add('gone');
-        closeLib();
-      };
-    });
+  const counts = {}; all.forEach(e=>{ counts[e.cat] = (counts[e.cat]||0) + 1; });
+  el('libBody').innerHTML = '<div class="lib-top"><input type="search" id="libSearch" class="lib-search" placeholder="Search '+all.length+' molecules by name or formula" autocomplete="off"></div>'+
+    '<div class="lib-chips" id="libChips"><button type="button" data-lc="all">All <i>'+all.length+'</i></button>'+LIB_CATS.filter(([c])=>counts[c]).map(([c, l])=>'<button type="button" data-lc="'+c+'">'+l+' <i>'+counts[c]+'</i></button>').join('')+'</div>'+
+    '<div id="libList"></div><p class="lib-more">Not here? Build understands '+Object.keys(L3_LIB).length+' names, any formula and any SMILES string. Press Enter in the search box to build the first match.</p>';
+  const plain = f => f.replace(/[⁰-₟²³¹]/g, d=>'0123456789+-'['⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'.indexOf(d)] || '');
+  const card = (e, i) => '<button class="lib" type="button" data-i="'+i+'" title="'+e.n.replace(/"/g, '&quot;')+'"><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>';
+  const draw = () => {
+    const q = LIB_UI.q.trim().toLowerCase(), qf = q.replace(/\s/g, '');
+    el('libChips').querySelectorAll('[data-lc]').forEach(b=>b.classList.toggle('on', b.dataset.lc === LIB_UI.cat && !q));
+    const idx = all.map((e, i)=>[e, i]).filter(([e])=>(LIB_UI.cat === 'all' || q || e.cat === LIB_UI.cat) && (!q || e.n.toLowerCase().includes(q) || plain(e.f).toLowerCase().includes(qf)));
+    let h = '';
+    if(q){
+      /* best first: names that start with the search, then the rest */
+      idx.sort((a, b)=>(b[0].n.toLowerCase().startsWith(q) - a[0].n.toLowerCase().startsWith(q)) || a[0].n.length - b[0].n.length);
+      const lim = LIB_UI.more ? idx.length : 120;
+      h = idx.length ? '<span class="eyebrow lib-cat">'+idx.length+' match'+(idx.length === 1 ? '' : 'es')+'</span><div class="lib-grid">'+idx.slice(0, lim).map(([e, i])=>card(e, i)).join('')+'</div>'+(idx.length > lim ? '<button type="button" class="ghost-btn lib-showall" data-more="1">Show all '+idx.length+'</button>' : '')
+        : '<p class="lib-more">Nothing in the library matches. Try it in Build: it may still know it.</p>';
+    } else if(LIB_UI.cat === 'all'){
+      h = LIB_CATS.map(([c, label])=>{ const list = idx.filter(([e])=>e.cat === c); if(!list.length) return '';
+        return '<span class="eyebrow lib-cat">'+label+' <i>'+list.length+'</i></span><div class="lib-grid">'+list.slice(0, 11).map(([e, i])=>card(e, i)).join('')+
+          (list.length > 11 ? '<button type="button" class="lib lib-moreb" data-lc="'+c+'"><b>+ '+(list.length - 11)+'</b><span>show all</span></button>' : '')+'</div>'; }).join('');
+    } else h = '<div class="lib-grid">'+idx.map(([e, i])=>card(e, i)).join('')+'</div>';
+    el('libList').innerHTML = h;
   };
-  draw('');
-  el('libSearch').addEventListener('input', ev=>draw(ev.target.value));
+  const build = m => {
+    if(m.spec){
+      if(L3.on){ specTo3D(m.spec, m.n.toLowerCase()); closeLib(); return; }
+      pushUndo(); buildSpec(m.spec, viewCX()+(Math.random()-0.5)*150, viewCY()+(Math.random()-0.5)*110, false); say(m.n+' built — '+subPlain(m.f)+'.','added');
+    } else if(L3.on){ l3Push(); l3BuildSmiles(m.sm, m.n); }
+    else buildCompound2D(m.n, (Math.random()-0.5)*150, (Math.random()-0.5)*110);
+    const hint = el('hint'); if(hint) hint.classList.add('gone');
+    closeLib();
+  };
+  el('libBody').onclick = ev=>{
+    const c = ev.target.closest('[data-lc]'); if(c){ LIB_UI.cat = c.dataset.lc; LIB_UI.q = ''; LIB_UI.more = false; el('libSearch').value = ''; draw(); el('libList').scrollIntoView({block:'nearest'}); return; }
+    if(ev.target.closest('[data-more]')){ LIB_UI.more = true; draw(); return; }
+    const b = ev.target.closest('.lib[data-i]'); if(b) build(all[+b.dataset.i]);
+  };
+  const s = el('libSearch');
+  s.addEventListener('input', ()=>{ LIB_UI.q = s.value; LIB_UI.more = false; draw(); });
+  s.addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ const first = el('libList').querySelector('.lib[data-i]'); if(first && LIB_UI.q.trim()) build(all[+first.dataset.i]); } ev.stopPropagation(); });
+  draw();
 }
 function buildTours(){
   el('tours').innerHTML = Object.keys(TOURS).map(k=>
@@ -14952,6 +14998,162 @@ Object.entries(LIB_MORE).forEach(([c, o])=>Object.entries(o).forEach(([n, v])=>{
   LIB_CAT_OF[n] = c;
   if(Array.isArray(v)) LIB_FORMULA[n] = v[1];
 }));
+/* ---------- the library grows to a thousand ----------
+   Most of the new entries are whole families made by rule: the homologous
+   series of organic chemistry (every member named the IUPAC way), substituted
+   benzenes, and the salts of common cations and anions with their charges
+   balanced. The rest are written out by hand, each with the molecular formula
+   it must have, which tests/library.js checks. A structural fingerprint keeps
+   the same molecule from appearing twice under two names. */
+const LIB_PRI = {};                 /* the order entries are offered in: lower first */
+const LIB_EXPECT = {};              /* formula each hand-written entry must build to */
+const libAdd = (cat, name, sm, pri, f, expect) => {
+  if(L3_LIB[name] && L3_LIB[name] !== sm) return;
+  L3_LIB[name] = sm; if(!LIB_CAT_OF[name]) LIB_CAT_OF[name] = cat; LIB_PRI[name] = LIB_PRI[name] == null ? pri : LIB_PRI[name];
+  if(f) LIB_FORMULA[name] = f; if(expect) LIB_EXPECT[name] = expect;
+};
+(function(){
+  const P = ['meth','eth','prop','but','pent','hex','hept','oct','non','dec','undec','dodec','tridec','tetradec','pentadec','hexadec','heptadec','octadec','nonadec','icos'];
+  const C = n => 'C'.repeat(n);
+  /* generated families come after everything written by hand */
+  let pri = 500;
+  for(let n=1;n<=20;n++) libAdd('hydrocarbon', P[n-1]+'ane', C(n), pri + n);
+  for(let n=2;n<=16;n++) libAdd('hydrocarbon', n <= 3 ? P[n-1]+'ene' : P[n-1]+'-1-ene', 'C=C'+C(n-2), pri + 20 + n);
+  for(let n=4;n<=8;n++) libAdd('hydrocarbon', P[n-1]+'-2-ene', 'CC=C'+C(n-3), pri + 40 + n);
+  for(let n=2;n<=12;n++) libAdd('hydrocarbon', n <= 3 ? P[n-1]+'yne' : P[n-1]+'-1-yne', 'C#C'+C(n-2), pri + 50 + n);
+  for(let n=5;n<=10;n++) libAdd('hydrocarbon', '2-methyl'+P[n-2]+'ane', 'CC(C)'+C(n-3), pri + 70 + n);
+  for(let n=6;n<=10;n++) libAdd('hydrocarbon', '3-methyl'+P[n-2]+'ane', 'CCC(C)'+C(n-4), pri + 80 + n);
+  for(let n=6;n<=10;n++) libAdd('hydrocarbon', '2,2-dimethyl'+P[n-3]+'ane', 'CC(C)(C)'+C(n-4), pri + 90 + n);
+  for(let n=3;n<=12;n++) libAdd('hydrocarbon', 'cyclo'+P[n-1]+'ane', 'C1'+C(n-1)+'1', pri + 100 + n);
+  for(let n=5;n<=8;n++) libAdd('hydrocarbon', 'cyclo'+P[n-1]+'ene', 'C1=C'+C(n-2)+'1', pri + 112 + n);
+  for(let n=1;n<=6;n++) libAdd('aromatic', n === 1 ? 'toluene' : P[n-1]+'ylbenzene', C(n)+'c1ccccc1', pri + 120 + n);
+  pri = 650;
+  for(let n=1;n<=18;n++) libAdd('oxygen', n <= 2 ? P[n-1]+'anol' : P[n-1]+'an-1-ol', C(n)+'O', pri + n);
+  for(let n=3;n<=10;n++) libAdd('oxygen', P[n-1]+'an-2-ol', 'CC(O)'+C(n-2), pri + 20 + n);
+  for(let n=1;n<=12;n++) libAdd('oxygen', P[n-1]+'anal', n === 1 ? 'C=O' : C(n-1)+'C=O', pri + 30 + n);
+  for(let n=3;n<=12;n++) libAdd('oxygen', n <= 4 ? P[n-1]+'anone' : P[n-1]+'an-2-one', 'CC(=O)'+C(n-2), pri + 45 + n);
+  for(let n=5;n<=10;n++) libAdd('oxygen', P[n-1]+'an-3-one', 'CCC(=O)'+C(n-3), pri + 60 + n);
+  for(let n=2;n<=6;n++) libAdd('oxygen', P[n-1]+'ane-1,'+n+'-diol', 'O'+C(n)+'O', pri + 70 + n);
+  for(let n=5;n<=8;n++){ libAdd('oxygen', 'cyclo'+P[n-1]+'anol', 'OC1'+C(n-1)+'1', pri + 80 + n); libAdd('oxygen', 'cyclo'+P[n-1]+'anone', 'O=C1'+C(n-1)+'1', pri + 85 + n); }
+  const al = ['methyl','ethyl','propyl','butyl'];
+  for(let i=0;i<4;i++) for(let j=i;j<4;j++){ const nm = i === j ? 'di'+al[i]+' ether' : [al[i], al[j]].sort().join(' ')+' ether'; libAdd('oxygen', nm, C(i+1)+'O'+C(j+1), pri + 95 + i*4 + j); }
+  pri = 760;
+  for(let n=1;n<=20;n++) libAdd('acid', P[n-1]+'anoic acid', n === 1 ? 'OC=O' : C(n-1)+'C(=O)O', pri + n);
+  for(let n=2;n<=10;n++) libAdd('acid', P[n-1]+'anedioic acid', 'OC(=O)'+C(n-2)+'C(=O)O', pri + 20 + n);
+  const acyl = ['methanoate','ethanoate','propanoate','butanoate','pentanoate','hexanoate'], alk = ['methyl','ethyl','propyl','butyl','pentyl'];
+  for(let m=1;m<=6;m++) for(let r=1;r<=5;r++) libAdd('acid', alk[r-1]+' '+acyl[m-1], (m === 1 ? '' : C(m-1))+'C(=O)O'+C(r), pri + 30 + m*5 + r);
+  pri = 830;
+  for(let n=1;n<=12;n++) libAdd('nitrogen', n <= 2 ? P[n-1]+'anamine' : P[n-1]+'an-1-amine', C(n)+'N', pri + n);
+  for(let n=2;n<=10;n++) libAdd('nitrogen', P[n-1]+'anenitrile', C(n-1)+'C#N', pri + 15 + n);
+  for(let n=1;n<=10;n++) libAdd('nitrogen', P[n-1]+'anamide', n === 1 ? 'NC=O' : C(n-1)+'C(N)=O', pri + 25 + n);
+  for(let n=1;n<=8;n++) libAdd('nitrogen', n <= 2 ? P[n-1]+'anethiol' : P[n-1]+'ane-1-thiol', C(n)+'S', pri + 40 + n);
+  pri = 880;
+  [['F','fluoro'],['Cl','chloro'],['Br','bromo'],['I','iodo']].forEach(([X, x], k)=>{ for(let n=1;n<=8;n++) libAdd('halogen', (n <= 2 ? x : '1-'+x)+P[n-1]+'ane', C(n)+X, pri + k*10 + n); });
+  /* two groups on a benzene ring: named on the parent the senior group makes */
+  pri = 930;
+  const sub = {F:['fluoro','F'], Cl:['chloro','Cl'], Br:['bromo','Br'], I:['iodo','I'], NO2:['nitro','[N+](=O)[O-]'], CH3:['methyl','C']};
+  const par = [['phenol','O'],['aniline','N'],['benzoic acid','C(=O)O'],['toluene','C'],['anisole','OC']];
+  const ring = (a, pos, b) => a+'c1'+(pos === 2 ? 'c('+b+')cccc1' : pos === 3 ? 'cc('+b+')ccc1' : 'ccc('+b+')cc1');
+  par.forEach(([pn, ps], pi)=>Object.keys(sub).forEach((sk, si)=>{ if(pn === 'toluene' && sk === 'CH3') return; [2,3,4].forEach(pos=>libAdd('aromatic', pos+'-'+sub[sk][0]+pn, ring(ps, pos, sub[sk][1]), pri + pi*20 + si*3 + pos)); }));
+  ['F','Cl','Br','I'].forEach((X, k)=>[2,3,4].forEach(pos=>libAdd('aromatic', '1,'+pos+'-di'+sub[X][0]+'benzene', ring(X, pos, X), pri + 110 + k*3 + pos)));
+  /* salts: cations by anions, the charges balanced; nothing that does not exist */
+  pri = 1100;
+  const cat = [['Li','lithium','[Li+]',1],['Na','sodium','[Na+]',1],['K','potassium','[K+]',1],['Rb','rubidium','[Rb+]',1],['Cs','caesium','[Cs+]',1],['NH4','ammonium','[NH4+]',1],
+    ['Mg','magnesium','[Mg+2]',2],['Ca','calcium','[Ca+2]',2],['Sr','strontium','[Sr+2]',2],['Ba','barium','[Ba+2]',2],['Zn','zinc','[Zn+2]',2],['Fe','iron(II)','[Fe+2]',2],['Cu','copper(II)','[Cu+2]',2],['Pb','lead(II)','[Pb+2]',2],
+    ['Ag','silver','[Ag+]',1],['Al','aluminium','[Al+3]',3],['Fe','iron(III)','[Fe+3]',3]];
+  const an = [['F','fluoride','[F-]',1,0],['Cl','chloride','[Cl-]',1,0],['Br','bromide','[Br-]',1,0],['I','iodide','[I-]',1,0],['OH','hydroxide','[OH-]',1,1],['NO3','nitrate','[O-][N+](=O)[O-]',1,1],
+    ['SO4','sulfate','[O-]S(=O)(=O)[O-]',2,1],['CO3','carbonate','[O-]C(=O)[O-]',2,1],['PO4','phosphate','[O-]P(=O)([O-])[O-]',3,1],['O','oxide','[O-2]',2,0],['S','sulfide','[S-2]',2,0],['CH3COO','ethanoate','CC(=O)[O-]',1,1]];
+  /* pairs that do not exist as stable compounds (or are not ionic solids at all) */
+  const none = new Set(['ammonium oxide','ammonium sulfide','ammonium hydroxide','silver hydroxide','aluminium carbonate','iron(III) carbonate','iron(III) iodide','copper(II) iodide','iron(III) sulfide','copper(II) carbonate','lead(II) hydroxide']);
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  cat.forEach(([cs, cn, csm, cq], ci)=>an.forEach(([as, anm, asm, aq, poly], ai)=>{
+    const nm = cn+' '+anm; if(none.has(nm)) return;
+    const L = cq*aq/gcd(cq, aq), nc = L/cq, na = L/aq;
+    const grp = (s, n, isPoly) => n === 1 ? s : (isPoly || s.length > 2 && /[A-Z].*[A-Z]/.test(s) ? '('+s+')'+n : s+n);
+    const cf = cs === 'NH4' ? grp('NH4', nc, nc > 1) : cs + (nc > 1 ? nc : ''), af = grp(as === 'CH3COO' ? 'CH3COO' : as, na, poly);
+    libAdd('salt', nm, Array(nc).fill(csm).concat(Array(na).fill(asm)).join('.'), pri + ci*12 + ai, cf + af);
+  }));
+})();
+/* written out by hand: [name, SMILES, molecular formula it must build to] */
+const LIB_HAND = {
+  drug:[['morphine','CN1CCC23C4C1CC5=C2C(=C(C=C5)O)OC3C(C=C4)O','C17H19NO3'],['codeine','CN1CCC23C4C1CC5=C2C(=C(C=C5)OC)OC3C(C=C4)O','C18H21NO3'],['naloxone','C=CCN1CCC23C4C(=O)CCC2(C1CC5=C3C(=C(C=C5)O)O4)O','C19H21NO4'],
+    ['ketoprofen','CC(C1=CC(=CC=C1)C(=O)C2=CC=CC=C2)C(=O)O','C16H14O3'],['celecoxib','CC1=CC=C(C=C1)C2=CC(=NN2C3=CC=C(C=C3)S(=O)(=O)N)C(F)(F)F','C17H14F3N3O2S'],['omeprazole','CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC','C17H19N3O3S'],
+    ['atenolol','CC(C)NCC(COC1=CC=C(C=C1)CC(=O)N)O','C14H22N2O3'],['propranolol','CC(C)NCC(COC1=CC=CC2=CC=CC=C21)O','C16H21NO2'],['amoxicillin','CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=C(C=C3)O)N)C(=O)O)C','C16H19N3O5S'],
+    ['ampicillin','CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O)O)C','C16H19N3O4S'],['ciprofloxacin','C1CC1N2C=C(C(=O)C3=CC(=C(C=C32)N4CCNCC4)F)C(=O)O','C17H18FN3O3'],['sertraline','CNC1CCC(C2=CC=CC=C12)C3=CC(=C(C=C3)Cl)Cl','C17H17Cl2N'],
+    ['citalopram','CN(C)CCCC1(C2=C(CO1)C=C(C=C2)C#N)C3=CC=C(C=C3)F','C20H21FN2O'],['loratadine','CCOC(=O)N1CCC(=C2C3=C(CCC4=C2N=CC=C4)C=C(C=C3)Cl)CC1','C22H23ClN2O2'],['cetirizine','C1CN(CCN1CCOCC(=O)O)C(C2=CC=CC=C2)C3=CC=C(C=C3)Cl','C21H25ClN2O3'],
+    ['amlodipine','CCOC(=O)C1=C(NC(=C(C1C2=CC=CC=C2Cl)C(=O)OC)C)COCCN','C20H25ClN2O5'],['losartan','CCCCC1=NC(=C(N1CC2=CC=C(C=C2)C3=CC=CC=C3C4=NNN=N4)CO)Cl','C22H23ClN6O'],['furosemide','C1=COC(=C1)CNC2=CC(=C(C=C2C(=O)O)S(=O)(=O)N)Cl','C12H11ClN2O5S'],
+    ['hydrochlorothiazide','C1NC2=CC(=C(C=C2S(=O)(=O)N1)S(=O)(=O)N)Cl','C7H8ClN3O4S2'],['prednisone','CC12CC(=O)C3C(C1CCC2(C(=O)CO)O)CCC4=CC(=O)C=CC34C','C21H26O5'],['acyclovir','C1=NC2=C(N1COCCO)N=C(NC2=O)N','C8H11N5O3'],
+    ['oseltamivir','CCC(CC)OC1C=C(CC(C1NC(=O)C)N)C(=O)OCC','C16H28N2O4'],['chloroquine','CCN(CC)CCCC(C)NC1=C2C=CC(=CC2=NC=C1)Cl','C18H26ClN3'],['metronidazole','CC1=NC=C(N1CCO)[N+](=O)[O-]','C6H9N3O3'],
+    ['sildenafil','CCCC1=NN(C2=C1N=C(NC2=O)C3=C(C=CC(=C3)S(=O)(=O)N4CCN(CC4)C)OCC)C','C22H30N6O4S'],['tamoxifen','CCC(=C(C1=CC=CC=C1)C2=CC=C(C=C2)OCCN(C)C)C3=CC=CC=C3','C26H29NO'],['levodopa','C1=CC(=C(C=C1CC(C(=O)O)N)O)O','C9H11NO4'],
+    ['haloperidol','C1CN(CCC1(C2=CC=C(C=C2)Cl)O)CCCC(=O)C3=CC=C(C=C3)F','C21H23ClFNO2'],['alprazolam','CC1=NN=C2N1C3=C(C=C(C=C3)Cl)C(=NC2)C4=CC=CC=C4','C17H13ClN4'],['lorazepam','C1=CC=C(C(=C1)C2=NC(C(=O)NC3=C2C=C(C=C3)Cl)O)Cl','C15H10Cl2N2O2'],
+    ['gabapentin','C1CCC(CC1)(CC(=O)O)CN','C9H17NO2'],['pregabalin','CC(C)CC(CC(=O)O)CN','C8H17NO2'],['tramadol','CN(C)CC1CCCCC1(C2=CC(=CC=C2)OC)O','C16H25NO2'],['ketamine','CNC1(CCCCC1=O)C2=CC=CC=C2Cl','C13H16ClNO'],
+    ['clopidogrel','COC(=O)C(C1=CC=CC=C1Cl)N2CCC3=C(C2)C=CS3','C16H16ClNO2S'],['artemisinin','CC1CCC2C(C(=O)OC3C24C1CCC(O3)(OO4)C)C','C15H22O5'],['isoniazid','C1=CN=CC=C1C(=O)NN','C6H7N3O'],['allopurinol','C1=NNC2=C1C(=O)NC=N2','C5H4N4O'],
+    ['ondansetron','CC1=NC=CN1CC2CCC3=C(C2=O)C4=CC=CC=C4N3C','C18H19N3O'],['ranitidine','CNC(=C[N+](=O)[O-])NCCSCC1=CC=C(O1)CN(C)C','C13H22N4O3S'],['dextromethorphan','CN1CCC23CCCCC2C1CC4=C3C=C(C=C4)OC','C18H25NO'],
+    ['guaifenesin','COC1=CC=CC=C1OCC(CO)O','C10H14O4'],['phenylephrine','CNCC(C1=CC(=CC=C1)O)O','C9H13NO2'],['cortisol','CC12CCC(=O)C=C1CCC3C2C(CC4(C3CCC4(C(=O)CO)O)C)O','C21H30O5'],['progesterone','CC(=O)C1CCC2C1(CCC3C2CCC4=CC(=O)CCC34C)C','C21H30O2'],
+    ['estrone','CC12CCC3C(C1CCC2=O)CCC4=C3C=CC(=C4)O','C18H22O2'],['thyroxine','C1=C(C=C(C(=C1I)OC2=CC(=C(C(=C2)I)O)I)I)CC(C(=O)O)N','C15H11I4NO4'],['noradrenaline','C1=CC(=C(C=C1C(CN)O)O)O','C8H11NO3'],['tryptamine','C1=CC=C2C(=C1)C(=CN2)CCN','C10H12N2'],
+    ['psilocybin','CN(C)CCC1=CNC2=C1C(=CC=C2)OP(=O)(O)O','C12H17N2O4P']],
+  natural:[['piperine','C1CCN(CC1)C(=O)C=CC=CC2=CC3=C(C=C2)OCO3','C17H19NO3'],['curcumin','COC1=C(C=CC(=C1)C=CC(=O)CC(=O)C=CC2=CC(=C(C=C2)O)OC)O','C21H20O6'],['resveratrol','C1=CC(=CC=C1C=CC2=CC(=CC(=C2)O)O)O','C14H12O3'],
+    ['quercetin','C1=CC(=C(C=C1C2=C(C(=O)C3=C(C=C(C=C3O2)O)O)O)O)O','C15H10O7'],['gingerol','CCCCCC(CC(=O)CCC1=CC(=C(C=C1)O)OC)O','C17H26O4'],['menthone','CC1CCC(C(=O)C1)C(C)C','C10H18O'],['citronellal','CC(CC=O)CCC=C(C)C','C10H18O'],
+    ['terpineol','CC1=CCC(CC1)C(C)(C)O','C10H18O'],['eucalyptol','CC1(C2CCC(O1)(CC2)C)C','C10H18O'],['beta-pinene','CC1(C2CCC(=C)C1C2)C','C10H16'],['myrcene','CC(=CCCC(=C)C=C)C','C10H16'],['farnesol','CC(=CCCC(=CCCC(=CCO)C)C)C','C15H26O'],
+    ['ethyl vanillin','CCOC1=C(C=CC(=C1)C=O)O','C9H10O3'],['anethole','CC=CC1=CC=C(C=C1)OC','C10H12O'],['estragole','COC1=CC=C(C=C1)CC=C','C10H12O'],['safrole','C=CCC1=CC2=C(C=C1)OCO2','C10H10O2'],['raspberry ketone','CC(=O)CCC1=CC=C(C=C1)O','C10H12O2'],
+    ['maltol','CC1=C(C(=O)C=CO1)O','C6H6O3'],['furfural','C1=COC(=C1)C=O','C5H4O2'],['methyl anthranilate','COC(=O)C1=CC=CC=C1N','C8H9NO2'],['ethyl cinnamate','CCOC(=O)C=CC1=CC=CC=C1','C11H12O2'],['phenethyl alcohol','C1=CC=C(C=C1)CCO','C8H10O'],
+    ['geranyl acetate','CC(=CCCC(=CCOC(=O)C)C)C','C12H20O2'],['theanine','CCNC(=O)CCC(C(=O)O)N','C7H14N2O3'],['tristearin','CCCCCCCCCCCCCCCCCC(=O)OCC(COC(=O)CCCCCCCCCCCCCCCCC)OC(=O)CCCCCCCCCCCCCCCCC','C57H110O6']],
+  bio:[['riboflavin','CC1=CC2=C(C=C1C)N(C3=NC(=O)NC(=O)C3=N2)CC(C(C(CO)O)O)O','C17H20N4O6'],['pantothenic acid','CC(C)(CO)C(C(=O)NCCC(=O)O)O','C9H17NO5'],['biotin','C1C2C(C(S1)CCCCC(=O)O)NC(=O)N2','C10H16N2O3S'],
+    ['folic acid','C1=CC(=CC=C1C(=O)NC(CCC(=O)O)C(=O)O)NCC2=CN=C3C(=N2)C(=O)NC(=N3)N','C19H19N7O6'],['cholecalciferol','CC(C)CCCC(C)C1CCC2C1(CCCC2=CC=C3CC(CCC3=C)O)C','C27H44O'],['alpha-tocopherol','CC1=C(C2=C(CCC(O2)(C)CCCC(C)CCCC(C)CCCC(C)C)C(=C1O)C)C','C29H50O2'],
+    ['phylloquinone','CC1=C(C(=O)C2=CC=CC=C2C1=O)CC=C(C)CCCC(C)CCCC(C)CCCC(C)C','C31H46O2'],['menadione','CC1=CC(=O)C2=CC=CC=C2C1=O','C11H8O2'],['guanosine','C1=NC2=C(N1C3C(C(C(O3)CO)O)O)N=C(NC2=O)N','C10H13N5O5'],
+    ['cytidine','C1=CN(C(=O)N=C1N)C2C(C(C(O2)CO)O)O','C9H13N3O5'],['uridine','C1=CN(C(=O)NC1=O)C2C(C(C(O2)CO)O)O','C9H12N2O6'],['thymidine','CC1=CN(C(=O)NC1=O)C2CC(C(O2)CO)O','C10H14N2O5'],
+    ['adenosine monophosphate','C1=NC(=C2C(=N1)N(C=N2)C3C(C(C(O3)COP(=O)(O)O)O)O)N','C10H14N5O7P'],['maltose','OCC1OC(OC2C(CO)OC(O)C(O)C2O)C(O)C(O)C1O','C12H22O11'],['trehalose','OCC1OC(OC2OC(CO)C(O)C(O)C2O)C(O)C(O)C1O','C12H22O11'],
+    ['glucosamine','NC1C(O)OC(CO)C(O)C1O','C6H13NO5'],['xylitol','OCC(O)C(O)C(O)CO','C5H12O5'],['erythritol','OCC(O)C(O)CO','C4H10O4'],['alpha-linolenic acid','CCC=CCC=CCC=CCCCCCCCC(=O)O','C18H30O2'],
+    ['arachidonic acid','CCCCCC=CCC=CCC=CCC=CCCCC(=O)O','C20H32O2'],['eicosapentaenoic acid','CCC=CCC=CCC=CCC=CCC=CCCCC(=O)O','C20H30O2'],['docosahexaenoic acid','CCC=CCC=CCC=CCC=CCC=CCC=CCCC(=O)O','C22H32O2']],
+  ionic:[['chlorate','[O-]Cl(=O)=O','ClO3-'],['perchlorate','[O-]Cl(=O)(=O)=O','ClO4-'],['chlorite','[O-]Cl=O','ClO2-'],['hypochlorite','[O-]Cl','ClO-'],['bromate','[O-]Br(=O)=O','BrO3-'],['iodate','[O-]I(=O)=O','IO3-'],
+    ['nitrite','[O-]N=O','NO2-'],['sulfite','[O-]S(=O)[O-]','SO3 2-'],['thiosulfate','[O-]S(=O)(=S)[O-]','S2O3 2-'],['hydrogen sulfate','OS(=O)(=O)[O-]','HSO4-'],['dihydrogen phosphate','OP(=O)(O)[O-]','H2PO4-'],['hydrogen phosphate','OP(=O)([O-])[O-]','HPO4 2-'],
+    ['permanganate','[O-][Mn](=O)(=O)=O','MnO4-'],['chromate','[O-][Cr](=O)(=O)[O-]','CrO4 2-'],['dichromate','[O-][Cr](=O)(=O)O[Cr](=O)(=O)[O-]','Cr2O7 2-'],['cyanate','[O-]C#N','OCN-'],['thiocyanate','[S-]C#N','SCN-'],
+    ['azide','[N-]=[N+]=[N-]','N3-'],['peroxide','[O-][O-]','O2 2-'],['oxalate','[O-]C(=O)C(=O)[O-]','C2O4 2-'],['formate','[O-]C=O','HCOO-'],['benzoate','[O-]C(=O)c1ccccc1','C6H5COO-'],['methoxide','C[O-]','CH3O-'],
+    ['phenoxide','[O-]c1ccccc1','C6H5O-'],['tetrafluoroborate','F[B-](F)(F)F','BF4-'],['methylammonium','C[NH3+]','CH3NH3+'],['tetramethylammonium','C[N+](C)(C)C','N(CH3)4+'],['oxide ion','[O-2]','O2-'],['sulfide ion','[S-2]','S2-'],
+    ['lithium ion','[Li+]','Li+'],['sodium ion','[Na+]','Na+'],['potassium ion','[K+]','K+'],['magnesium ion','[Mg+2]','Mg2+'],['calcium ion','[Ca+2]','Ca2+'],['aluminium ion','[Al+3]','Al3+'],['iron(II) ion','[Fe+2]','Fe2+'],
+    ['iron(III) ion','[Fe+3]','Fe3+'],['copper(II) ion','[Cu+2]','Cu2+'],['zinc ion','[Zn+2]','Zn2+'],['silver ion','[Ag+]','Ag+']],
+  simple:[['white phosphorus','P12P3P1P23','P4'],['sulfur (S8)','S1SSSSSSS1','S8'],['helium','[He]','He'],['neon','[Ne]','Ne'],['argon','[Ar]','Ar'],['krypton','[Kr]','Kr'],['xenon','[Xe]','Xe'],['radon','[Rn]','Rn'],
+    ['hydrogen telluride','[TeH2]','H2Te'],['stibine','[SbH3]','SbH3'],['carbon tetrabromide','BrC(Br)(Br)Br','CBr4']],
+  inorganic:[['dinitrogen trioxide','[O-][N+](=O)N=O','N2O3'],['dinitrogen pentoxide','[O-][N+](=O)O[N+](=O)[O-]','N2O5'],['sulfuryl chloride','ClS(Cl)(=O)=O','SO2Cl2'],['dichlorine monoxide','ClOCl','Cl2O'],['oxygen difluoride','FOF','OF2'],
+    ['nitrosyl chloride','ClN=O','NOCl'],['iodine monochloride','ICl','ICl'],['bromine pentafluoride','FBr(F)(F)(F)F','BrF5'],['sulfur tetrafluoride','FS(F)(F)F','SF4'],['arsenic trichloride','Cl[As](Cl)Cl','AsCl3'],
+    ['antimony pentachloride','Cl[Sb](Cl)(Cl)(Cl)Cl','SbCl5'],['tin(IV) chloride','Cl[Sn](Cl)(Cl)Cl','SnCl4'],['titanium tetrachloride','Cl[Ti](Cl)(Cl)Cl','TiCl4'],['phosphorous acid','[PH](=O)(O)O','H3PO3'],['chloric acid','OCl(=O)=O','HClO3'],
+    ['chlorous acid','OCl=O','HClO2'],['bromic acid','OBr(=O)=O','HBrO3'],['iodic acid','OI(=O)=O','HIO3'],['periodic acid','OI(=O)(=O)=O','HIO4'],['selenic acid','O[Se](=O)(=O)O','H2SeO4'],['thiosulfuric acid','OS(=O)(=S)O','H2S2O3']]
+};
+Object.keys(LIB_HAND).forEach((c, ci)=>LIB_HAND[c].forEach(([n, sm, f], i)=>{
+  const cat2 = c === 'natural' ? 'drug' : c;
+  /* ions and simple species show their formula as given; molecules show the computed one, and must match it */
+  if(c === 'ionic' || c === 'simple' || c === 'inorganic') libAdd(cat2, n, sm, 300 + ci*50 + i, f.replace(/ ?(\d?)([+-])$/, (m, d, s)=>chargeSup((s === '+' ? 1 : -1)*(+d || 1))));
+  else libAdd(cat2, n, sm, 300 + ci*50 + i, null, f);
+}));
+/* common names for generated entries, so they can be typed */
+Object.assign(L3_ALIAS, {'formic acid':'formic acid', 'lauric acid':'dodecanoic acid', 'myristic acid':'tetradecanoic acid', 'palmitic acid':'palmitic acid', 'stearic acid':'stearic acid', 'arachidic acid':'icosanoic acid',
+  'valeric acid':'pentanoic acid', 'caproic acid':'hexanoic acid', 'caprylic acid':'octanoic acid', 'capric acid':'decanoic acid', 'isopropyl alcohol':'isopropanol', 'rubbing alcohol':'isopropanol', 'wood alcohol':'methanol',
+  'grain alcohol':'ethanol', 'propionic acid':'propanoic acid', 'glutaric acid':'pentanedioic acid', 'pimelic acid':'heptanedioic acid', 'suberic acid':'octanedioic acid', 'azelaic acid':'nonanedioic acid', 'sebacic acid':'decanedioic acid',
+  'baking soda':'sodium bicarbonate', 'lye':'sodium hydroxide', 'quicklime':'calcium oxide', 'slaked lime':'calcium hydroxide', 'epsom salt':'magnesium sulfate', 'chalk':'calcium carbonate', 'limestone':'calcium carbonate', 'table salt':'sodium chloride',
+  'vitamin b2':'riboflavin', 'vitamin b5':'pantothenic acid', 'vitamin b7':'biotin', 'vitamin b9':'folic acid', 'vitamin d3':'cholecalciferol', 'vitamin e':'alpha-tocopherol', 'vitamin k1':'phylloquinone', 'vitamin k3':'menadione',
+  'dha':'docosahexaenoic acid', 'epa':'eicosapentaenoic acid', 'hydrocortisone':'cortisol', 'norepinephrine':'noradrenaline', 'l-dopa':'levodopa', 'acetonitrile':'acetonitrile'});
+Object.keys(L3_ALIAS).forEach(k=>{ if(L3_ALIAS[k] === k || !L3_LIB[L3_ALIAS[k]]) delete L3_ALIAS[k]; });
+/* a structural fingerprint: atoms, charges, bonds and who joins whom, refined
+   four times (Weisfeiler-Lehman), so one molecule under two names is caught */
+/* a typed name to a library entry: case, spaces, hyphens and underscores do
+   not matter, so "pentan-2-ol", "Pentan 2 ol" and "IRON(III) SULFATE" all work */
+let LIB_NORM = null;
+const libNormKey = t => String(t).toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+function libLookup(key){
+  if(L3_ALIAS[key]) return L3_ALIAS[key];
+  if(L3_LIB[key]) return key;
+  if(!LIB_NORM){ LIB_NORM = {}; Object.keys(L3_LIB).forEach(n=>{ LIB_NORM[libNormKey(n)] = n; }); Object.keys(L3_ALIAS).forEach(a=>{ const t = L3_ALIAS[a]; if(L3_LIB[t] && !LIB_NORM[libNormKey(a)]) LIB_NORM[libNormKey(a)] = t; }); }
+  return LIB_NORM[libNormKey(key)] || null;
+}
+function smilesKey(sm){
+  let g; try{ g = l3SmilesGraph(sm); }catch(e){ return null; }
+  const n = g.syms.length, nb = Array.from({length:n}, ()=>[]);
+  g.bl.forEach(b=>{ nb[b.a].push([b.b, b.o]); nb[b.b].push([b.a, b.o]); });
+  let lab = g.syms.map((s, i)=>s + (g.chg[i] || ''));
+  const h = t => { let x = 5381; for(let i=0;i<t.length;i++) x = ((x << 5) + x + t.charCodeAt(i)) | 0; return (x >>> 0).toString(36); };
+  for(let it=0; it<4; it++) lab = lab.map((l, i)=>h(l + '|' + nb[i].map(([j, o])=>o + lab[j]).sort().join(',')));
+  return n + ':' + lab.slice().sort().join('');
+}
 /* SMILES to atoms and bonds: atoms (C, [nH], [Na+]), bonds (- = # :), branches in
    brackets, ring closures by digit, and lowercase aromatic rings, which are given
    alternating double bonds (Kekule) before hydrogens are filled in */
@@ -15315,7 +15517,7 @@ function scene2D(k){
 }
 function l3BuildAny(str){
   str = str.trim(); const key = str.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
-  const name = L3_ALIAS[key] || (L3_LIB[key] ? key : null);
+  const name = libLookup(key);
   if(name) return l3BuildSmiles(L3_LIB[name], name);
   /* SMILES look: brackets, bonds, ring digits after letters, aromatic lowercase, or an element twice running */
   const counts = l3ParseFormula(str);
@@ -15357,7 +15559,7 @@ function buildCompound2D(str, ox, oy){
   const key = str.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
   let graph = null, label = null, note = '';
   const libOf = k => { try{ return benchFormula(l3SmilesCounts(L3_LIB[k])); } catch(e){ return null; } };
-  const name = L3_ALIAS[key] || (L3_LIB[key] ? key : null);
+  const name = libLookup(key);
   if(name){ graph = l3SmilesGraph(L3_LIB[name]); label = name; }
   else {
     const counts = l3ParseFormula(str);
@@ -17549,8 +17751,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 120;
+const VERSION = 121;
 const CHANGELOG = [
+  [121, 'The molecule library now holds 1000 compounds, and about 1080 names can be typed into Build. New are whole homologous series named the IUPAC way (alkanes to icosane, alkenes, alkynes, alcohols, aldehydes, ketones, carboxylic and dicarboxylic acids, thirty esters, ethers, amines, nitriles, amides, thiols, haloalkanes, rings and branched alkanes), substituted benzenes (chloro-, bromo-, nitro- and methyl- phenols, anilines, benzoic acids, toluenes and anisoles), a hundred salts with their charges balanced (and nothing that does not exist), and about a hundred more by hand: medicines, natural products and flavours, vitamins, nucleosides, fatty acids, oxyanions and other ions, and inorganic molecules, each checked against its molecular formula. The library sheet is rebuilt for its size: family chips with counts, a compact grid, search by name or formula with the best matches first, and Enter to build the top one. Names are found whatever their case or hyphens (pentan-2-ol, Pentan 2 ol, IRON(III) SULFATE), which also fixes typed names with hyphens on both benches. A compact pass on the interface, with nothing taken away: a slimmer header (Share and Clear keep their full descriptions as tooltips), the reactions as small chips instead of large boxes, tighter readout tiles and a shorter chart.'],
   [120, 'The chemistry course, rebuilt from the ground up for someone who knows nothing yet. Fifty-one lessons in twelve units: matter, atoms, the periodic table\u2019s patterns, ionic bonding, covalent and metallic bonding, shape and polarity, forces between molecules, counting (formulas, equations and the mole), gases, energy and rates and equilibrium, solutions and acids, and redox, organic and nuclear chemistry, each unit ending in a check. Lessons now carry 39 diagrams drawn for them (atoms, shells, the periodic table coloured by trend, Lewis structures, energy profiles, the pH scale and more), a key idea to take away, worked examples revealed a line at a time with one of your own to try, and predictions to make before the bench shows what happens. A recap opens lessons that build on earlier ones; every term the course teaches is collected in Words; the Map shows your progress unit by unit with your check scores. On the bench you can now look inside atoms (the readout draws the selected atom\u2019s shells, protons, neutrons and isotope), heat and squeeze a gas and read its pressure, watch a liquid and its vapour reach equilibrium, run electrolysis, and split uranium with a neutron. Fourteen new practice skills (particles, shells, counting atoms, balancing, reacting masses, gas laws, pH, trends, classifying matter, physical or chemical change, states, rates, equilibrium, nuclear) join Practice and the assessment.'],
   [119, 'The course is now a mode of its own. While it runs, everything a lesson does not need steps aside: the side panels, the bench\u2019s top bar and toolbar, the header buttons, the stats. The bench fills the window beside the course panel. What the side panels used to show appears in a small readout card on the bench, and only what the step needs: the selected atom, what is on the bench (with names, shapes and polarity), the last reaction\u2019s equation, the solution meter, the energy given out or taken in, hydrogen bonds, or temperature. Reactions to try are buttons in the course panel, and the Break a bond and Add energy tools appear only in the lessons that use them. Everything comes back when you leave the course.'],
   [118, 'A whole chemistry course, taught on the bench. Press Course (top right) for twenty-one lessons in nine units: atoms and the periodic table, ions, covalent, multiple, ionic and metallic bonding, polarity, shapes, forces between molecules, states of matter, energy, equations, dissolving, precipitation, acids, neutralisation, redox, reactive metals and flame colours, carbon chemistry and addition reactions, ending in your own lab. Each lesson runs straight on from the last: short readings, guided bench time with tasks that tick off the moment the bench shows them (with hints, and a gentle push for slow reactions), free bench time with things worth trying, and a quick check whose questions carry all their own data. The whole bench stays usable throughout, the course remembers where you are, the contents let you jump to any lesson, and your own bench comes back when you leave. Atoms added one after another now land at bonding distance from the atom that can still take them, so building NH\u2083 or MgCl\u2082 atom by atom works every time.'],
