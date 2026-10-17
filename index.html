@@ -612,6 +612,9 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .lib:hover{background:#EDEDE8;transform:translateY(-2px)}
 .lib-cat{margin:16px 0 8px;display:block}
 .lib-cat:first-child{margin-top:0}
+.lib-cat i{font-style:normal;color:var(--faint);margin-left:4px}
+.lib-search{width:100%;box-sizing:border-box;margin:0 0 12px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--sunk);font:inherit;font-size:13px;color:var(--ink)}
+.lib-more{font-size:11.5px;color:var(--muted);margin:14px 2px 2px}
 #peek{
   position:fixed;z-index:60;pointer-events:none;width:200px;padding:14px;
   background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow-l);
@@ -856,6 +859,8 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 /* learn mode: the panels and bench controls step aside */
 body.learning .workspace{grid-template-columns:minmax(0,1fr)}
 body.learning .workspace > .panel,body.learning .workspace > .gutter{display:none}
+/* the narrow layouts give the bench its own grid column; learn mode has only one */
+body.learning .workspace > .stage{grid-column:1 / -1;grid-row:1;min-height:calc(100vh - 66px)}
 body.learning #l3bar,body.learning #l3tools,body.learning #l3read,body.learning #l3Tip,body.learning #hud,body.learning #stepCard,
 body.learning #benchRT,body.learning #shareBtn,body.learning #clearBtn,body.learning #modeSeg,
 body.learning #tools,body.learning .timectl,body.learning #camCtl,body.learning #lessonCard,body.learning #tourCard,body.learning #hint,body.learning #toolbar{display:none!important}
@@ -978,6 +983,17 @@ kbd{display:inline-block;font-family:var(--font-mono);font-size:10.5px;padding:1
 .ld-opt[disabled]{cursor:default}
 .ld-why{font-size:11.5px;color:var(--ink-2);line-height:1.55;margin:4px 0 0;background:var(--sunk);border-radius:7px;padding:6px 8px}
 .ld-score{font-weight:700;color:#2A7A78;font-size:12.5px;margin:8px 0 0}
+.ex-start{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;margin:4px 0 12px;padding:10px 12px;border-radius:10px;border:0;background:var(--ink);color:#fff;cursor:pointer;font:inherit}
+.ex-start b{font-size:13px;font-weight:600}.ex-start span{font-size:11px;opacity:.75;line-height:1.4}
+.ex-bar{height:4px;border-radius:2px;background:var(--hair);overflow:hidden;margin:2px 0 4px}.ex-bar i{display:block;height:100%;background:#2A7A78;transition:width .3s}
+.ex-hint{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.ex-pal{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:4px 0 8px}
+.ex-pal button{padding:6px 0;border-radius:7px;border:1px solid var(--hair);background:var(--surface);font:inherit;font-weight:600;font-size:12.5px;color:var(--ec);cursor:pointer}
+.ex-pal button:hover{background:var(--sunk)}
+.ex-build{display:flex;gap:5px;margin-bottom:6px}.ex-build input{flex:1;min-width:0;padding:6px 9px;border-radius:7px;border:1px solid var(--hair);background:var(--surface);font:inherit;font-size:12px;color:var(--ink)}
+.ex-build button{padding:6px 11px;border-radius:7px;border:0;background:var(--sunk);font:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink)}
+.ex-score{display:flex;align-items:baseline;gap:10px;margin:4px 0 6px}.ex-score b{font-family:var(--font-display);font-size:38px;font-weight:500;line-height:1}.ex-score span{font-size:11.5px;color:var(--muted)}
+.ex-miss{border-top:1px solid var(--hair);padding:7px 0 4px}.ex-miss p{margin:0 0 3px;font-size:12px}
 .ld-verdict{margin:10px 0 2px;font-size:12px;line-height:1.55;border-radius:8px;padding:8px 10px;color:var(--ink-2)}
 .ld-verdict.right{background:rgba(42,122,120,.10)}
 .ld-verdict.right b{color:#1F5E5C}
@@ -5827,6 +5843,7 @@ function l3OrderCP(A){
 }
 /* the hands-on checks, about once a second while watching */
 function learnTaskCheck(){
+  if(LEARN.on && LEARN.phase === 'exam'){ examCheck(); return; }
   if(!LEARN.on || !LEARN.topic || LEARN.phase !== 'watch' || LEARN.paused) return;
   const t = LEARN.topic;
   t.expect.forEach((x, j)=>{ if(LEARN.ticks[j] || !x.check) return; if(j > 0 && t.expect[j-1].check && !LEARN.ticks[j-1]) return; if(x.check()){ LEARN.ticks[j] = true; LEARN.lastEvt = performance.now(); } });
@@ -5872,10 +5889,135 @@ function glossify(html){
     return part.replace(/\u0001(\d+)\u0002([^\u0003]*)\u0003/g, (m0, i, w)=>'<abbr class="gl" title="'+GLOSSARY[+i][1].replace(/"/g, '&quot;')+'">'+w+'</abbr>');
   }).join('');
 }
+/* ---------------- the assessment ----------------
+   Everything in Learn mode at once. Part one asks one question from every
+   topic; part two hands over a cleared 3D bench and asks for things to be made,
+   each ticked the moment it exists. Atoms added from the palette are neutral, so
+   the ionic ones have to be made by a real electron transfer. */
+const EXAM_ATOMS = ['H','C','N','O','F','Na','Mg','Cl','B','Br'];
+const EXAM_TASKS = [
+  {k:'water', t:'A water molecule, H\u2082O', hint:'two hydrogens bonded to one oxygen', c:'covalent',
+    check:()=>l3Molecules().some(g=>g.length === 3 && benchFormula(countsOf(g)) === 'H2O' && !g.some(a=>a.ion || a.fq))},
+  {k:'ionic', t:'An ionic bond, made from neutral atoms', hint:'a metal hands its outer electron to a nonmetal', c:'ionization',
+    check:()=>L3.bonds.some(b=>{ if(b.type !== 'ionic') return false; const p = l3Find(b.a), q = l3Find(b.b); return p && q && !p.exGiven && !q.exGiven; })},
+  {k:'double', t:'A molecule with a double bond', hint:'O\u2082, CO\u2082 or ethene all have one', c:'covalent',
+    check:()=>L3.bonds.some(b=>b.type === 'covalent' && b.order === 2)},
+  {k:'triple', t:'A molecule with a triple bond', hint:'two nitrogens will do it', c:'covalent',
+    check:()=>L3.bonds.some(b=>b.type === 'covalent' && b.order === 3)},
+  {k:'mg2', t:'Magnesium chloride: a 2+ ion, from Mg and Cl atoms', hint:'magnesium has two electrons to give, and each chlorine takes one', c:'ionization',
+    check:()=>L3.atoms.some(a=>EL[a.e].sym === 'Mg' && a.ion === 2 && !a.exGiven)},
+  {k:'nonpolar', t:'A non-polar molecule made of polar bonds', hint:'polar bonds arranged so their dipoles cancel, as in CO\u2082', c:'polar',
+    check:()=>l3Molecules().some(g=>{ if(g.length < 3 || g.some(a=>a.ion || a.fq)) return false;
+      const pol = L3.bonds.filter(b=>b.type === 'covalent' && g.some(a=>a.id === b.a) && Math.abs(EL[l3Find(b.a).e].en - EL[l3Find(b.b).e].en) >= 0.4).length;
+      return pol >= 2 && l3Dipole(g) < 0.5; })},
+  {k:'dative', t:'A coordinate bond', hint:'a molecule with a lone pair meets one with an empty orbital (try BF\u2083 and NH\u2083)', c:'lewis',
+    check:()=>L3.bonds.some(b=>b.type === 'dative' || b.dat)},
+  {k:'hbond', t:'Three hydrogen bonds at once', hint:'H on O, N or F, pointing at another molecule\u2019s O, N or F', c:'hbond',
+    check:()=>(L3.hb||[]).length >= 3}
+];
+function examStart(){
+  /* one question from every topic, picked at random from its guess and its quiz */
+  const qs = LEARN_TOPICS.map(t=>{ const qa = LEARN_QA[t.k]; if(!qa) return null;
+    const pool = [qa.predict].concat(qa.quiz||[]).filter(Boolean); if(!pool.length) return null;
+    return {t, q:pool[Math.floor(Math.random()*pool.length)]}; }).filter(Boolean);
+  for(let i=qs.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [qs[i], qs[j]] = [qs[j], qs[i]]; }
+  LEARN.topic = null; LEARN.perm = {}; STEP.hold = false; STEP.cur = null;
+  LEARN.exam = {qs, i:0, ans:[], stage:'quiz', done:{}};
+  LEARN.phase = 'exam'; renderLearnDock();
+}
+function examToBench(){
+  const X = LEARN.exam; if(!X) return;
+  X.stage = 'build';
+  if(!L3.on) set3D(true);
+  l3Clear(); L3.box = L3.boxTo = 420; L3.dist = 420*3.8; L3.target = {x:0, y:0, z:0};
+  setSlider('temp', 12);
+  stepMode(false, true);                     /* the bench runs freely while you build */
+  try{ renderLeft3D(); }catch(e){}
+  renderLearnDock();
+}
+/* an atom from the palette, dropped somewhere clear near the middle */
+function examAdd(sym){
+  /* atoms added one after another land beside whichever recent one still has the
+     most bonds to give, so O, H, H gather round the oxygen and make water */
+  const X = LEARN.exam || {}, now = performance.now();
+  X.recent = (X.recent||[]).filter(r=>L3.atoms.includes(r.a) && now - r.t < 10000);
+  const cand = X.recent.slice().sort((p, q)=>(l3Free(q.a) - l3Free(p.a)) || (q.t - p.t));
+  const prev = cand.length ? cand[0].a : null;
+  let best = null;
+  for(let k=0;k<40;k++){
+    const u = [Math.random()-0.5, Math.random()-0.5, Math.random()-0.5], ul = Math.hypot(...u) || 1, r = 190 + Math.random()*40;
+    const c = prev ? {x:prev.x + u[0]/ul*r, y:prev.y + u[1]/ul*r, z:prev.z + u[2]/ul*r} : {x:(Math.random()-0.5)*420, y:(Math.random()-0.5)*300, z:(Math.random()-0.5)*420};
+    if(Math.max(Math.abs(c.x), Math.abs(c.y), Math.abs(c.z)) > L3.box - 60) continue;
+    const dmin = Math.min(1e9, ...L3.atoms.filter(a=>a !== prev).map(a=>Math.hypot(a.x-c.x, a.y-c.y, a.z-c.z)));
+    if(!best || dmin > best.d) best = {c, d:dmin};
+    if(dmin > 260) break;
+  }
+  if(!best) best = {c:{x:0, y:0, z:0}};
+  l3Push(); const a = l3Add(sym, best.c.x, best.c.y, best.c.z); a.cool = 0.6; L3.dirty = true;
+  X.recent.push({a, t:performance.now()});
+}
+/* anything typed: a name, a formula or SMILES. Ions it brings already charged
+   do not count for the questions about making ions. */
+function examBuild(str){
+  if(!str || !str.trim()) return;
+  const n0 = L3.atoms.length; l3Push(); l3BuildAny(str.trim());
+  L3.atoms.slice(n0).forEach(a=>{ if(a.ion || a.fq) a.exGiven = true; });
+}
+function examCheck(){
+  const X = LEARN.exam; if(!X || X.stage !== 'build') return false;
+  let changed = false;
+  EXAM_TASKS.forEach(x=>{ if(!X.done[x.k] && x.check()){ X.done[x.k] = true; changed = true; say('\u2713 '+x.t, 'learn'); } });
+  return changed;
+}
+function examFinish(){
+  const X = LEARN.exam; if(!X) return;
+  X.stage = 'done';
+  const qRight = X.qs.filter((x, i)=>X.ans[i] === x.q.a).length, built = EXAM_TASKS.filter(x=>X.done[x.k]).length;
+  const pct = Math.round((qRight + built)/(X.qs.length + EXAM_TASKS.length)*100);
+  X.result = {qRight, built, pct};
+  const best = learnScore.exam;
+  X.newBest = !!best && pct > best.pct; X.prevBest = best ? best.pct : null;
+  if(!best || pct > best.pct){ learnScore.exam = {pct, qRight, of:X.qs.length, built, ofB:EXAM_TASKS.length}; try{ localStorage.setItem('bondingbench.learnscore', JSON.stringify(learnScore)); }catch(e){} }
+  stepMode(true, true);
+  renderLearnDock();
+}
+function examHTML(){
+  const X = LEARN.exam, exit = '<button type="button" class="ld-exit" data-ld="exit">Exit Learn mode</button>';
+  let h = '<div class="ld-head"><button type="button" class="ld-back" data-ld="pick">\u2039 All topics</button>'+exit+'</div>'+
+    '<span class="eyebrow ld-cat" style="color:var(--accent,#2F5BEA)">Assessment</span>';
+  const bar = (n, of) => '<div class="ex-bar"><i style="width:'+Math.round(n/of*100)+'%"></i></div>';
+  if(X.stage === 'quiz'){
+    const x = X.qs[X.i], ans = X.ans[X.i], q = x.q, last = X.i === X.qs.length - 1;
+    h += '<h3 class="ld-title">Part 1: questions</h3>'+bar(X.i + (ans != null ? 1 : 0), X.qs.length)+
+      '<p class="ld-hint" style="margin-top:4px">Question '+(X.i+1)+' of '+X.qs.length+' \u00b7 from \u201c'+x.t.title+'\u201d \u00b7 '+X.ans.filter((a, i)=>a === X.qs[i].q.a).length+' right so far</p>'+
+      '<div class="ld-q"><p>'+q.q+'</p>'+learnOrder('ex'+X.i, q.opts.length).map(i=>'<button type="button" class="ld-opt'+(ans == null ? '' : i === q.a ? ' right' : i === ans ? ' wrong' : ' dim')+'" data-ld="exans" data-i="'+i+'"'+(ans == null ? '' : ' disabled')+'>'+q.opts[i]+'</button>').join('')+
+      (ans != null ? '<p class="ld-why">'+(ans === q.a ? '\u2713 ' : 'The answer: '+q.opts[q.a].replace(/^./, m=>m.toLowerCase())+'. ')+q.why+'</p>' : '')+'</div>'+
+      (ans != null ? '<div class="ld-btns"><button type="button" class="ld-go" data-ld="exnext">'+(last ? 'On to the bench: Part 2 \u25b6' : 'Next question \u25b6')+'</button></div>' : '');
+  } else if(X.stage === 'build'){
+    const n = EXAM_TASKS.filter(x=>X.done[x.k]).length;
+    h += '<h3 class="ld-title">Part 2: make it yourself</h3>'+bar(n, EXAM_TASKS.length)+
+      '<p class="ld-p">The bench is yours and running. Add atoms, let them meet (drag them together if they need help), and make each of these. They tick as soon as they exist, in any order.</p>'+
+      '<div class="ld-checks">'+EXAM_TASKS.map(x=>'<div class="ld-check'+(X.done[x.k] ? ' on' : '')+'"><i>'+(X.done[x.k] ? '\u2713' : '')+'</i><span>'+x.t+(X.done[x.k] ? '' : '<small class="ex-hint">'+x.hint+'</small>')+'</span></div>').join('')+'</div>'+
+      '<span class="eyebrow" style="display:block;margin-top:10px">Add an atom</span><div class="ex-pal">'+EXAM_ATOMS.map(sy=>'<button type="button" data-ld="exadd" data-s="'+sy+'" style="--ec:'+BY_SYM[sy].col+'">'+sy+'</button>').join('')+'</div>'+
+      '<div class="ex-build"><input id="exBuild" type="text" placeholder="or build: water, CO2, BF3, NH3\u2026" autocomplete="off"><button type="button" data-ld="exbuild">Build</button></div>'+
+      '<div class="ld-btns"><button type="button" class="ld-go" data-ld="exfinish">'+(n === EXAM_TASKS.length ? 'See my result \u25b6' : 'Finish ('+n+' of '+EXAM_TASKS.length+') \u25b6')+'</button><button type="button" class="ghost-btn" data-ld="exclear">Clear the bench</button></div>';
+  } else {
+    const R = X.result, best = learnScore.exam;
+    const verdict = R.pct >= 90 ? 'Outstanding: you have it all.' : R.pct >= 75 ? 'Strong: a couple of things to tidy up.' : R.pct >= 50 ? 'Getting there: the topics below are worth another look.' : 'A good start: go back through the topics below, then try again.';
+    const missQ = X.qs.map((x, i)=>[x, i]).filter(([x, i])=>X.ans[i] !== x.q.a);
+    const missB = EXAM_TASKS.filter(x=>!X.done[x.k]);
+    h += '<h3 class="ld-title">Your result</h3><div class="ex-score"><b>'+R.pct+'%</b><span>'+R.qRight+' of '+X.qs.length+' questions \u00b7 '+R.built+' of '+EXAM_TASKS.length+' made on the bench</span></div>'+
+      '<p class="ld-p"><b>'+verdict+'</b>'+(X.newBest ? ' A new best (it was '+X.prevBest+'%).' : X.prevBest != null && X.prevBest > R.pct ? ' Your best is '+X.prevBest+'%.' : '')+'</p>'+
+      (missQ.length ? '<span class="eyebrow" style="display:block;margin-top:10px">Questions to revisit</span>'+missQ.map(([x])=>'<div class="ex-miss"><p>'+x.q.q+'</p><p class="ld-why">'+x.q.opts[x.q.a]+'. '+x.q.why+'</p><button type="button" class="link-btn" data-ld="topic" data-k="'+x.t.k+'">Watch \u201c'+x.t.title+'\u201d again</button></div>').join('') : '')+
+      (missB.length ? '<span class="eyebrow" style="display:block;margin-top:10px">Not made yet</span>'+missB.map(x=>'<div class="ex-miss"><p>'+x.t+'</p><p class="ld-why">Hint: '+x.hint+'.</p></div>').join('') : '')+
+      '<div class="ld-btns"><button type="button" class="ld-go" data-ld="exam">Take it again \u25b6</button><button type="button" class="ghost-btn" data-ld="pick">All topics</button></div>';
+  }
+  return h;
+}
 const LEARN = {on:false, phase:'pick', topic:null, ticks:[], startId:0, paused:false, lastEvt:0, keep:null, pred:null, quiz:[], avg:{}};
 let learnDone = {};
 try{ learnDone = JSON.parse(localStorage.getItem('bondingbench.learndone')||'{}') || {}; }catch(e){ learnDone = {}; }
-const learnHeld = () => LEARN.on && (LEARN.phase !== 'watch' || LEARN.paused);
+const learnHeld = () => LEARN.on && (LEARN.phase === 'exam' ? !(LEARN.exam && LEARN.exam.stage === 'build') : (LEARN.phase !== 'watch' || LEARN.paused));
 function learnMode(on){
   if(!!on === LEARN.on) return;
   if(on){
@@ -5902,8 +6044,21 @@ function learnMode(on){
   renderLearnDock(); renderStepCard();
   const b = el('learnBtn'); if(b){ b.classList.toggle('on', LEARN.on); b.textContent = LEARN.on ? 'Exit Learn mode' : 'Learn mode'; }
 }
+/* the order a question's options are shown in: shuffled once per run of a
+   topic (every answer was written first, so unshuffled the first was always
+   right). The buttons keep each option's own index, so marking is unchanged. */
+function learnOrder(key, n){
+  LEARN.perm = LEARN.perm || {};
+  if(!LEARN.perm[key] || LEARN.perm[key].length !== n){
+    const o = [...Array(n).keys()];
+    for(let i=n-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [o[i], o[j]] = [o[j], o[i]]; }
+    LEARN.perm[key] = o;
+  }
+  return LEARN.perm[key];
+}
 function learnStart(k){
   const t = LEARN_TOPICS.find(x=>x.k === k); if(!t) return;
+  LEARN.perm = {};
   if(!LEARN.on) learnMode(true);
   if(!L3.on && t.flat === false) set3D(true);
   const sc = {k:'learn-'+k, label:t.title, note:CONCEPTS[t.c].one.replace(/\.$/, '').toLowerCase(), mols:t.mols, box:t.box, temp:t.temp, crystal:t.crystal};
@@ -5965,12 +6120,15 @@ function renderLearnDock(){
   const t = LEARN.topic, c = t && CONCEPTS[t.c], cat = c && CONCEPT_CATS[c.cat];
   const exit = '<button type="button" class="ld-exit" data-ld="exit">Exit Learn mode</button>';
   let h = '';
-  if(LEARN.phase === 'pick' || !t){
+  if(LEARN.phase === 'exam' && LEARN.exam){
+    h = examHTML();
+  } else if(LEARN.phase === 'pick' || !t){
     let last = null;
     h = '<div class="ld-head"><span class="eyebrow">Learn mode</span>'+exit+'</div>'+
       '<h3 class="ld-title">What would you like to watch?</h3>'+
       '<p class="ld-p">Each one sets out just the molecules it needs, runs slowly, and stops at every step to explain what happened.</p>'+
       '<p class="ld-hint" style="margin-top:0">On the '+(L3.on ? '3D bench' : 'flat bench: topics marked 3D open on the 3D bench')+'.</p>'+
+      '<button type="button" class="ex-start" data-ld="exam"><b>Take the assessment</b><span>A question from every topic, then make molecules and ionic compounds on the bench yourself'+(learnScore.exam ? ' \u00b7 best '+learnScore.exam.pct+'%' : '')+'</span></button>'+
       '<div class="ld-list">'+[...LEARN_TOPICS].sort((a,b)=>Object.keys(CONCEPT_CATS).indexOf(CONCEPTS[a.c].cat) - Object.keys(CONCEPT_CATS).indexOf(CONCEPTS[b.c].cat)).map(x=>{ const cc = CONCEPTS[x.c], ct = CONCEPT_CATS[cc.cat];
         const head = ct.label !== last ? '<span class="ld-grp">'+(last = ct.label)+'</span>' : '';
         return head+'<button type="button" data-ld="topic" data-k="'+x.k+'" style="--gc:'+ct.col+'"><i class="g-ic">'+cc.g+'</i><span><b>'+x.title+'</b><small>'+cc.name+(x.hands ? ' \u00b7 hands on' : '')+(!L3.on && x.flat === false ? ' \u00b7 3D' : '')+'</small></span>'+(learnDone[x.k] ? '<em>✓'+(learnScore[x.k] ? ' '+learnScore[x.k].right+'/'+learnScore[x.k].of : '')+'</em>' : '')+'</button>'; }).join('')+'</div>';
@@ -5984,7 +6142,7 @@ function renderLearnDock(){
     if(LEARN.phase === 'intro'){
       const pr = qa.predict;
       h += '<p class="ld-p"><b>'+glossify(c.one)+'</b></p><p class="ld-p">'+glossify(c.what[0])+'</p>'+
-        (pr ? '<div class="ld-q"><span class="eyebrow">Your guess</span><p>'+pr.q+'</p>'+pr.opts.map((o, i)=>'<button type="button" class="ld-opt'+(LEARN.pred === i ? ' picked' : '')+'" data-ld="pred" data-i="'+i+'">'+o+'</button>').join('')+'</div>' : '')+
+        (pr ? '<div class="ld-q"><span class="eyebrow">Your guess</span><p>'+pr.q+'</p>'+learnOrder('pred', pr.opts.length).map(i=>'<button type="button" class="ld-opt'+(LEARN.pred === i ? ' picked' : '')+'" data-ld="pred" data-i="'+i+'">'+pr.opts[i]+'</button>').join('')+'</div>' : '')+
         checks+
         '<div class="ld-btns"><button type="button" class="ld-go" data-ld="go">'+(pr && LEARN.pred == null ? 'Start without guessing ▶' : 'Start ▶')+'</button></div>'+
         '<p class="ld-hint">The bench is paused. Turn it with the mouse to look first if you like.</p>';
@@ -6019,7 +6177,7 @@ function renderLearnDock(){
         '<span class="eyebrow" style="display:block;margin-top:12px">The idea</span><p class="ld-p">'+glossify(c.what[1] || c.what[0])+'</p>'+
         (qa.predict && LEARN.pred != null ? '<div class="ld-verdict '+(LEARN.pred === qa.predict.a ? 'right' : 'wrong')+'"><b>'+(LEARN.pred === qa.predict.a ? 'Your guess was right.' : 'Not quite: '+qa.predict.opts[qa.predict.a].replace(/^./, m=>m.toLowerCase())+'.')+'</b> '+qa.predict.why+'</div>' : '')+
         (qa.quiz ? '<span class="eyebrow" style="display:block;margin-top:12px">Check yourself</span>'+qa.quiz.map((q, qi)=>{ const ans = LEARN.quiz[qi];
-          return '<div class="ld-q"><p>'+(qi+1)+'. '+q.q+'</p>'+q.opts.map((o, i)=>'<button type="button" class="ld-opt'+(ans == null ? '' : i === q.a ? ' right' : i === ans ? ' wrong' : ' dim')+'" data-ld="quiz" data-q="'+qi+'" data-i="'+i+'"'+(ans == null ? '' : ' disabled')+'>'+o+'</button>').join('')+
+          return '<div class="ld-q"><p>'+(qi+1)+'. '+q.q+'</p>'+learnOrder('quiz'+qi, q.opts.length).map(i=>'<button type="button" class="ld-opt'+(ans == null ? '' : i === q.a ? ' right' : i === ans ? ' wrong' : ' dim')+'" data-ld="quiz" data-q="'+qi+'" data-i="'+i+'"'+(ans == null ? '' : ' disabled')+'>'+q.opts[i]+'</button>').join('')+
             (ans != null ? '<p class="ld-why">'+(ans === q.a ? '\u2713 ' : '')+q.why+'</p>' : '')+'</div>'; }).join('')+
           (LEARN.quiz.filter(x=>x != null).length === qa.quiz.length ? '<p class="ld-score">'+LEARN.quiz.filter((x, i)=>x === qa.quiz[i].a).length+' of '+qa.quiz.length+' right</p>' : '') : '')+
         '<div class="ld-btns"><button type="button" class="ld-go" data-ld="topic" data-k="'+nx.k+'">Next: '+nx.title+' ▶</button>'+
@@ -6027,7 +6185,11 @@ function renderLearnDock(){
         '<div class="ld-foot"><button type="button" class="link-btn" data-ld="card">Read the full card</button></div>';
     }
   }
-  if(host._html !== h){ host.innerHTML = h; host._html = h; }
+  if(host._html !== h){
+    const bi = el('exBuild'), bv = bi ? bi.value : '', bf = bi && document.activeElement === bi;
+    host.innerHTML = h; host._html = h;
+    const b2 = el('exBuild'); if(b2 && bv){ b2.value = bv; if(bf) b2.focus(); }
+  }
   const ti = el('ldTemp');
   if(ti){ if(document.activeElement !== ti){ ti.value = P.temp; } ti.style.setProperty('--pct', ((P.temp-T_MIN)/(T_MAX-T_MIN)*100)+'%'); const tv = el('ldTempVal'); if(tv) tv.textContent = kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C'; }
 }
@@ -6039,7 +6201,14 @@ function wireLearnDock(){
     const k = b.dataset.ld;
     if(k === 'exit') learnMode(false);
     else if(k === 'topic') learnStart(b.dataset.k);
-    else if(k === 'pick'){ LEARN.phase = 'pick'; LEARN.topic = null; stepNext(); renderLearnDock(); }
+    else if(k === 'pick'){ if(LEARN.phase === 'exam' && LEARN.exam && LEARN.exam.stage === 'build') stepMode(true, true); LEARN.phase = 'pick'; LEARN.topic = null; LEARN.exam = null; stepNext(); renderLearnDock(); }
+    else if(k === 'exam'){ if(LEARN.exam && LEARN.exam.stage === 'build') stepMode(true, true); examStart(); }
+    else if(k === 'exans'){ const X = LEARN.exam; if(X && X.ans[X.i] == null){ X.ans[X.i] = +b.dataset.i; renderLearnDock(); } }
+    else if(k === 'exnext'){ const X = LEARN.exam; if(!X) return; if(X.i < X.qs.length - 1){ X.i++; renderLearnDock(); } else examToBench(); }
+    else if(k === 'exadd'){ examAdd(b.dataset.s); }
+    else if(k === 'exbuild'){ const bi = el('exBuild'); if(bi){ examBuild(bi.value); bi.value = ''; } }
+    else if(k === 'exclear'){ l3Push(); l3Clear(); }
+    else if(k === 'exfinish') examFinish();
     else if(k === 'go') learnGo();
     else if(k === 'next') stepNext();
     else if(k === 'pause'){ LEARN.paused = !LEARN.paused; if(!LEARN.paused) LEARN.lastEvt = performance.now(); renderLearnDock(); }
@@ -6055,6 +6224,7 @@ function wireLearnDock(){
     else if(k === 'card' && LEARN.topic){ const c = LEARN.topic.c; learnMode(false); openConcept(c); }
   };
   el('learnBtn').onclick = ()=>learnMode(!LEARN.on);
+  el('learnDock').addEventListener('keydown', ev=>{ if(ev.target.id === 'exBuild' && ev.key === 'Enter'){ examBuild(ev.target.value); ev.target.value = ''; } });
   el('learnDock').addEventListener('input', ev=>{ if(ev.target.id === 'ldTemp'){ setSlider('temp', +ev.target.value); const tv = el('ldTempVal'); if(tv) tv.textContent = kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C'; ev.target.style.setProperty('--pct', ((P.temp-T_MIN)/(T_MAX-T_MIN)*100)+'%'); } });
   document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && LEARN.on && !/INPUT|TEXTAREA/.test(ev.target.tagName)) learnMode(false); });
 }
@@ -7371,24 +7541,59 @@ function onFragUp(ev){
   stage.classList.remove('drop-on');
   fragDrag=null;
 }
-const LIB_CATS = [['simple','Small molecules'],['inorganic','Inorganic'],['organic','Organic'],['ionic','Ionic & adducts']];
-function buildLibrary(){
-  el('libBody').innerHTML = LIB_CATS.map(([c,label])=>
-    '<span class="eyebrow lib-cat">'+label+'</span><div class="lib-grid">'+
-    LIBRARY.filter(m=>m.cat===c).map(m=>
-      '<button class="lib" type="button" data-f="'+m.f+'"><b>'+subHtml(m.f)+'</b><span>'+m.n+'</span></button>'
-    ).join('')+'</div>').join('');
-  el('libBody').querySelectorAll('.lib').forEach(b=>{
-    b.onclick=()=>{
-      const m = LIBRARY.filter(x=>x.f===b.dataset.f)[0];
-      if(L3.on){ specTo3D(m, m.n.toLowerCase()); closeLib(); return; }
-      pushUndo();
-      buildSpec(m, viewCX()+(Math.random()-0.5)*150, viewCY()+(Math.random()-0.5)*110, false);
-      say(m.n+' built \u2014 '+subPlain(m.f)+'.','added');
-      el('hint').classList.add('gone');
-      closeLib();
-    };
+const LIB_CATS = [['simple','Small molecules'],['inorganic','Inorganic'],['hydrocarbon','Hydrocarbons'],['oxygen','Alcohols, ethers, aldehydes and ketones'],
+  ['acid','Acids and esters'],['nitrogen','Amines, amides and nitriles'],['halogen','Halogen compounds'],['aromatic','Aromatics and rings'],
+  ['bio','Molecules of life'],['drug','Medicines, scents and flavours'],['ionic','Ions, salts and adducts']];
+/* how many of each family the library shows: 250 in all with the hand-drawn
+   ones. Anything past a family's share can still be built by typing its name. */
+const LIB_CAP = {simple:12, inorganic:18, hydrocarbon:18, oxygen:16, acid:22, nitrogen:16, halogen:14, aromatic:30, bio:36, drug:26, ionic:14};
+const LIB_ORG = {'formaldehyde':'oxygen', 'methanol':'oxygen', 'ethane':'hydrocarbon', 'ethene':'hydrocarbon', 'ethyne':'hydrocarbon', 'benzene':'aromatic', 'carbon tetrachloride':'halogen'};
+let LIB_ALL = null;
+function libEntries(){
+  if(LIB_ALL) return LIB_ALL;
+  const all = LIBRARY.map(m=>({n:m.n, f:m.f, cat:m.cat === 'organic' ? (LIB_ORG[m.n] || 'oxygen') : m.cat, spec:m}));
+  const have = new Set(all.map(e=>e.n)), aliasOf = n => Object.keys(L3_ALIAS).filter(k=>L3_ALIAS[k] === n);
+  const per = {};
+  Object.keys(LIB_CAT_OF).forEach(n=>{
+    const cat = LIB_CAT_OF[n], sm = L3_LIB[n];
+    if(!sm || have.has(n) || aliasOf(n).some(a=>have.has(a))) return;
+    per[cat] = per[cat] || 0; if(per[cat] >= (LIB_CAP[cat] || 0)) return; per[cat]++;
+    let f = LIB_FORMULA[n];
+    if(!f){ try{ const g = l3SmilesGraph(sm), c = {}; g.syms.forEach(x=>{ c[x] = (c[x]||0) + 1; }); f = benchFormula(c) + chargeSup(g.chg.reduce((t,q)=>t+(q||0), 0)); } catch(e){ return; } }
+    all.push({n, f, cat, sm}); have.add(n);
   });
+  return (LIB_ALL = all);
+}
+function buildLibrary(){
+  const all = libEntries();
+  el('libBody').innerHTML = '<input type="search" id="libSearch" class="lib-search" placeholder="Search '+all.length+' molecules: name or formula" autocomplete="off">'+
+    '<div id="libList"></div><p class="lib-more">Not here? Type any of '+Object.keys(L3_LIB).length+' names, a formula or a SMILES string into Build.</p>';
+  const draw = q => {
+    q = (q||'').trim().toLowerCase();
+    const plain = f => f.replace(/[⁰-₟²³¹]/g, d=>'0123456789+-'['⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'.indexOf(d)] || '');
+    const hit = e => !q || e.n.toLowerCase().includes(q) || plain(e.f).toLowerCase().includes(q.replace(/\s/g, ''));
+    el('libList').innerHTML = LIB_CATS.map(([c,label])=>{
+      const list = all.map((e,i)=>[e,i]).filter(([e])=>e.cat === c && hit(e)); if(!list.length) return '';
+      return '<span class="eyebrow lib-cat">'+label+' <i>'+list.length+'</i></span><div class="lib-grid">'+
+        list.map(([e,i])=>'<button class="lib" type="button" data-i="'+i+'"><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>').join('')+'</div>';
+    }).join('') || '<p class="lib-more">Nothing in the library matches. Try typing it into Build: it may still know it.</p>';
+    el('libList').querySelectorAll('.lib').forEach(b=>{
+      b.onclick=()=>{
+        const m = all[+b.dataset.i];
+        if(m.spec){
+          if(L3.on){ specTo3D(m.spec, m.n.toLowerCase()); closeLib(); return; }
+          pushUndo();
+          buildSpec(m.spec, viewCX()+(Math.random()-0.5)*150, viewCY()+(Math.random()-0.5)*110, false);
+          say(m.n+' built — '+subPlain(m.f)+'.','added');
+        } else if(L3.on){ l3Push(); l3BuildSmiles(m.sm, m.n); }
+        else buildCompound2D(m.n, (Math.random()-0.5)*150, (Math.random()-0.5)*110);
+        el('hint').classList.add('gone');
+        closeLib();
+      };
+    });
+  };
+  draw('');
+  el('libSearch').addEventListener('input', ev=>draw(ev.target.value));
 }
 function buildTours(){
   el('tours').innerHTML = Object.keys(TOURS).map(k=>
@@ -7396,7 +7601,7 @@ function buildTours(){
     TOURS[k].steps.length+' steps</span></button>').join('');
   el('tours').querySelectorAll('button').forEach(b=>{ b.onclick=()=>startTour(b.dataset.k); });
 }
-const openLib  = () => { el('library').hidden=false; };
+const openLib  = () => { el('library').hidden=false; const q = el('libSearch'); if(q){ if(q.value){ q.value = ''; q.dispatchEvent(new Event('input')); } setTimeout(()=>q.focus(), 0); } };
 const closeLib = () => { el('library').hidden=true; };
 
 function drawIR(){
@@ -11454,6 +11659,8 @@ function l3Add(sym, x, y, z, A){
   L3.atoms.push(a); L3.dirty = true; L3.idx = null;
   return a;
 }
+/* how many electrons a main-group metal gives up: its group's (Na 1, Mg 2, Al 3) */
+const l3MetalVal = x => { const g = EL[x.e].gcol; return g === 1 ? 1 : g === 2 ? 2 : g === 13 ? 3 : 1; };
 function l3Bond(a, b, order, force){
   const ea = EL[a.e], eb = EL[b.e];
   const type = force ? force : (isMetal(ea) && isMetal(eb) && !a.ion && !b.ion) ? 'metallic' : Math.abs(ea.en - eb.en) >= 1.7 && (isMetal(ea) !== isMetal(eb)) ? 'ionic' : 'covalent';
@@ -11469,7 +11676,14 @@ function l3Bond(a, b, order, force){
     /* a real transfer is reported even straight after a scene is set out; only
        building a molecule or crystal, or a reaction that reports itself, is quiet */
     if(!cat.ion && !an.ion && !L3.quiet && typeof rxIonise === 'function') rxIonise(EL[cat.e].sym, EL[an.e].sym, '3D', 1, [cat.id, an.id]);
-    if(!cat.ion) l3SetIon(cat, 1); if(!an.ion) l3SetIon(an, -1);
+    if(!cat.ion) l3SetIon(cat, 1);
+    else if(cat.ion > 0 && cat.ion < l3MetalVal(cat) && !an.ion){
+      /* a cation with an electron still to give (Mg+ on its way to Mg2+) hands the next one over */
+      if(typeof l3Fly === 'function') l3Fly('electron', cat, an);
+      if(!L3.quiet && typeof rxIonise === 'function') rxIonise(EL[cat.e].sym, EL[an.e].sym, '3D', cat.ion + 1, [cat.id, an.id]);
+      l3SetIon(cat, cat.ion + 1);
+    }
+    if(!an.ion) l3SetIon(an, -1);
   }
   L3.bonds.push(bd); L3.dirty = true; L3.bv = (L3.bv||0) + 1;
   return bd;
@@ -12263,7 +12477,10 @@ function l3Step(dt){
       /* a metal bonds to something clearly more electronegative (ionic past 1.7, polar below), never to another like carbon */
       const metalOK = !(l3Metal(p) || l3Metal(q)) || Math.abs((EL[p.e].en||1.5) - (EL[q.e].en||1.5)) >= 1.0;
       const L = l3Len(p, q, 1), canB = (l3Free(p, q) > 0 && l3Free(q, p) > 0 && !p.ion && !q.ion && !(l3Metal(p) && l3Metal(q)) && metalOK) ||
-        (pairIons && (l3Ppt(p, q) || (!(wet(p) && wet(q)) && !shelled(p) && !shelled(q))));
+        (pairIons && (l3Ppt(p, q) || (!(wet(p) && wet(q)) && !shelled(p) && !shelled(q)))) ||
+        /* Mg+ still has an electron to give: a neutral chlorine that touches it takes the second */
+        (!L3.solvent && [[p, q], [q, p]].some(([m, x])=>m.ion > 0 && m.ion < l3MetalVal(m) && isMetal(EL[m.e]) && !x.ion && !isMetal(EL[x.e]) &&
+          l3Free(x, m) > 0 && (EL[x.e].en||0) - (EL[m.e].en||0) >= 1.7 && !(m.nW >= 0.5)));
       if(s===0 && d < L*1.35 && canB && !L3.noAuto){
         const nbd = l3Bond(p, q, 1, pairIons ? 'ionic' : undefined); nb.get(p.id).push(q); nb.get(q.id).push(p);
         /* an ion coming back out of water onto a crystal: the shell it sheds costs
@@ -12793,6 +13010,121 @@ const L3_ALIAS = {'acetaminophen':'paracetamol', 'tylenol':'paracetamol', 'epine
   'alcohol':'ethanol', 'vinegar':'acetic acid', 'ether':'diethyl ether', 'sugar':'sucrose', 'table sugar':'sucrose', 'dextrose':'glucose',
   'ethene':'ethylene', 'ethyne':'acetylene', 'glycerine':'glycerol', 'antifreeze':'ethylene glycol', 'propanone':'acetone',
   'methanal':'formaldehyde', 'ethanal':'acetaldehyde', 'ethanoic acid':'acetic acid', 'methanoic acid':'formic acid'};
+/* The molecule library, by family: every name here can also be typed into
+   either bench's Build box. A value is SMILES, or [SMILES, formula] where the
+   formula is better written the way chemists do (H2SO3, not H2O3S; Na2SO4). */
+const LIB_MORE = {
+  simple:{ 'hydrazine':['NN','N2H4'], 'hydroxylamine':['NO','NH2OH'], 'phosphine':['P','PH3'], 'silane':['[SiH4]','SiH4'], 'germane':['[GeH4]','GeH4'],
+    'arsine':['[AsH3]','AsH3'], 'hydrogen selenide':['[SeH2]','H2Se'], 'fluorine':['FF','F2'], 'bromine':['BrBr','Br2'], 'iodine':['II','I2'],
+    'carbon disulfide':['S=C=S','CS2'], 'carbonyl sulfide':['O=C=S','OCS'], 'nitrous oxide':['[N-]=[N+]=O','N2O'], 'hydrogen azide':['N=[N+]=[N-]','HN3'] },
+  inorganic:{ 'sulfurous acid':['OS(=O)O','H2SO3'], 'carbonic acid':['OC(=O)O','H2CO3'], 'nitrous acid':['ON=O','HNO2'], 'hypochlorous acid':['OCl','HOCl'],
+    'perchloric acid':['OCl(=O)(=O)=O','HClO4'], 'boric acid':['OB(O)O','H3BO3'], 'phosphorus trichloride':['ClP(Cl)Cl','PCl3'],
+    'phosphorus pentachloride':['ClP(Cl)(Cl)(Cl)Cl','PCl5'], 'phosphoryl chloride':['ClP(Cl)(Cl)=O','POCl3'], 'sulfur hexafluoride':['FS(F)(F)(F)(F)F','SF6'],
+    'sulfur dichloride':['ClSCl','SCl2'], 'thionyl chloride':['ClS(Cl)=O','SOCl2'], 'disulfur dichloride':['ClSSCl','S2Cl2'],
+    'xenon difluoride':['F[Xe]F','XeF2'], 'xenon tetrafluoride':['F[Xe](F)(F)F','XeF4'], 'chlorine trifluoride':['FCl(F)F','ClF3'],
+    'iodine pentafluoride':['FI(F)(F)(F)F','IF5'], 'silicon tetrachloride':['Cl[Si](Cl)(Cl)Cl','SiCl4'], 'aluminium chloride':['Cl[Al](Cl)Cl','AlCl3'],
+    'boron trichloride':['ClB(Cl)Cl','BCl3'], 'phosgene':['ClC(Cl)=O','COCl2'], 'cyanogen':['N#CC#N','C2N2'],
+    'dinitrogen tetroxide':['O=[N+]([O-])[N+](=O)[O-]','N2O4'], 'selenium dioxide':['O=[Se]=O','SeO2'] },
+  hydrocarbon:{ 'pentane':'CCCCC', 'hexane':'CCCCCC', 'heptane':'CCCCCCC', 'nonane':'CCCCCCCCC', 'decane':'CCCCCCCCCC', 'isobutane':'CC(C)C',
+    'isopentane':'CCC(C)C', 'neopentane':'CC(C)(C)C', 'isooctane':'CC(C)CC(C)(C)C', 'propene':'CC=C', '1-butene':'CCC=C', '2-butene':'CC=CC',
+    'isobutylene':'CC(C)=C', '1,3-butadiene':'C=CC=C', 'isoprene':'CC(=C)C=C', 'propyne':'CC#C', 'cyclopropane':'C1CC1', 'cyclobutane':'C1CCC1',
+    'cyclopentane':'C1CCCC1', 'cyclohexene':'C1CC=CCC1', 'methylcyclohexane':'CC1CCCCC1', 'decalin':'C1CCC2CCCCC2C1', 'norbornane':'C1CC2CCC1C2',
+    'adamantane':'C1C2CC3CC1CC(C2)C3', 'cubane':'C12C3C4C1C5C2C3C45', 'squalene':'CC(C)=CCCC(C)=CCCC(C)=CCCC=C(C)CCC=C(C)CCC=C(C)C' },
+  oxygen:{ '1-propanol':'CCCO', 'isopropanol':'CC(C)O', '1-butanol':'CCCCO', 'tert-butanol':'CC(C)(C)O', 'cyclohexanol':'OC1CCCCC1',
+    'propylene glycol':'CC(O)CO', 'dimethyl ether':'COC', 'methyl tert-butyl ether':'COC(C)(C)C', 'tetrahydrofuran':'C1CCOC1', '1,4-dioxane':'C1COCCO1',
+    'ethylene oxide':'C1CO1', 'propanal':'CCC=O', 'butanal':'CCCC=O', 'acrolein':'C=CC=O', 'butanone':'CCC(C)=O', 'cyclohexanone':'O=C1CCCCC1',
+    'diacetyl':'CC(=O)C(C)=O', 'benzoquinone':'O=C1C=CC(=O)C=C1' },
+  acid:{ 'propanoic acid':'CCC(=O)O', 'butyric acid':'CCCC(=O)O', 'oxalic acid':'OC(=O)C(=O)O', 'malonic acid':'OC(=O)CC(=O)O',
+    'succinic acid':'OC(=O)CCC(=O)O', 'adipic acid':'OC(=O)CCCCC(=O)O', 'acrylic acid':'C=CC(=O)O', 'tartaric acid':'OC(C(O)C(=O)O)C(=O)O',
+    'malic acid':'OC(CC(=O)O)C(=O)O', 'fumaric acid':'OC(=O)C=CC(=O)O', 'pyruvic acid':'CC(=O)C(=O)O', 'glycolic acid':'OCC(=O)O',
+    'chloroacetic acid':'OC(=O)CCl', 'trifluoroacetic acid':'OC(=O)C(F)(F)F', 'methanesulfonic acid':'CS(=O)(=O)O', 'phthalic acid':'OC(=O)c1ccccc1C(=O)O',
+    'terephthalic acid':'OC(=O)c1ccc(cc1)C(=O)O', 'methyl formate':'COC=O', 'methyl acetate':'COC(C)=O', 'ethyl formate':'CCOC=O',
+    'isoamyl acetate':'CC(C)CCOC(C)=O', 'ethyl butyrate':'CCCC(=O)OCC', 'octyl acetate':'CCCCCCCCOC(C)=O', 'benzyl acetate':'CC(=O)OCc1ccccc1',
+    'methyl salicylate':'COC(=O)c1ccccc1O', 'acetic anhydride':'CC(=O)OC(C)=O', 'acetyl chloride':'CC(Cl)=O', 'methyl methacrylate':'COC(=O)C(C)=C',
+    'vinyl acetate':'CC(=O)OC=C' },
+  nitrogen:{ 'methylamine':'CN', 'dimethylamine':'CNC', 'trimethylamine':'CN(C)C', 'ethylamine':'CCN', 'triethylamine':'CCN(CC)CC',
+    'ethylenediamine':'NCCN', 'putrescine':'NCCCCN', 'cadaverine':'NCCCCCN', 'formamide':'NC=O', 'acetamide':'CC(N)=O', 'dimethylformamide':'CN(C)C=O',
+    'acetonitrile':'CC#N', 'acrylonitrile':'C=CC#N', 'methyl isocyanate':'CN=C=O', 'nitromethane':'C[N+](=O)[O-]', 'guanidine':'NC(N)=N',
+    'ethyl carbamate':'CCOC(N)=O', 'caprolactam':'O=C1CCCCCN1', 'piperidine':'C1CCNCC1', 'pyrrolidine':'C1CCNC1', 'morpholine':'C1COCCN1',
+    'piperazine':'C1CNCCN1', 'hexamethylenetetramine':'C1N2CN3CN1CN(C2)C3',
+    'nitroglycerin':'[O-][N+](=O)OCC(O[N+](=O)[O-])CO[N+](=O)[O-]', 'trinitrotoluene':'Cc1c(cc(cc1[N+](=O)[O-])[N+](=O)[O-])[N+](=O)[O-]' },
+  halogen:{ 'fluoromethane':'CF', 'chloromethane':'CCl', 'bromomethane':'CBr', 'iodomethane':'CI', 'dichloromethane':'ClCCl', 'chloroform':'ClC(Cl)Cl',
+    'bromoform':'BrC(Br)Br', 'carbon tetrafluoride':'FC(F)(F)F', 'chloroethane':'CCCl', '1,2-dichloroethane':'ClCCCl', 'vinyl chloride':'C=CCl',
+    'allyl chloride':'C=CCCl', 'trichloroethylene':'ClC=C(Cl)Cl', 'tetrafluoroethylene':'FC(F)=C(F)F', 'dichlorodifluoromethane':'FC(F)(Cl)Cl',
+    'halothane':'FC(F)(F)C(Cl)Br', 'chlorobenzene':'Clc1ccccc1', 'bromobenzene':'Brc1ccccc1', 'benzyl chloride':'ClCc1ccccc1',
+    'hexafluorobenzene':'Fc1c(F)c(F)c(F)c(F)c1F', 'DDT':'ClC(Cl)(Cl)C(c1ccc(Cl)cc1)c1ccc(Cl)cc1' },
+  aromatic:{ 'ethylbenzene':'CCc1ccccc1', 'o-xylene':'Cc1ccccc1C', 'p-xylene':'Cc1ccc(C)cc1', 'cumene':'CC(C)c1ccccc1', 'phenylacetylene':'C#Cc1ccccc1',
+    'biphenyl':'c1ccc(cc1)-c1ccccc1', 'stilbene':'C(=Cc1ccccc1)c1ccccc1', 'anthracene':'c1ccc2cc3ccccc3cc2c1', 'phenanthrene':'c1ccc2c(c1)ccc1ccccc12',
+    'pyrene':'c1cc2ccc3cccc4ccc(c1)c2c34', 'anisole':'COc1ccccc1', 'benzyl alcohol':'OCc1ccccc1', 'benzaldehyde':'O=Cc1ccccc1',
+    'acetophenone':'CC(=O)c1ccccc1', 'benzophenone':'O=C(c1ccccc1)c1ccccc1', 'o-cresol':'Cc1ccccc1O', 'catechol':'Oc1ccccc1O',
+    'resorcinol':'Oc1cccc(O)c1', 'hydroquinone':'Oc1ccc(O)cc1', 'benzonitrile':'N#Cc1ccccc1', 'nitrobenzene':'[O-][N+](=O)c1ccccc1',
+    'N,N-dimethylaniline':'CN(C)c1ccccc1', 'diphenyl ether':'c1ccc(Oc2ccccc2)cc1', 'picric acid':'Oc1c(cc(cc1[N+](=O)[O-])[N+](=O)[O-])[N+](=O)[O-]',
+    'bisphenol A':'CC(C)(c1ccc(O)cc1)c1ccc(O)cc1', 'butylated hydroxytoluene':'Cc1cc(C(C)(C)C)c(O)c(c1)C(C)(C)C',
+    'pyrimidine':'c1cncnc1', 'pyrazine':'c1cnccn1', 'imidazole':'c1c[nH]cn1', 'pyrazole':'c1cc[nH]n1', 'oxazole':'c1cocn1', 'thiazole':'c1cscn1',
+    'purine':'c1ncc2[nH]cnc2n1', 'quinoline':'c1ccc2ncccc2c1', 'isoquinoline':'c1ccc2cnccc2c1', 'benzofuran':'c1ccc2occc2c1',
+    'carbazole':'c1ccc2c(c1)[nH]c1ccccc12', 'acridine':'c1ccc2nc3ccccc3cc2c1' },
+  bio:{ 'serine':'NC(CO)C(=O)O', 'cysteine':'NC(CS)C(=O)O', 'valine':'CC(C)C(N)C(=O)O', 'leucine':'CC(C)CC(N)C(=O)O', 'isoleucine':'CCC(C)C(N)C(=O)O',
+    'threonine':'CC(O)C(N)C(=O)O', 'methionine':'CSCCC(N)C(=O)O', 'proline':'OC(=O)C1CCCN1', 'phenylalanine':'NC(Cc1ccccc1)C(=O)O',
+    'tyrosine':'NC(Cc1ccc(O)cc1)C(=O)O', 'tryptophan':'NC(Cc1c[nH]c2ccccc12)C(=O)O', 'aspartic acid':'NC(CC(=O)O)C(=O)O',
+    'glutamic acid':'NC(CCC(=O)O)C(=O)O', 'asparagine':'NC(CC(N)=O)C(=O)O', 'glutamine':'NC(CCC(N)=O)C(=O)O', 'lysine':'NCCCCC(N)C(=O)O',
+    'arginine':'NC(=N)NCCCC(N)C(=O)O', 'histidine':'NC(Cc1c[nH]cn1)C(=O)O', 'ribose':'OCC1OC(O)C(O)C1O', 'deoxyribose':'OCC1OC(O)CC1O',
+    'glyceraldehyde':'OCC(O)C=O', 'dihydroxyacetone':'OCC(=O)CO', 'sorbitol':'OCC(O)C(O)C(O)C(O)CO', 'uric acid':'O=C1NC(=O)C2=C(N1)NC(=O)N2',
+    'adenosine':'Nc1ncnc2n(cnc12)C1OC(CO)C(O)C1O', 'ATP':'Nc1ncnc2n(cnc12)C1OC(COP(=O)(O)OP(=O)(O)OP(=O)(O)O)C(O)C1O',
+    'glutathione':'NC(CCC(=O)NC(CS)C(=O)NCC(=O)O)C(=O)O', 'taurine':'NCCS(=O)(=O)O', 'creatine':'CN(CC(=O)O)C(N)=N',
+    'choline':'C[N+](C)(C)CCO', 'acetylcholine':'CC(=O)OCC[N+](C)(C)C', 'GABA':'NCCCC(=O)O', 'niacin':'OC(=O)c1cccnc1',
+    'nicotinamide':'NC(=O)c1cccnc1', 'pyridoxine':'Cc1ncc(CO)c(CO)c1O', 'palmitic acid':'CCCCCCCCCCCCCCCC(=O)O', 'stearic acid':'CCCCCCCCCCCCCCCCCC(=O)O',
+    'oleic acid':'CCCCCCCCC=CCCCCCCCC(=O)O', 'linoleic acid':'CCCCCC=CCC=CCCCCCCCC(=O)O',
+    'cholesterol':'CC(C)CCCC(C)C1CCC2C1(C)CCC1C2CC=C2CC(O)CCC12C', 'testosterone':'CC12CCC3C(CCC4=CC(=O)CCC34C)C1CCC2O',
+    'estradiol':'CC12CCC3c4ccc(O)cc4CCC3C1CCC2O', 'retinol':'CC1=C(C(C)(C)CCC1)C=CC(C)=CC=CC(C)=CCO',
+    'beta-carotene':'CC1=C(C(C)(C)CCC1)C=CC(C)=CC=CC(C)=CC=CC=C(C)C=CC=C(C)C=CC1=C(C)CCCC1(C)C' },
+  drug:{ 'naproxen':'COc1ccc2cc(C(C)C(=O)O)ccc2c1', 'diclofenac':'OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl', 'benzocaine':'CCOC(=O)c1ccc(N)cc1',
+    'procaine':'CCN(CC)CCOC(=O)c1ccc(N)cc1', 'lidocaine':'CCN(CC)CC(=O)Nc1c(C)cccc1C', 'cocaine':'COC(=O)C1C(OC(=O)c2ccccc2)CC2CCC1N2C',
+    'atropine':'CN1C2CCC1CC(C2)OC(=O)C(CO)c1ccccc1', 'quinine':'COc1ccc2nccc(C(O)C3CC4CCN3CC4C=C)c2c1', 'theophylline':'CN1C(=O)N(C)c2nc[nH]c2C1=O',
+    'ephedrine':'CNC(C)C(O)c1ccccc1', 'amphetamine':'CC(N)Cc1ccccc1', 'mescaline':'COc1cc(CCN)cc(OC)c1OC', 'MDMA':'CNC(C)Cc1ccc2OCOc2c1',
+    'salbutamol':'CC(C)(C)NCC(O)c1ccc(O)c(CO)c1', 'diphenhydramine':'CN(C)CCOC(c1ccccc1)c1ccccc1', 'fluoxetine':'CNCCC(Oc1ccc(cc1)C(F)(F)F)c1ccccc1',
+    'diazepam':'CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc12', 'metformin':'CN(C)C(=N)NC(N)=N', 'warfarin':'CC(=O)CC(c1ccccc1)C1=C(O)c2ccccc2OC1=O',
+    'thalidomide':'O=C1CCC(N2C(=O)c3ccccc3C2=O)C(=O)N1', 'penicillin G':'CC1(C)SC2C(NC(=O)Cc3ccccc3)C(=O)N2C1C(=O)O',
+    'THC':'CCCCCc1cc(O)c2C3C=C(C)CCC3C(C)(C)Oc2c1', 'aspartame':'COC(=O)C(Cc1ccccc1)NC(=O)C(N)CC(=O)O', 'saccharin':'O=C1NS(=O)(=O)c2ccccc12',
+    'eugenol':'COc1cc(CC=C)ccc1O', 'thymol':'CC(C)c1ccc(C)cc1O', 'geraniol':'CC(C)=CCCC(C)=CCO', 'citral':'CC(C)=CCCC(C)=CC=O',
+    'linalool':'CC(C)=CCCC(C)(O)C=C', 'carvone':'CC1=CCC(CC1=O)C(C)=C', 'alpha-pinene':'CC1=CCC2CC1C2(C)C', 'cinnamaldehyde':'O=CC=Cc1ccccc1',
+    'coumarin':'O=C1C=Cc2ccccc2O1', 'muscone':'CC1CCCCCCCCCCCCC(=O)C1', 'skatole':'Cc1c[nH]c2ccccc12', 'allicin':'C=CCSS(=O)CC=C',
+    'indigo':'O=C1C(=C2Nc3ccccc3C2=O)Nc2ccccc12' },
+  ionic:{ 'potassium chloride':['[K+].[Cl-]','KCl'], 'lithium fluoride':['[Li+].[F-]','LiF'], 'sodium fluoride':['[Na+].[F-]','NaF'],
+    'potassium iodide':['[K+].[I-]','KI'], 'silver chloride':['[Ag+].[Cl-]','AgCl'], 'silver nitrate':['[Ag+].[O-][N+](=O)[O-]','AgNO3'],
+    'sodium nitrate':['[Na+].[O-][N+](=O)[O-]','NaNO3'], 'potassium nitrate':['[K+].[O-][N+](=O)[O-]','KNO3'],
+    'ammonium nitrate':['[NH4+].[O-][N+](=O)[O-]','NH4NO3'], 'calcium chloride':['[Ca+2].[Cl-].[Cl-]','CaCl2'],
+    'magnesium chloride':['[Mg+2].[Cl-].[Cl-]','MgCl2'], 'lead(II) iodide':['[Pb+2].[I-].[I-]','PbI2'],
+    'copper(II) sulfate':['[Cu+2].[O-]S(=O)(=O)[O-]','CuSO4'], 'sodium sulfate':['[Na+].[Na+].[O-]S(=O)(=O)[O-]','Na2SO4'],
+    'sodium bicarbonate':['[Na+].OC(=O)[O-]','NaHCO3'], 'sodium carbonate':['[Na+].[Na+].[O-]C(=O)[O-]','Na2CO3'],
+    'calcium carbonate':['[Ca+2].[O-]C(=O)[O-]','CaCO3'], 'sodium acetate':['[Na+].CC(=O)[O-]','CH3COONa'], 'potassium hydroxide':['[K+].[OH-]','KOH'],
+    'calcium hydroxide':['[Ca+2].[OH-].[OH-]','Ca(OH)2'], 'sodium hypochlorite':['[Na+].[O-]Cl','NaOCl'],
+    'monosodium glutamate':['[Na+].NC(CCC(=O)O)C(=O)[O-]','C5H8NNaO4'], 'sulfate':['[O-]S(=O)(=O)[O-]','SO4²⁻'],
+    'bicarbonate':['OC(=O)[O-]','HCO3⁻'], 'carbonate':['[O-]C(=O)[O-]','CO3²⁻'], 'phosphate':['[O-]P(=O)([O-])[O-]','PO4³⁻'],
+    'cyanide':['[C-]#N','CN⁻'], 'fluoride':['[F-]','F⁻'], 'bromide':['[Br-]','Br⁻'], 'iodide':['[I-]','I⁻'] }
+};
+/* the families the older entries above belong to, for the library */
+const LIB_CAT_OF = {
+  'ammonia':'simple', 'hydrogen peroxide':'simple', 'hydrogen bromide':'simple', 'hydrogen iodide':'simple',
+  'sulfuric acid':'inorganic', 'phosphoric acid':'inorganic', 'nitric acid':'inorganic', 'boron trifluoride':'inorganic',
+  'propane':'hydrocarbon', 'butane':'hydrocarbon', 'octane':'hydrocarbon', 'cyclohexane':'hydrocarbon', 'limonene':'drug', 'camphor':'drug', 'menthol':'drug',
+  'ethanol':'oxygen', 'ethylene glycol':'oxygen', 'glycerol':'oxygen', 'diethyl ether':'oxygen', 'acetaldehyde':'oxygen', 'acetone':'oxygen',
+  'formic acid':'acid', 'acetic acid':'acid', 'ethyl acetate':'acid', 'lactic acid':'acid', 'citric acid':'acid', 'urea':'nitrogen',
+  'glycine':'bio', 'alanine':'bio', 'toluene':'aromatic', 'phenol':'aromatic', 'aniline':'aromatic', 'styrene':'aromatic', 'benzoic acid':'aromatic',
+  'salicylic acid':'aromatic', 'naphthalene':'aromatic', 'pyridine':'aromatic', 'pyrrole':'aromatic', 'furan':'aromatic', 'thiophene':'aromatic', 'indole':'aromatic',
+  'caffeine':'drug', 'theobromine':'drug', 'aspirin':'drug', 'paracetamol':'drug', 'ibuprofen':'drug', 'nicotine':'drug', 'dopamine':'bio', 'serotonin':'bio',
+  'adrenaline':'bio', 'histamine':'bio', 'melatonin':'bio', 'vanillin':'drug', 'capsaicin':'drug', 'glucose':'bio', 'fructose':'bio', 'sucrose':'bio',
+  'ascorbic acid':'bio', 'adenine':'bio', 'guanine':'bio', 'cytosine':'bio', 'thymine':'bio', 'uracil':'bio',
+  'ammonium':'ionic', 'hydronium':'ionic', 'hydroxide':'ionic', 'acetate':'ionic', 'chloride':'ionic', 'nitrate':'ionic', 'sodium hydroxide':'ionic', 'ammonium chloride':'ionic'
+};
+const LIB_FORMULA = {'ammonia':'NH3', 'hydrogen peroxide':'H2O2', 'hydrogen bromide':'HBr', 'hydrogen iodide':'HI', 'sulfuric acid':'H2SO4', 'phosphoric acid':'H3PO4',
+  'nitric acid':'HNO3', 'boron trifluoride':'BF3', 'ammonium':'NH4⁺', 'hydronium':'H3O⁺', 'hydroxide':'OH⁻', 'acetate':'CH3COO⁻', 'chloride':'Cl⁻',
+  'nitrate':'NO3⁻', 'sodium hydroxide':'NaOH', 'ammonium chloride':'NH4Cl'};
+Object.entries(LIB_MORE).forEach(([c, o])=>Object.entries(o).forEach(([n, v])=>{
+  const sm = Array.isArray(v) ? v[0] : v;
+  if(!L3_LIB[n]) L3_LIB[n] = sm;
+  LIB_CAT_OF[n] = c;
+  if(Array.isArray(v)) LIB_FORMULA[n] = v[1];
+}));
 /* SMILES to atoms and bonds: atoms (C, [nH], [Na+]), bonds (- = # :), branches in
    brackets, ring closures by digit, and lowercase aromatic rings, which are given
    alternating double bonds (Kekule) before hydrogens are filled in */
@@ -15389,8 +15721,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 115;
+const VERSION = 116;
 const CHANGELOG = [
+  [116, 'An assessment in Learn mode: Take the assessment asks one question from every topic, then hands you a cleared 3D bench to make eight things yourself (water, an ionic bond from neutral atoms, a double and a triple bond, magnesium chloride with its 2+ ion, a non-polar molecule built from polar bonds, a coordinate bond and three hydrogen bonds at once), ticking each the moment it exists. It ends with a score, the questions to revisit with a link back to each topic, and your best result. Learn answers are shuffled: the right one was always first. The molecule library now holds 250 compounds in eleven families, with a search box, and about 390 names can be typed into Build on either bench. Magnesium (and other group 2 metals) now give both electrons on the 3D bench, so Mg and two Cl make MgCl\u2082 rather than stopping at Mg\u207a. Learn mode no longer squashes the bench to nothing in windows between 761 and 1140 pixels wide.'],
   [115, 'Three new things. Precipitation on the 3D bench: load Silver nitrate + salt water and a white solid, silver chloride, gathers and slowly settles while the sodium and nitrate stay dissolved; Golden rain does the same with bright yellow lead(II) iodide. AgCl, AgBr, AgI, PbI\u2082, PbCl\u2082 and CaF\u2082 come out of water as solids tinted their real colour, with the real \u0394H of precipitation, and a new Guide card explains why. Silver ions now take two waters, not six. A solution meter on the 3D bench: with water present it shows the pH, the conductivity in mS/cm worked out from each dissolved ion\u2019s real molar conductivity, and what is dissolved and how concentrated. Flame colours on both benches: any metal atom or ion past about 1300 K glows its flame-test colour (sodium yellow, copper green, lithium crimson, potassium lilac, strontium scarlet) with flickering tongues, and says why the first time; see the Flame colours card. Dissolved ions also now feel each other from further away, so they find their partners across a solution.'],
   [114, 'Fixed sodium turning into Na\u00b2\u207a on the flat bench. When an ionic bond broke while its electron was still flying across, the bench handed the electron back anyway, so sodium sat at \u22121 for a moment, could give two electrons to the next chlorines, and ended at 2+. Electrons still in flight are now called back instead, and only ones that landed are returned.'],
   [113, 'The + and − on charge badges sit dead centre now, on both benches. They were drawn as text, and a font\u2019s plus and minus sit off the middle of their box; they are drawn as strokes instead, with the number beside a smaller sign for 2+ and 3−. The proton and electron dots that fly between atoms use the same marks.'],
