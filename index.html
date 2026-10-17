@@ -1029,6 +1029,127 @@ body.coursing #modeSeg,body.coursing #learnBtn,body.coursing .stats,body.coursin
 body.coursing #tourCard,body.coursing #hint,body.coursing #toolbar,body.coursing #learnDock{display:none!important}
 body.coursing:not(.crs-tools) #l3tools{display:none!important}
 body.coursing .course-dock.collapsed{top:14px}
+/* analysis mode: the bench on the left, a wide report on the right */
+body.analysing .workspace{grid-template-columns:minmax(0,1fr)}
+body.analysing .workspace > .panel,body.analysing .workspace > .gutter{display:none}
+body.analysing .workspace > .stage{grid-column:1 / -1;grid-row:1;min-height:calc(100vh - 66px)}
+body.analysing #l3bar,body.analysing #l3read,body.analysing #l3Tip,body.analysing #hud,body.analysing #benchRT,body.analysing #shareBtn,body.analysing #clearBtn,
+body.analysing #modeSeg,body.analysing #learnBtn,body.analysing #courseBtn,body.analysing .stats,body.analysing #tools,body.analysing .timectl,body.analysing #camCtl,body.analysing #lessonCard,
+body.analysing #tourCard,body.analysing #hint,body.analysing #toolbar,body.analysing #learnDock,body.analysing #courseDock,body.analysing #crsInfo,body.analysing #l3tools,body.analysing #stepCard{display:none!important}
+.ana-btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ana-dock{position:absolute;right:14px;top:14px;bottom:14px;width:min(620px,58%);z-index:9;background:rgba(255,255,255,.98);border:1px solid var(--hair);border-radius:16px;box-shadow:var(--shadow-l);overflow:auto;box-sizing:border-box;padding:0 0 18px}
+.ana-dock[hidden]{display:none}
+.ana-head{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 18px 8px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px)}
+.ana-title{display:block;font-family:var(--font-display);font-size:21px;font-weight:600;line-height:1.2;margin-top:3px;color:var(--ink)}
+.ana-pick{padding:2px 18px 10px;border-bottom:1px solid var(--hair);position:sticky;top:58px;z-index:2;background:rgba(255,255,255,.96);backdrop-filter:blur(8px)}
+.ana-tabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.ana-chip{display:inline-flex;align-items:center;border-radius:999px;background:var(--sunk);border:1px solid transparent;font-size:12px;font-weight:600;color:var(--ink-2);overflow:hidden}
+.ana-chip > button{background:none;border:0;padding:5px 4px 5px 11px;font:inherit;color:inherit;cursor:pointer}
+.ana-chip > button.x{padding:5px 9px 5px 4px;color:var(--faint)}.ana-chip > button.x:hover{color:var(--pos)}
+.ana-chip.t{padding:5px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:600;border:1px dashed var(--line);background:none}
+.ana-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}.ana-chip.on > button.x{color:rgba(255,255,255,.6)}
+.ana-add{position:relative;display:flex;gap:6px}
+.ana-add input{flex:1;min-width:0;padding:8px 11px;border-radius:9px;border:1px solid var(--line);background:var(--sunk);font:inherit;font-size:13px;color:var(--ink)}
+.ana-add input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.ana-add > button{padding:0 14px;border-radius:9px;background:var(--ink);color:#fff;font-weight:600;font-size:12.5px}
+.ana-ac{position:absolute;left:0;right:60px;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-l);padding:4px;z-index:5}
+.ana-ac[hidden],.ana-ac:empty{display:none}
+.ana-ac button{display:block;width:100%;text-align:left;padding:6px 9px;border-radius:7px;font-size:12.5px;color:var(--ink-2)}
+.ana-ac button:hover,.ana-ac button.on{background:var(--sunk);color:var(--ink)}
+.ana-err{margin:6px 0 0;font-size:12px;color:var(--pos)}
+.ana-body{padding:12px 18px 0}
+.ana-note{display:block;font-size:11.5px;line-height:1.55;color:var(--muted);margin:6px 0 0}
+.ana-sub{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin:12px 0 5px}
+.ana-hero{border-radius:14px;background:var(--sunk);padding:10px 12px 12px;margin-bottom:10px}
+.ana-pic{background:var(--surface);border-radius:10px;box-shadow:inset 0 0 0 1px var(--hair)}
+.ana-pic svg,.ana-lewis svg,.ana-nmrpic svg{display:block;width:100%;height:auto}
+.ana-id{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:10px 2px 6px}
+.ana-f{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.ana-n{font-family:var(--font-display);font-style:italic;font-size:16px;color:var(--ink-2)}
+.ana-facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px}
+.ana-facts span{background:var(--surface);border-radius:8px;padding:5px 8px;display:flex;flex-direction:column;gap:1px}
+.ana-facts i{font-style:normal;font-family:var(--font-mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ana-facts b{font-size:12.5px;font-weight:600;color:var(--ink)}
+.ana-smiles{margin:7px 2px 0;font-size:11px;color:var(--muted);overflow-wrap:anywhere}.ana-smiles i{font-style:normal;font-family:var(--font-mono);font-size:9px;letter-spacing:.06em}
+.ana-smiles code,.ana-rx code,.ana-pred code,.ana-ev code,.ana-eq code,.ana-dl code{font-family:var(--font-mono);font-size:11.5px;color:var(--ink);background:var(--surface);border-radius:5px;padding:1px 6px;overflow-wrap:anywhere}
+.ana-tools{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;align-items:center}
+.ana-seg{display:inline-flex;background:var(--surface);border-radius:8px;padding:2px;box-shadow:inset 0 0 0 1px var(--hair)}
+.ana-seg button{padding:4px 9px;border-radius:6px;font-size:11.5px;color:var(--ink-2)}.ana-seg button.on{background:var(--ink);color:#fff}
+.ana-tg{padding:5px 10px;border-radius:8px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair);font-size:11.5px;color:var(--ink-2)}
+.ana-tg:hover{box-shadow:inset 0 0 0 1px var(--ink-2)}.ana-tg.on{background:var(--accent);color:#fff;box-shadow:none}
+.ana-temp{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:11.5px;color:var(--ink-2)}
+.ana-temp label{white-space:nowrap}.ana-temp input{flex:1;accent-color:var(--pos)}.ana-temp span{font-family:var(--font-mono);font-size:11px;min-width:58px;text-align:right}
+.ana-callout{font-size:12px;line-height:1.55;color:var(--ink-2);background:color-mix(in srgb,#8A5BB0 9%,var(--surface));border-radius:10px;padding:8px 11px;margin:0 0 10px}
+.ana-sec{border-top:1px solid var(--hair);padding:2px 0}
+.ana-sec > summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px;padding:10px 0 8px;font-weight:650;font-size:14px;color:var(--ink)}
+.ana-sec > summary::-webkit-details-marker{display:none}
+.ana-sec > summary::before{content:'';width:7px;height:7px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:rotate(-45deg);transition:transform .18s;margin-right:3px;position:relative;top:-1px}
+.ana-sec[open] > summary::before{transform:rotate(45deg)}
+.ana-sec > summary em{font-style:normal;font-family:var(--font-mono);font-size:10px;color:var(--faint);margin-left:auto}
+.ana-in{padding:0 0 12px}
+.ana-tw{overflow-x:auto;margin:4px 0}
+.ana-t{width:100%;border-collapse:collapse;font-size:11.8px}
+.ana-t th{text-align:left;font-family:var(--font-mono);font-size:9px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:4px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ana-t td{padding:5px 7px;border-bottom:1px solid var(--hair);color:var(--ink-2);vertical-align:top}
+.ana-t td b{color:var(--ink);font-weight:650}.ana-t td small{display:block;font-size:10px;color:var(--faint)}
+.ana-t tr[data-hl]:hover td{background:color-mix(in srgb,#C2711C 9%,transparent)}
+.ana-t td.up{color:#2A7A78;font-weight:700}.ana-t td.dn{color:var(--pos);font-weight:700}
+.ana-t.cmp th{white-space:normal}.ana-t.cmp tbody th{font-family:var(--font-ui);text-transform:none;letter-spacing:0;font-size:11.5px;color:var(--ink);font-weight:600;border-bottom:1px solid var(--hair);vertical-align:top}
+.ana-cpic{background:var(--surface);border-radius:8px;box-shadow:inset 0 0 0 1px var(--hair);min-width:120px}.ana-cpic svg{display:block;width:100%;height:auto}
+.ana-dl{display:grid;grid-template-columns:132px 1fr;gap:6px 12px;margin:6px 0}
+.ana-dl dt{font-size:11.5px;font-weight:600;color:var(--ink);font-family:var(--font-ui);text-transform:none;letter-spacing:0;padding:0;border:0;text-align:left}
+.ana-dl dd{margin:0;font-size:12px;line-height:1.5;color:var(--ink-2);padding:0;border:0;text-align:left;font-family:var(--font-ui)}
+.ana-stack{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:2px 0 8px}.ana-stack i{display:block;height:100%}
+.ana-els{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.ana-el{border-radius:10px;padding:8px 10px;background:color-mix(in srgb,var(--ec) 8%,var(--surface));box-shadow:inset 3px 0 0 var(--ec)}
+.ana-el > b{font-size:18px;color:var(--ec)}.ana-el > span{font-size:11.5px;color:var(--ink-2);margin-left:6px}
+.ana-el dl{display:grid;grid-template-columns:auto 1fr;gap:1px 8px;margin:5px 0 0;font-size:10.5px}
+.ana-el dt{font-family:var(--font-mono);font-size:9px;color:var(--muted);padding:0;border:0;text-transform:none;letter-spacing:0}.ana-el dd{margin:0;color:var(--ink-2);padding:0;border:0;text-align:left}
+.ana-lewis,.ana-nmrpic{margin:8px 0;background:var(--surface);border-radius:10px;box-shadow:inset 0 0 0 1px var(--hair);padding:4px 6px 8px}
+.ana-nmrpic .tg,.ana-tag{color:#C2711C;font-style:italic;font-weight:700}
+.ana-mo{display:grid;grid-template-columns:minmax(0,300px) 1fr;gap:12px;align-items:center;margin:8px 0;background:var(--sunk);border-radius:10px;padding:8px}
+.ana-mo b{font-size:12.5px}.ana-chart.mo{background:var(--surface);border-radius:8px}
+.ana-mo-n{font-family:var(--font-mono);font-size:10px;fill:#2A7A78}.ana-mo-n.anti{fill:var(--pos)}
+.ana-mo-l{stroke:#2A7A78;stroke-width:2}.ana-mo-l.anti{stroke:var(--pos)}.ana-mo-e{font-size:13px;fill:var(--ink);font-weight:700}
+.ana-big{font-size:26px;font-weight:700;margin:2px 0}.ana-big span{font-size:13px;font-weight:600;color:var(--muted);margin-left:6px}
+.ana-groups,.ana-rx{list-style:none;margin:4px 0;padding:0;display:grid;gap:6px}
+.ana-groups li,.ana-rx li{background:var(--sunk);border-radius:10px;padding:8px 11px;display:flex;flex-direction:column;gap:3px}
+.ana-groups b,.ana-rx b{font-size:12.5px;color:var(--ink)}.ana-groups span,.ana-rx span{font-size:11.5px;line-height:1.5;color:var(--ink-2)}
+.ana-rx button{align-self:flex-start;margin-top:3px;font-size:11.5px;font-weight:600;color:var(--accent);padding:2px 0}
+.ana-iso,.ana-ex{display:flex;flex-wrap:wrap;gap:5px}
+.ana-iso button,.ana-ex button{padding:5px 10px;border-radius:999px;background:var(--sunk);font-size:11.5px;color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--hair)}
+.ana-iso button:hover,.ana-ex button:hover{background:var(--surface);box-shadow:inset 0 0 0 1px var(--ink-2);color:var(--ink)}
+.ana-home > p:first-child{font-size:13px;line-height:1.6;color:var(--ink-2);margin:2px 0 4px}
+.ana-chart{display:block;width:100%;height:auto;margin:6px 0 2px;background:var(--surface);border-radius:8px;box-shadow:inset 0 0 0 1px var(--hair)}
+.ana-grid{stroke:#EFEFEA;stroke-width:1}.ana-grid.zero{stroke:#D8D8D2;stroke-dasharray:3 3}
+.ana-tick{font-family:var(--font-mono);font-size:8.5px;fill:#A4AAB2}
+.ana-plab{font-family:var(--font-mono);font-size:8.5px;fill:#474C54;font-weight:500}
+.ana-chart text:not([text-anchor]){text-anchor:middle}.ana-plab.mol{fill:var(--pos);font-weight:700}
+.ana-line{fill:none;stroke:#2F5BEA;stroke-width:1.5}
+.ana-fp{fill:#F6F6F2}
+.ana-peak{stroke:#2F5BEA;stroke-width:1.5}.ana-peak.broad{fill:rgba(47,91,234,.12);stroke:#2F5BEA}.ana-peak.tms{stroke:#B4B9C0}.ana-peak.c13{stroke:#2A7A78;stroke-width:2}
+.ana-bar{stroke:#A4AAB2;stroke-width:2.4}.ana-bar.mol{stroke:var(--pos)}
+.ana-sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.ana-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--ink-2);margin:3px 2px 0}
+.ana-leg i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.ana-rxset{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ana-step{display:inline-flex;align-items:center;gap:6px;background:var(--sunk);border-radius:999px;padding:3px 4px 3px 11px;font-size:12px}
+.ana-step button{width:22px;height:22px;border-radius:50%;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);font-weight:700;color:var(--ink-2)}
+.ana-step i{font-style:normal;font-family:var(--font-mono);font-weight:600;min-width:14px;text-align:center}
+.ana-chk{font-size:12px;color:var(--ink-2);display:inline-flex;gap:5px;align-items:center;margin-left:4px}
+.ana-ctl{display:flex;align-items:center;gap:8px;margin:10px 0 4px;flex-wrap:wrap}
+.ana-go{padding:8px 16px;border-radius:10px;background:var(--ink);color:#fff;font-weight:650;font-size:13px}
+.ana-clock{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:auto}
+.ana-pred{border-radius:11px;padding:9px 12px;margin:0 0 7px;background:var(--sunk);box-shadow:inset 3px 0 0 var(--muted)}
+.ana-pred.v-yes{box-shadow:inset 3px 0 0 #2A7A78}.ana-pred.v-partly,.ana-pred.v-slow,.ana-pred.v-needsheat{box-shadow:inset 3px 0 0 #C2711C}.ana-pred.v-no,.ana-pred.v-barely{box-shadow:inset 3px 0 0 var(--faint)}
+.ana-kind{display:block;font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.ana-pred b{display:block;font-size:13px;margin-bottom:4px}.ana-pred p,.ana-ev p{margin:5px 0 0;font-size:11.8px;line-height:1.55;color:var(--ink-2)}
+.ana-eq{margin:4px 0}.ana-eq code{font-size:13px;padding:4px 9px;display:inline-block}
+.ana-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ana-ev{border-left:2px solid var(--line);padding:2px 0 8px 10px;margin-left:3px}
+.ana-ev > span{display:block;font-family:var(--font-mono);font-size:9.5px;color:var(--muted)}.ana-ev b{display:block;font-size:12.5px;margin:2px 0 3px}
+.ana-says{background:var(--sunk);border-radius:12px;padding:4px 12px;margin:10px 0}.ana-says p{font-size:12.5px;line-height:1.6;color:var(--ink-2);margin:8px 0}
+@media (max-width:760px){ .ana-dock{position:relative;right:auto;top:auto;bottom:auto;width:auto;margin:10px;max-height:none} .ana-two,.ana-mo{grid-template-columns:1fr} }
 .crs-info{position:absolute;left:14px;bottom:14px;z-index:8;width:min(320px,38%);max-height:46%;overflow:auto;background:rgba(255,255,255,.95);border:1px solid var(--hair);border-radius:12px;box-shadow:var(--shadow-l);padding:10px 12px;box-sizing:border-box;font-size:12px;color:var(--ink-2)}
 .crs-info[hidden]{display:none}
 .crs-info h5{margin:0 0 5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500}
@@ -1172,6 +1293,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     <span class="chip" id="benchTemp">298 K</span>
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
     <button class="ghost-btn course-btn" id="courseBtn" type="button" title="A whole chemistry course taught on the bench: lessons, guided bench time and free bench time">Course</button>
+    <button class="ghost-btn ana-btn" id="anaBtn" type="button" title="Look at one to four compounds in depth: structure, bonds, shape, electrons, polarity, acids and bases, spectra, and how they react together">Analyse</button>
     <button class="ghost-btn learn-btn" id="learnBtn" type="button" title="A quieter view for watching one reaction at a time">Learn mode</button>
     <button class="ghost-btn" id="shareBtn" type="button" title="Share this bench as a link">Share</button>
     <button class="ghost-btn" id="clearBtn" type="button" title="Clear everything off the bench (Undo brings it back)">Clear</button>
@@ -1282,6 +1404,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
       <div id="elTip" class="atom-tip el-tip" hidden></div>
       <div class="learn-dock" id="learnDock" hidden></div>
       <div class="learn-dock course-dock" id="courseDock" hidden></div>
+      <div class="ana-dock" id="anaDock" hidden></div>
       <div class="crs-info" id="crsInfo" hidden></div>
       <div class="timectl"><div class="seg" id="timeSeg" role="group" aria-label="Time scale"></div>
         <div class="stats">
@@ -7546,6 +7669,7 @@ const crsIsCheck = L => L.steps.length === 1 && L.steps[0].t === 'check';
 COURSE.forEach(L=>(L.terms||[]).forEach(([w, d])=>{ if(!GLOSSARY.some(g=>g[0].toLowerCase() === w.toLowerCase())) GLOSSARY.push([w, d]); }));
 GLOSSARY.sort((a, b)=>b[0].length - a[0].length);              /* longer terms first, so "mass number" wins over "mass" */
 function courseStart(li){
+  if(ANA.on) anaExit();
   if(LEARN.on) learnMode(false);
   if(!CRS.on){
     /* your own bench is kept and comes back, as it was, when you leave the course */
@@ -7888,6 +8012,1287 @@ function wireCourse(){
   setInterval(crsTick, 600);
 }
 
+/* ============================== analysis mode ==============================
+   One to four compounds looked at in depth. Each gets a full report: structure,
+   composition and every bond; the shape at every centre and the electrons
+   behind it; polarity and the forces between its molecules, with what they mean
+   for melting, boiling and dissolving; acidic and basic sites with the pH of a
+   solution; functional groups and what they react with; estimated energetics;
+   and simulated infrared, proton and carbon NMR, mass and UV spectra. Two or
+   more can be compared side by side, or set reacting in a box of their own: the
+   panel predicts what should happen and why, runs the real engine, then
+   accounts for the result (species before and after, the net equation, bonds
+   broken and formed with a Hess's law enthalpy, every step with its reason, and
+   charts of the run). Everything is measured from the molecule as the 3D bench
+   builds and relaxes it. */
+const ANA = {on:false, list:[], tab:0, keep:null, rep:{}, run:null, pred:null, open:{}, held:false, water:false, temp:298, ac:[], acI:-1, err:''};
+/* measured melting and boiling points at 1 atm, in kelvin (null: decomposes or sublimes first) */
+const ANA_PHYS = {
+  'water':[273,373], 'ammonia':[195,240], 'methane':[91,112], 'ethane':[90,184], 'propane':[85,231], 'butane':[136,273], 'pentane':[143,309], 'hexane':[178,342],
+  'heptane':[182,371], 'octane':[216,399], 'nonane':[220,424], 'decane':[243,447], 'ethene':[104,169], 'propene':[88,225], 'ethyne':[192,189], 'benzene':[279,353],
+  'toluene':[178,384], 'cyclohexane':[280,354], 'naphthalene':[353,491], 'methanol':[175,338], 'ethanol':[159,351], 'propan-1-ol':[147,370], 'isopropanol':[184,356],
+  'butan-1-ol':[184,391], 'glycerol':[291,563], 'ethylene glycol':[260,470], 'phenol':[314,455], 'formaldehyde':[181,254], 'acetaldehyde':[150,293], 'acetone':[178,329],
+  'formic acid':[281,374], 'acetic acid':[290,391], 'propanoic acid':[252,414], 'butanoic acid':[268,437], 'diethyl ether':[157,308], 'dimethyl ether':[132,249],
+  'ethyl acetate':[189,350], 'chloroform':[210,334], 'carbon tetrachloride':[250,350], 'dichloromethane':[176,313], 'chloromethane':[176,249], 'aniline':[267,457],
+  'pyridine':[232,388], 'nitrobenzene':[279,484], 'styrene':[242,418], 'acetonitrile':[229,355], 'methylamine':[180,267], 'urea':[406,null], 'glucose':[419,null],
+  'sucrose':[459,null], 'caffeine':[511,null], 'aspirin':[409,null], 'paracetamol':[442,null], 'ibuprofen':[349,null], 'menthol':[316,485], 'camphor':[448,482],
+  'vanillin':[354,558], 'limonene':[199,449], 'nicotine':[194,520], 'cholesterol':[421,null], 'stearic acid':[343,634], 'palmitic acid':[336,624], 'glycine':[506,null],
+  'hydrogen chloride':[159,188], 'hydrogen fluoride':[190,293], 'hydrogen bromide':[184,206], 'hydrogen iodide':[222,238], 'hydrogen sulfide':[191,213],
+  'carbon dioxide':[null,195], 'carbon monoxide':[68,82], 'oxygen':[54,90], 'nitrogen':[63,77], 'hydrogen':[14,20], 'chlorine':[172,239], 'bromine':[266,332],
+  'iodine':[387,457], 'fluorine':[53,85], 'ozone':[81,161], 'sulfur dioxide':[200,263], 'nitrogen dioxide':[262,294], 'nitrous oxide':[182,185], 'hydrogen peroxide':[272,423],
+  'sulfuric acid':[283,610], 'nitric acid':[231,356], 'sodium chloride':[1074,1738], 'potassium chloride':[1044,1693], 'sodium hydroxide':[591,1661], 'calcium carbonate':[1098,null],
+  'helium':[null,4], 'neon':[25,27], 'argon':[84,87], 'krypton':[116,120], 'xenon':[161,165], 'phosphine':[140,185], 'silane':[88,161], 'hydrazine':[275,387]
+};
+/* standard enthalpies of combustion, kJ/mol, for checking the estimate */
+const ANA_HC = {'methane':-890, 'ethane':-1560, 'propane':-2220, 'butane':-2878, 'pentane':-3509, 'hexane':-4163, 'octane':-5470, 'ethene':-1411, 'ethyne':-1301,
+  'benzene':-3268, 'methanol':-726, 'ethanol':-1367, 'propan-1-ol':-2021, 'glucose':-2803, 'sucrose':-5640, 'hydrogen':-286, 'carbon monoxide':-283, 'acetic acid':-874,
+  'acetone':-1790, 'toluene':-3910, 'cyclohexane':-3920, 'naphthalene':-5157, 'formic acid':-255, 'urea':-632, 'ammonia':-383};
+/* enthalpy to make a gaseous atom from the element as it is at 25 degrees, kJ/mol */
+const ANA_ATOMISE = {H:218.0, C:716.7, N:472.7, O:249.2, F:79.4, Cl:121.3, Br:111.9, I:106.8, S:277.2, P:316.5, Si:450.0, B:565.0};
+/* the products' enthalpies of formation, kJ/mol */
+const ANA_HF = {CO2:-393.5, H2Ol:-285.8, H2Og:-241.8, SO2:-296.8, HCl:-92.3, HF:-273.3, HBr:-36.3, HI:26.5, P4O10:-2984};
+const anaSym = a => EL[a.e].sym;
+const anaQ = a => (a.ion||0) + (a.fq||0);
+const anaCov = b => b.type === 'covalent' || b.type === 'dative';
+const anaDeg = n => Math.round(n*180/Math.PI*10)/10;
+const anaRnd = (x, d) => { const p = Math.pow(10, d||0); return Math.round(x*p)/p; };
+const anaFmt = (x, d) => (x < 0 ? '−' : '')+String(Math.abs(anaRnd(x, d)));
+const anaEsc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const anaCap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+function anaFormula(c, q){ const bf = benchFormula(c); return subPlain(bf === 'HO' ? 'OH' : bf) + chargeSup(q||0); }
+
+/* the molecule on the bench, as a graph with everything the report needs */
+function anaMol(entry){
+  const atoms = L3.atoms.filter(a=>!a.dying), byId = new Map(atoms.map(a=>[a.id, a]));
+  const bonds = L3.bonds.filter(b=>byId.has(b.a) && byId.has(b.b));
+  const nb = new Map(atoms.map(a=>[a.id, []]));
+  bonds.forEach(b=>{ nb.get(b.a).push({b, o:byId.get(b.b)}); nb.get(b.b).push({b, o:byId.get(b.a)}); });
+  const counts = countsOf(atoms), q = atoms.reduce((t, a)=>t + anaQ(a), 0);
+  const mass = atoms.reduce((t, a)=>t + (a.A && Math.abs(a.A - EL[a.e].mass) > 0.6 ? a.A : EL[a.e].mass), 0);
+  /* atoms numbered within their element, as chemists label them: C1, C2, O1 */
+  const tally = {}, lab = new Map();
+  atoms.forEach(a=>{ const s = anaSym(a); tally[s] = (tally[s]||0) + 1; lab.set(a.id, s + tally[s]); });
+  /* the pieces: a salt is several, a molecule one */
+  const comp = new Map(); let nc = 0;
+  atoms.forEach(a=>{ if(comp.has(a.id)) return; const st = [a]; comp.set(a.id, nc);
+    while(st.length){ const x = st.pop(); nb.get(x.id).forEach(({b, o})=>{ if(anaCov(b) && !comp.has(o.id)){ comp.set(o.id, nc); st.push(o); } }); } nc++; });
+  const pieces = []; for(let k=0;k<nc;k++){ const list = atoms.filter(a=>comp.get(a.id) === k); pieces.push(speciesOf(list, list.reduce((t, a)=>t + anaQ(a), 0))); }
+  const M = {entry, atoms, bonds, byId, nb, counts, q, mass, lab, comp, nc, pieces,
+    cov: a => nb.get(a.id).filter(x=>anaCov(x.b)), heavy: atoms.filter(a=>anaSym(a) !== 'H')};
+  M.hOn = a => M.cov(a).filter(x=>anaSym(x.o) === 'H').length;
+  M.f = anaFormula(counts, q);
+  /* the library writes some formulas the way chemists do (HNO3, not NHO3) */
+  if(entry.lib){ const lf = LIB_FORMULA[entry.lib] || (entry.spec && entry.spec.f); if(lf){ try{ const g2 = l3ParseFormula(lf.replace(/[\u00b9\u00b2\u00b3\u2070-\u209f]+$/, '').replace(/[\u00b9\u00b2\u00b3\u2070-\u209f]/g, '')); if(g2 && benchFormula(g2) === benchFormula(counts)) M.f = subPlain(lf.replace(/[\u00b9\u00b2\u00b3\u2070-\u209f]+$/, '')) + chargeSup(q); }catch(e){} } }
+  const single = nc === 1;
+  M.name = entry.lib || (single ? speciesOf(atoms, q).name : '') || (single ? '' : pieces.map(p=>p.name || p.f).join(' + '));
+  /* symmetry classes: atoms that are the same by connectivity (Weisfeiler-Lehman
+     refinement), which set the NMR environments and the stereocentres */
+  let cls = atoms.map(a=>anaSym(a) + anaQ(a));
+  const idx = new Map(atoms.map((a, i)=>[a.id, i]));
+  const h = t => { let x = 5381; for(let i=0;i<t.length;i++) x = ((x << 5) + x + t.charCodeAt(i)) | 0; return (x >>> 0).toString(36); };
+  for(let it=0; it<Math.min(12, atoms.length); it++) cls = atoms.map((a, i)=>h(cls[i] + '|' + nb.get(a.id).map(({b, o})=>(b.order||1) + b.type[0] + cls[idx.get(o.id)]).sort().join(',')));
+  M.cls = new Map(atoms.map((a, i)=>[a.id, cls[i]]));
+  /* rings among the covalent bonds, the smallest through each bond */
+  M.rings = anaRings(M);
+  M.arom = new Set();
+  M.rings.forEach(r=>{ if(r.length !== 6 && r.length !== 5) return;
+    const ok = r.every(id=>{ const a = byId.get(id); return M.cov(a).some(({b, o})=>(b.order === 2 || b.order === 1.5 || b.arom) && r.includes(o.id)) || (r.length === 5 && ['N','O','S'].includes(anaSym(a))); });
+    const dbl = r.filter((id, i)=>{ const nx = r[(i+1) % r.length]; return M.cov(byId.get(id)).some(({b, o})=>o.id === nx && (b.order >= 1.5 || b.arom)); }).length;
+    if(ok && (r.length === 6 ? dbl >= 3 : dbl >= 2)) r.forEach(id=>M.arom.add(id)); });
+  return M;
+}
+function anaRings(M){
+  const rings = [], seen = new Set(), ids = M.heavy.map(a=>a.id);
+  const adj = id => M.cov(M.byId.get(id)).map(x=>x.o).filter(o=>anaSym(o) !== 'H').map(o=>o.id);
+  ids.forEach(u=>adj(u).forEach(v=>{ if(v < u) return;
+    const prev = new Map([[u, u]]), qu = [u]; let found = false;
+    for(let k=0;k<qu.length && !found;k++){ const x = qu[k]; for(const y of adj(x)){ if(x === u && y === v) continue; if(!prev.has(y)){ prev.set(y, x); if(y === v){ found = true; break; } qu.push(y); } } }
+    if(!found) return; const ring = [v]; while(ring[ring.length-1] !== u) ring.push(prev.get(ring[ring.length-1]));
+    if(ring.length > 10) return; const key = ring.slice().sort((a, b)=>a - b).join(','); if(!seen.has(key)){ seen.add(key); rings.push(ring); } }));
+  return rings;
+}
+/* ---------- identity ---------- */
+function anaIdentity(M){
+  const c = M.counts, X = (c.F||0) + (c.Cl||0) + (c.Br||0) + (c.I||0);
+  const organicOnly = Object.keys(c).every(s=>['C','H','N','O','S','F','Cl','Br','I','P'].includes(s));
+  const dou = organicOnly && !M.q && c.C ? (2*c.C + 2 + (c.N||0) + (c.P||0) - (c.H||0) - X)/2 : null;
+  const covB = M.bonds.filter(anaCov), pi = covB.reduce((t, b)=>t + Math.max(0, Math.round(b.order) - 1), 0);
+  const ringN = covB.length - M.atoms.length + M.nc;
+  /* stereocentres: an sp3 carbon with four different groups; a C=C with two different groups on each end */
+  const stereo = [], ez = [];
+  M.atoms.forEach(a=>{
+    if(anaSym(a) !== 'C') return; const cv = M.cov(a); if(cv.length !== 4 || cv.some(x=>x.b.order !== 1)) return;
+    const k = cv.map(x=>M.cls.get(x.o.id)); if(new Set(k).size === 4) stereo.push(M.lab.get(a.id)); });
+  M.bonds.forEach(b=>{ if(b.order !== 2 || b.type !== 'covalent') return; const p = M.byId.get(b.a), q = M.byId.get(b.b);
+    if(anaSym(p) !== 'C' || anaSym(q) !== 'C' || (M.arom.has(p.id) && M.arom.has(q.id))) return;
+    if(M.rings.some(r=>r.includes(p.id) && r.includes(q.id) && r.length < 8)) return;
+    const side = x => M.cov(x).filter(y=>y.o !== p && y.o !== q).map(y=>M.cls.get(y.o.id));
+    const s1 = side(p), s2 = side(q); if(s1.length === 2 && s2.length === 2 && s1[0] !== s1[1] && s2[0] !== s2[1]) ez.push(M.lab.get(p.id)+'='+M.lab.get(q.id)); });
+  return {dou, pi, rings:ringN, stereo, ez, aromRings:M.rings.filter(r=>r.every(id=>M.arom.has(id))).length};
+}
+/* ---------- bonds ---------- */
+const ANA_ORDER_GLYPH = {1:'–', 1.5:'…', 2:'=', 3:'≡'};
+function anaBondKey(M, b){
+  const p = M.byId.get(b.a), q = M.byId.get(b.b), sp = anaSym(p), sq = anaSym(q);
+  const rank = s => s === 'C' ? 0 : s === 'H' ? 9 : 1 + (EL[BY_SYM[s].i].en || 0);
+  const [x, y] = rank(sp) <= rank(sq) ? [sp, sq] : [sq, sp];
+  return b.type === 'ionic' ? x+'⋯'+y : b.type === 'metallic' ? x+'·'+y : x + (ANA_ORDER_GLYPH[b.order] || '–') + y;
+}
+/* infrared bands as spectra tables give them for each kind of bond and its surroundings */
+function anaIR(M, b){
+  if(!anaCov(b)) return null;
+  const p = M.byId.get(b.a), q = M.byId.get(b.b), s1 = anaSym(p), s2 = anaSym(q), o = b.order;
+  const pair = (x, y) => (s1 === x && s2 === y) ? [p, q] : (s1 === y && s2 === x) ? [q, p] : null;
+  const carbonylC = c => M.cov(c).some(x=>x.b.order === 2 && anaSym(x.o) === 'O');
+  if(s1 === s2 && M.atoms.length === 2) return {wn:0, lab:s1+'–'+s2, note:'IR-inactive: stretching a bond between two identical atoms changes no dipole'};
+  let r;
+  if((r = pair('O','H'))){ const O = r[0], C = M.cov(O).map(x=>x.o).find(x=>anaSym(x) === 'C');
+    if(C && carbonylC(C)) return {wn:3000, w:330, s:0.85, lab:'O–H (acid)', note:'very broad, 2500–3300, from hydrogen-bonded pairs of acid molecules'};
+    if(M.cov(O).every(x=>anaSym(x.o) === 'H')) return {wn:3400, w:200, s:0.9, lab:'O–H (water)', note:'broad, hydrogen bonded'};
+    return {wn:3350, w:170, s:0.85, lab:'O–H', note:'broad, 3200–3550, because of hydrogen bonding'}; }
+  if((r = pair('N','H'))){ const N = r[0], C = M.cov(N).map(x=>x.o).find(x=>anaSym(x) === 'C'); return C && carbonylC(C) ? {wn:3300, w:90, s:0.6, lab:'N–H (amide)'} : {wn:3370, w:80, s:0.5, lab:'N–H', note:'sharper than O–H; NH₂ shows two peaks'}; }
+  if((r = pair('C','H'))){ const C = r[0], cv = M.cov(C);
+    if(cv.some(x=>x.b.order === 3)) return {wn:3300, w:22, s:0.6, lab:'≡C–H', note:'sharp'};
+    if(carbonylC(C)) return {wn:2760, w:40, s:0.35, lab:'C–H (aldehyde)', note:'a pair near 2720 and 2820, the mark of an aldehyde'};
+    if(cv.some(x=>x.b.order >= 1.5) || M.arom.has(C.id)) return {wn:3050, w:40, s:0.3, lab:'C–H (sp²)', note:'just above 3000'};
+    return {wn:2930, w:55, s:0.55, lab:'C–H (sp³)', note:'just below 3000'}; }
+  if(pair('S','H')) return {wn:2570, w:30, s:0.25, lab:'S–H', note:'weak'};
+  if(pair('C','C') && o === 3) return {wn:2150, w:25, s:0.2, lab:'C≡C', note:'weak, missing if the alkyne is symmetric'};
+  if(pair('C','N') && o === 3) return {wn:2250, w:25, s:0.5, lab:'C≡N', note:'sharp, medium'};
+  if((r = pair('C','O')) && o === 2){ const C = r[0], cv = M.cov(C).filter(x=>x.o !== r[1]);
+    if(M.atoms.length === 3 && cv.length === 1) return {wn:2350, w:30, s:1, lab:'O=C=O', note:'the asymmetric stretch; why CO₂ is a greenhouse gas'};
+    if(cv.some(x=>anaSym(x.o) === 'O' && anaQ(x.o) < 0)) return {wn:1580, w:40, s:0.9, lab:'C=O (carboxylate)'};
+    if(cv.some(x=>anaSym(x.o) === 'O' && M.hOn(x.o))) return {wn:1710, w:35, s:1, lab:'C=O (acid)', note:'strong'};
+    if(cv.some(x=>anaSym(x.o) === 'O')) return {wn:1740, w:30, s:1, lab:'C=O (ester)', note:'strong'};
+    if(cv.some(x=>anaSym(x.o) === 'N')) return {wn:1660, w:35, s:1, lab:'C=O (amide)', note:'strong, lowered by the nitrogen’s lone pair'};
+    if(cv.some(x=>anaSym(x.o) === 'H')) return {wn:1730, w:30, s:1, lab:'C=O (aldehyde)', note:'strong'};
+    if(cv.some(x=>anaSym(x.o) === 'Cl')) return {wn:1800, w:30, s:1, lab:'C=O (acid chloride)'};
+    return {wn:1715, w:30, s:1, lab:'C=O (ketone)', note:'strong, the tallest peak in most spectra that have it'}; }
+  if(pair('C','C') && (o === 1.5 || (o === 2 && M.arom.has(p.id) && M.arom.has(q.id)) || (o === 1 && M.arom.has(p.id) && M.arom.has(q.id)))) return {wn:1600, w:20, s:0.35, lab:'C=C (aromatic)', note:'with another near 1500'};
+  if(pair('C','C') && o === 2) return {wn:1650, w:25, s:0.3, lab:'C=C', note:'medium to weak'};
+  if(pair('C','N') && o === 2) return {wn:1650, w:25, s:0.4, lab:'C=N'};
+  if((r = pair('N','O'))){ if(o === 2 || anaQ(r[1]) < 0) return {wn:1530, w:30, s:0.9, lab:'N=O (nitro)', note:'strong, with another near 1350'}; return {wn:900, w:30, s:0.3, lab:'N–O'}; }
+  if(pair('S','O') && o === 2) return {wn:1350, w:35, s:0.9, lab:'S=O', note:'strong, with another near 1150'};
+  if(pair('P','O') && o === 2) return {wn:1250, w:35, s:0.8, lab:'P=O'};
+  if((r = pair('C','O')) && o === 1){ const ester = M.cov(r[0]).some(x=>x.b.order === 2 && anaSym(x.o) === 'O'); return {wn:ester ? 1240 : 1080, w:45, s:0.7, lab:'C–O', note:'strong, in the fingerprint region'}; }
+  if(pair('C','N') && o === 1) return {wn:1150, w:40, s:0.4, lab:'C–N'};
+  if(pair('C','F')) return {wn:1100, w:45, s:0.9, lab:'C–F', note:'strong'};
+  if(pair('C','Cl')) return {wn:740, w:35, s:0.7, lab:'C–Cl'};
+  if(pair('C','Br')) return {wn:600, w:30, s:0.6, lab:'C–Br'};
+  if(pair('C','I')) return {wn:500, w:30, s:0.5, lab:'C–I'};
+  if(pair('C','C') && o === 1) return {wn:1000, w:40, s:0.08, lab:'C–C', note:'weak, lost in the fingerprint region'};
+  /* anything else: a harmonic oscillator whose stiffness follows the bond enthalpy */
+  const k = (b.energy||300)*(1.25 + 0.4*(o - 1)), ma = EL[p.e].mass, mc = EL[q.e].mass;
+  const wn = 130.3*Math.sqrt(k/(ma*mc/(ma+mc))), den = Math.abs((EL[p.e].en||2) - (EL[q.e].en||2));
+  return {wn:Math.round(wn), w:35, s:clamp(den, 0.05, 0.9), lab:anaBondKey(M, b), note:'estimated: a harmonic oscillator stiffened by the bond enthalpy'};
+}
+function anaBonds(M){
+  const rows = new Map();
+  M.bonds.forEach(b=>{
+    const k = anaBondKey(M, b), p = M.byId.get(b.a), q = M.byId.get(b.b);
+    const d = Math.hypot(p.x-q.x, p.y-q.y, p.z-q.z), den = Math.abs((EL[p.e].en||0) - (EL[q.e].en||0));
+    let r = rows.get(k);
+    if(!r){ r = {k, n:0, d:0, E:b.energy||0, den, type:b.type, order:b.order, ref:anaCov(b) ? l3Len(p, q, b.order) : null, ir:anaIR(M, b), ids:[]}; rows.set(k, r); }
+    r.n++; r.d += d; r.ids.push(p.id, q.id);
+  });
+  /* infrared bands are told apart by their surroundings, not just the two atoms: an sp2 C-H is not an sp3 one */
+  const bands = new Map();
+  M.bonds.forEach(b=>{ const ir = anaIR(M, b); if(!ir) return; const o = bands.get(ir.lab) || {ir, n:0, ids:[]}; o.n++; o.ids.push(b.a, b.b); bands.set(ir.lab, o); });
+  const list = [...rows.values()].map(r=>Object.assign(r, {d:r.d/r.n,
+    kind: r.type === 'ionic' ? 'ionic' : r.type === 'metallic' ? 'metallic' : r.type === 'dative' ? 'coordinate' : r.den < 0.4 ? 'nonpolar covalent' : r.den < 1.7 ? 'polar covalent' : 'very polar'}));
+  list.sort((a, b)=>b.n - a.n || a.k.localeCompare(b.k));
+  const cov = list.filter(r=>r.type === 'covalent' || r.type === 'dative');
+  const total = cov.reduce((t, r)=>t + r.n*r.E, 0);
+  const weakest = cov.slice().sort((a, b)=>a.E - b.E)[0] || null;
+  return {list, total, weakest, bands:[...bands.values()]};
+}
+/* ---------- shape ---------- */
+const ANA_IDEAL = {'linear':'180', 'trigonal planar':'120', 'bent3':'<120 (about 117)', 'bent4':'104.5', 'trigonal pyramidal':'107', 'tetrahedral':'109.5',
+  'seesaw':'90 and 120', 'T-shaped':'90', 'square planar':'90', 'trigonal bipyramidal':'90 and 120', 'square pyramidal':'90', 'octahedral':'90'};
+const ANA_EGEOM = {2:'linear', 3:'trigonal planar', 4:'tetrahedral', 5:'trigonal bipyramidal', 6:'octahedral'};
+function anaShape(M){
+  const rows = new Map();
+  M.atoms.forEach(a=>{
+    const cv = M.cov(a); if(cv.length < 2) return;
+    const lp = l3Conj(a) ? 0 : l3Lone(a), sn = cv.length + lp;
+    const shape = l3Shape(a) || cv.length+'-coordinate', ideal = ANA_IDEAL[shape === 'bent' ? 'bent'+sn : shape] || '';
+    const angs = []; for(let i=0;i<cv.length;i++) for(let j=i+1;j<cv.length;j++){ const u = cv[i].o, v = cv[j].o;
+      const ax = u.x-a.x, ay = u.y-a.y, az = u.z-a.z, bx = v.x-a.x, by = v.y-a.y, bz = v.z-a.z;
+      angs.push(Math.acos(clamp((ax*bx + ay*by + az*bz)/((Math.hypot(ax, ay, az)*Math.hypot(bx, by, bz)) || 1), -1, 1))); }
+    const hy = M.hOn(a), what = anaSym(a) + (hy ? 'H' + (hy > 1 ? subPlain(String(hy)) : '') : '') + (anaQ(a) ? chargeSup(anaQ(a)) : '');
+    const key = M.cls.get(a.id) + '|' + shape;
+    let r = rows.get(key);
+    if(!r){ r = {what, sym:anaSym(a), lab:M.lab.get(a.id), labs:[], n:0, bonds:cv.length, lp, sn, egeom:ANA_EGEOM[sn] || sn+' domains', shape, hyb:HYB[Math.min(sn, 6)] || '', ideal, angs:[], ids:[]}; rows.set(key, r); }
+    r.n++; r.labs.push(M.lab.get(a.id)); r.angs.push(...angs); r.ids.push(a.id);
+  });
+  return [...rows.values()].map(r=>{ const m = r.angs.reduce((t, x)=>t + x, 0)/(r.angs.length || 1);
+    return Object.assign(r, {mean:anaDeg(m), min:anaDeg(Math.min(...r.angs)), max:anaDeg(Math.max(...r.angs))}); })
+    .sort((a, b)=>(b.sym !== 'C') - (a.sym !== 'C') || b.bonds - a.bonds);
+}
+/* ---------- electrons ---------- */
+function anaElectrons(M){
+  let val = 0, bp = 0, lp = 0; const fq = [], octet = [];
+  M.atoms.forEach(a=>{ val += l3Valence(EL[a.e]); lp += l3Lone(a);
+    const q = anaQ(a); if(q) fq.push([M.lab.get(a.id), q]);
+    if(l3Metal(a) || a.ion) return;
+    const own = M.cov(a).reduce((t, x)=>t + (x.b.type === 'dative' ? 1 : x.b.order), 0), around = 2*own + 2*l3Lone(a), want = anaSym(a) === 'H' || anaSym(a) === 'He' ? 2 : 8;
+    if(M.cov(a).length && around !== want && !(around === 2*Math.round(own)+2*l3Lone(a) && Math.abs(around - want) < 1)) octet.push([M.lab.get(a.id), around, want]); });
+  M.bonds.forEach(b=>{ if(anaCov(b)) bp += b.type === 'dative' ? 1 : Math.round(b.order*2)/2; });
+  val -= M.q;
+  const rad = Math.max(0, Math.round(val - 2*bp - 2*lp));
+  return {val, bp, lp, rad, fq, octet};
+}
+/* ---------- polarity and forces ---------- */
+function anaPolarity(M){
+  const ch = M.atoms.map(a=>({a, q:a.q||0, lab:M.lab.get(a.id)}));
+  const pos = ch.filter(x=>x.q > 0.04).sort((a, b)=>b.q - a.q), neg = ch.filter(x=>x.q < -0.04).sort((a, b)=>a.q - b.q);
+  const mu = M.q ? null : l3Dipole(M.atoms);
+  const polarBonds = M.bonds.some(b=>anaCov(b) && Math.abs((EL[M.byId.get(b.a).e].en||0) - (EL[M.byId.get(b.b).e].en||0)) >= 0.4);
+  return {pos, neg, mu, polar: M.q ? true : mu > 0.5, polarBonds};
+}
+function anaForces(M, P){
+  let donors = 0, acceptors = 0;
+  M.atoms.forEach(a=>{ const s = anaSym(a);
+    if(s === 'H'){ const h = M.cov(a)[0]; if(h && HB_ACCEPT[anaSym(h.o)]) donors++; }
+    if(HB_ACCEPT[s] && !a.ion) acceptors += l3Lone(a) ? 1 : 0;
+    if(HB_ACCEPT[s] && a.ion < 0) acceptors++; });
+  const ionic = M.atoms.some(a=>a.ion) || M.q !== 0;
+  const electrons = M.atoms.reduce((t, a)=>t + EL[a.e].z, 0) - M.q;
+  const pol = M.atoms.reduce((t, a)=>t + (EL[a.e].pol || 1), 0);
+  const strongest = ionic ? 'ionic' : donors && acceptors ? 'hydrogen bonding' : P.polar ? 'dipole–dipole' : 'London dispersion';
+  /* how well it mixes with water: hydrogen bonds and a dipole pull it in, a long oily carbon chain keeps it out */
+  const oily = M.atoms.filter(a=>anaSym(a) === 'C' && !M.cov(a).some(x=>['O','N'].includes(anaSym(x.o)))).length;
+  const score = (ionic ? 6 : 0) + 2.2*Math.min(donors, 4) + 1.1*Math.min(acceptors, 6) + (P.polar ? 1.2 : 0) - 0.95*oily - (M.counts.Cl||0)*0.4 - (M.counts.Br||0)*0.6;
+  const sol = ionic ? 'dissolves in water as ions (unless its lattice is too strong: see precipitates)' : score > 1.8 ? 'mixes with or dissolves well in water' : score > -0.5 ? 'slightly soluble in water' : 'insoluble in water; dissolves in oils and non-polar solvents like hexane';
+  return {donors, acceptors, ionic, electrons, pol, strongest, oily, score, sol};
+}
+function anaPhase(M){
+  const nm = (M.entry.lib || M.name || '').toLowerCase();
+  let r = ANA_PHYS[nm];
+  if(!r){ const f = benchFormula(M.counts); const s = SUBSTANCE[f]; if(s && (M.counts.C||0) <= 1) r = s; }
+  return r || null;
+}
+const ANA_ALKANES = [['methane',16,112],['ethane',30,184],['propane',44,231],['butane',58,273],['pentane',72,309],['hexane',86,342],['heptane',100,371],['octane',114,399],['nonane',128,424],['decane',142,447]];
+/* ---------- acids and bases ---------- */
+function anaAcidBase(M){
+  const acids = new Map(), bases = new Map();
+  M.atoms.forEach(h=>{
+    if(anaSym(h) !== 'H' || h.ion) return; const hb = M.cov(h); if(hb.length !== 1) return;
+    let pk = null; try{ pk = l3AcidPKa(h, hb[0].o); }catch(e){}
+    if(pk == null || pk > 50) return;
+    const k = M.cls.get(h.id); const r = acids.get(k) || {pk, n:0, on:hb[0].o, lab:anaSym(hb[0].o)+'–H on '+M.lab.get(hb[0].o.id)}; r.n++; acids.set(k, r); });
+  M.atoms.forEach(b=>{
+    if(!L3_DONOR[anaSym(b)]) return; let pk = null; try{ pk = l3BasePKa(b); }catch(e){}
+    if(pk == null) return;
+    const k = M.cls.get(b.id); const r = bases.get(k) || {pk, n:0, at:b, lab:'lone pair on '+M.lab.get(b.id)+(anaQ(b) < 0 ? ' (negative)' : '')}; r.n++; bases.set(k, r); });
+  const A = [...acids.values()].sort((a, b)=>a.pk - b.pk), B = [...bases.values()].sort((a, b)=>b.pk - a.pk);
+  const C = 0.1, out = {acids:A, bases:B};
+  const a0 = A[0], b0 = B[0];
+  if(a0 && a0.pk < 15.7){
+    if(a0.pk < -1.74){ out.acidPH = 1.0; out.acidNote = 'a strong acid: it gives up this proton to water completely, so a 0.10 mol/L solution has [H₃O⁺] = 0.10 mol/L'; out.alpha = 100; }
+    else { const Ka = Math.pow(10, -a0.pk), x = (-Ka + Math.sqrt(Ka*Ka + 4*Ka*C))/2; out.acidPH = -Math.log10(Math.max(x, 1e-7)); out.alpha = Math.min(100, x/C*100);
+      out.acidNote = 'a weak acid: Ka = 10^−'+anaFmt(a0.pk, 2)+', so in 0.10 mol/L only '+(out.alpha < 1 ? out.alpha.toFixed(2) : out.alpha.toFixed(1))+'% of the molecules have given up their proton at any moment'; }
+  }
+  if(b0 && b0.pk > 0 && b0.pk > (a0 ? a0.pk - 2 : -99)){
+    const pKb = 14 - b0.pk;
+    if(pKb < 0){ out.basePH = 13.0; out.baseNote = 'a strong base: it takes a proton from water completely, so 0.10 mol/L gives [OH⁻] = 0.10 mol/L'; }
+    else { const Kb = Math.pow(10, -pKb), x = (-Kb + Math.sqrt(Kb*Kb + 4*Kb*C))/2; out.basePH = 14 + Math.log10(Math.max(x, 1e-7));
+      out.baseNote = 'a weak base: Kb = 10^−'+anaRnd(pKb, 2)+' (pKa of its conjugate acid '+anaFmt(b0.pk, 2)+'), so only '+(x/C*100 < 1 ? (x/C*100).toFixed(2) : (x/C*100).toFixed(1))+'% is protonated in 0.10 mol/L'; }
+  }
+  if(a0){ const c = Object.assign({}, M.counts); c.H--; if(!c.H) delete c.H; out.conjBase = anaFormula(c, M.q - 1); }
+  if(b0){ const c = Object.assign({}, M.counts); c.H = (c.H||0) + 1; out.conjAcid = anaFormula(c, M.q + 1); }
+  return out;
+}
+/* ---------- functional groups ---------- */
+const ANA_GROUP_NOTE = {
+  'carboxylic acid':'gives up its O–H proton (pKa near 4–5): sour, reacts with bases and carbonates, and with alcohols makes esters',
+  'carboxylate':'the conjugate base of an acid; takes a proton back from strong acids',
+  'ester':'sweet, fruity smells; split by water (slowly) or by hydroxide (soap-making, saponification) into an acid and an alcohol',
+  'amide':'very stable, the link in proteins and nylon; the nitrogen’s lone pair is shared with the C=O, so it is barely basic',
+  'aldehyde':'easily oxidised to an acid (it reduces Tollens’ and Fehling’s reagents); reduced to a primary alcohol',
+  'ketone':'not easily oxidised; reduced to a secondary alcohol; the C=O carbon is attacked by nucleophiles',
+  'primary alcohol':'oxidised to an aldehyde, then an acid; makes esters with acids; hydrogen bonds',
+  'secondary alcohol':'oxidised to a ketone; makes esters; hydrogen bonds',
+  'tertiary alcohol':'resists oxidation; loses water easily to give an alkene',
+  'phenol':'a weak acid (pKa near 10), much stronger than an alcohol because the ring spreads the charge of its anion',
+  'ether':'unreactive; accepts hydrogen bonds but cannot give them, so it boils low for its size',
+  'primary amine':'a base (pKa of its ion near 10.6): takes a proton, smells fishy, makes amides with acids',
+  'secondary amine':'a base, a little stronger than a primary amine in water',
+  'tertiary amine':'a base with no N–H, so it cannot hydrogen bond to itself',
+  'ammonium':'a protonated amine, the conjugate acid; gives the proton back to strong bases',
+  'nitrile':'C≡N: hydrolysed to an acid; reduced to an amine',
+  'nitro':'strongly electron-withdrawing; reduced to an amine; many nitro compounds are explosive',
+  'alkene':'C=C: adds HBr, Br₂, H₂ or water across the double bond (addition), and polymerises',
+  'alkyne':'C≡C: adds two molecules across the triple bond',
+  'benzene ring':'aromatic: six π electrons shared round the ring make it unusually stable, so it substitutes rather than adds',
+  'haloalkane':'C–X: the halogen can be swapped for OH, CN or NH₂ (nucleophilic substitution); C–I reacts fastest, C–F hardly at all',
+  'aryl halide':'a halogen on a ring: far harder to replace than in a haloalkane',
+  'thiol':'S–H: smells strongly; more acidic than an alcohol; oxidised to disulfides (S–S, as in hair)',
+  'sulfide':'C–S–C: the sulfur cousin of an ether',
+  'alkane':'only C–C and C–H single bonds: unreactive apart from burning and, in light, substitution by chlorine or bromine'
+};
+function anaGroups(M){
+  const G = new Map(), add = (k, n) => G.set(k, (G.get(k)||0) + (n||1));
+  const sy = anaSym, cv = M.cov, isC = x => sy(x) === 'C';
+  M.atoms.forEach(a=>{
+    const s = sy(a), nbs = cv(a);
+    if(s === 'C'){
+      const dO = nbs.find(x=>x.b.order === 2 && sy(x.o) === 'O'), sO = nbs.filter(x=>x.b.order === 1 && sy(x.o) === 'O');
+      if(dO){
+        if(sO.some(x=>anaQ(x.o) < 0)) add('carboxylate');
+        else if(sO.some(x=>M.hOn(x.o))) add('carboxylic acid');
+        else if(sO.some(x=>cv(x.o).some(y=>y.o !== a && isC(y.o)))) add('ester');
+        else if(nbs.some(x=>sy(x.o) === 'N')) add('amide');
+        else if(nbs.some(x=>sy(x.o) === 'H')) add('aldehyde');
+        else if(nbs.filter(x=>isC(x.o)).length === 2) add('ketone');
+      }
+      if(nbs.some(x=>x.b.order === 3 && sy(x.o) === 'N')) add('nitrile');
+      ['F','Cl','Br','I'].forEach(X=>{ const n = nbs.filter(x=>sy(x.o) === X).length; if(n) add(M.arom.has(a.id) ? 'aryl halide' : 'haloalkane', n); });
+    }
+    if(s === 'O' && !a.ion){
+      const cs = nbs.filter(x=>isC(x.o)), h = M.hOn(a);
+      if(h && cs.length === 1){ const c = cs[0].o, cn = cv(c);
+        if(cn.some(x=>x.b.order === 2 && sy(x.o) === 'O')){ /* the acid's own O-H */ }
+        else if(M.arom.has(c.id)) add('phenol');
+        else if(!cn.some(x=>x.b.order > 1)){ const k = cn.filter(x=>isC(x.o)).length; add(k <= 1 ? 'primary alcohol' : k === 2 ? 'secondary alcohol' : 'tertiary alcohol'); } }
+      if(!h && cs.length === 2 && !cs.some(x=>cv(x.o).some(y=>y.b.order === 2 && sy(y.o) === 'O'))) add('ether');
+    }
+    if(s === 'N' && !a.ion){
+      const cs = nbs.filter(x=>isC(x.o)), h = M.hOn(a), acyl = cs.some(x=>cv(x.o).some(y=>y.b.order === 2 && sy(y.o) === 'O'));
+      if(anaQ(a) > 0 && nbs.length === 4 && !nbs.some(x=>sy(x.o) === 'O')) add('ammonium');
+      else if(nbs.filter(x=>sy(x.o) === 'O').length >= 2) add('nitro');
+      else if(cs.length && !acyl && nbs.every(x=>x.b.order === 1) && !M.arom.has(a.id)) add(h === 2 ? 'primary amine' : h === 1 ? 'secondary amine' : 'tertiary amine');
+    }
+    if(s === 'S' && !a.ion){ if(M.hOn(a) && nbs.some(x=>isC(x.o))) add('thiol'); else if(nbs.filter(x=>isC(x.o)).length === 2 && nbs.length === 2) add('sulfide'); }
+  });
+  M.bonds.forEach(b=>{ if(b.type !== 'covalent') return; const p = M.byId.get(b.a), q = M.byId.get(b.b); if(!isC(p) || !isC(q)) return;
+    if(b.order === 3) add('alkyne'); else if(b.order === 2 && !(M.arom.has(p.id) && M.arom.has(q.id))) add('alkene'); });
+  const ar = M.rings.filter(r=>r.length === 6 && r.every(id=>M.arom.has(id) && isC(M.byId.get(id)))).length; if(ar) add('benzene ring', ar);
+  if(!G.size && M.counts.C && Object.keys(M.counts).every(s=>s === 'C' || s === 'H') && !M.q) add('alkane');
+  return [...G].map(([k, n])=>({k, n, note:ANA_GROUP_NOTE[k] || ''}));
+}
+/* ---------- energetics ---------- */
+function anaEnergy(M, B){
+  const out = {atomise:B.total};
+  const els = Object.keys(M.counts);
+  if(!M.q && !M.atoms.some(a=>a.ion || l3Metal(a)) && els.every(s=>ANA_ATOMISE[s] != null)){
+    out.hf = els.reduce((t, s)=>t + M.counts[s]*ANA_ATOMISE[s], 0) - B.total;
+    /* combustion: C to CO2, H to water, S to SO2, N to N2, halogens to HX */
+    const c = M.counts, C = c.C||0, H = c.H||0, N = c.N||0, O = c.O||0, S = c.S||0, X = (c.F||0) + (c.Cl||0) + (c.Br||0) + (c.I||0);
+    const Hw = H - X;
+    if((C || H) && Hw >= 0 && !(C === 1 && O === 2 && !H) && !(H === 2 && O === 1 && !C)){
+      const o2 = C + Hw/4 + S - O/2;
+      if(o2 > 0){
+        const hx = ['F','Cl','Br','I'].filter(s=>c[s]).map(s=>[s, c[s]]);
+        let k = 1; while(k < 8 && [o2*k, Hw/2*k, N/2*k].some(v=>Math.abs(v - Math.round(v)) > 1e-6)) k++;
+        const n = v => { const r = Math.round(v*k); return r === 1 ? '' : String(r); };
+        const prod = [C ? n(C)+'CO₂' : '', Hw ? n(Hw/2)+'H₂O' : '', S ? n(S)+'SO₂' : '', N ? n(N/2)+'N₂' : ''].concat(hx.map(([s, m])=>n(m)+'H'+s)).filter(Boolean);
+        out.combEq = (k > 1 ? k : '')+M.f+' + '+n(o2)+'O₂ → '+prod.join(' + ');
+        const hfP = C*ANA_HF.CO2 + Hw/2*ANA_HF.H2Ol + S*ANA_HF.SO2 + hx.reduce((t, [s, m])=>t + m*(ANA_HF['H'+s]||0), 0);
+        out.hc = hfP - out.hf;
+        out.hcKnown = ANA_HC[(M.entry.lib || M.name || '').toLowerCase()] || null;
+        out.perG = out.hc/M.mass;
+      }
+    }
+  }
+  return out;
+}
+/* ---------- oxidation states: every bond's electrons go to its more electronegative end ---------- */
+function anaOxidation(M){
+  const rows = new Map();
+  M.atoms.forEach(a=>{
+    if(l3Metal(a) && !a.ion){ return; }
+    let got = 2*l3Lone(a);
+    M.cov(a).forEach(({b, o})=>{ const ea = EL[a.e].en || 0, eo = EL[o.e].en || 0, n = b.type === 'dative' ? 1 : Math.round(b.order);
+      got += Math.abs(ea - eo) < 1e-6 ? n : ea > eo ? 2*n : 0; });
+    const ox = a.ion && !M.cov(a).length ? a.ion : l3Valence(EL[a.e]) - got;
+    const k = anaSym(a) + '|' + ox; const r = rows.get(k) || {sym:anaSym(a), ox, n:0, labs:[]}; r.n++; r.labs.push(M.lab.get(a.id)); rows.set(k, r);
+  });
+  return [...rows.values()].sort((a, b)=>a.sym.localeCompare(b.sym) || b.ox - a.ox);
+}
+/* ---------- the shape of the whole molecule: flexibility and vibrations ---------- */
+function anaMotion(M){
+  const heavyDeg = a => M.cov(a).filter(x=>anaSym(x.o) !== 'H').length;
+  let rot = 0;
+  M.bonds.forEach(b=>{ if(b.type !== 'covalent' || b.order !== 1) return; const p = M.byId.get(b.a), q = M.byId.get(b.b);
+    if(anaSym(p) === 'H' || anaSym(q) === 'H' || heavyDeg(p) < 2 || heavyDeg(q) < 2) return;
+    if(M.rings.some(r=>r.includes(p.id) && r.includes(q.id))) return;
+    const amide = [[p, q], [q, p]].some(([c, n])=>anaSym(c) === 'C' && anaSym(n) === 'N' && M.cov(c).some(x=>x.b.order === 2 && anaSym(x.o) === 'O'));
+    if(!amide) rot++; });
+  const N = M.atoms.length;
+  let linear = N <= 2;
+  if(N > 2){ const a0 = M.atoms[0]; let far = M.atoms[1], d = 0; M.atoms.forEach(x=>{ const dd = Math.hypot(x.x-a0.x, x.y-a0.y, x.z-a0.z); if(dd > d){ d = dd; far = x; } });
+    const ux = (far.x-a0.x)/d, uy = (far.y-a0.y)/d, uz = (far.z-a0.z)/d;
+    linear = M.atoms.every(x=>{ const vx = x.x-a0.x, vy = x.y-a0.y, vz = x.z-a0.z, t = vx*ux + vy*uy + vz*uz; return Math.hypot(vx - t*ux, vy - t*uy, vz - t*uz) < 18; }); }
+  return {rot, modes: N < 2 ? 0 : 3*N - (linear ? 5 : 6), linear, N};
+}
+/* ---------- the elements in it ---------- */
+function anaElements(M){
+  return Object.keys(M.counts).sort((a, b)=>formulaRank(a) - formulaRank(b)).map(s=>{ const e = BY_SYM[s];
+    return {s, e, n:M.counts[s], cfg:configString(e.z), ie:IE1[s] || null, massPct:100*M.counts[s]*e.mass/M.mass}; });
+}
+/* ---------- isomers: library compounds with the same formula ---------- */
+let ANA_FIDX = null;
+function anaIsomers(M){
+  if(!ANA_FIDX){ ANA_FIDX = new Map();
+    Object.keys(L3_LIB).forEach(n=>{ try{ const g = l3SmilesGraph(L3_LIB[n]), c = {}; g.syms.forEach(x=>{ c[x] = (c[x]||0) + 1; });
+      const k = benchFormula(c)+'|'+g.chg.reduce((t, v)=>t + (v||0), 0); if(!ANA_FIDX.has(k)) ANA_FIDX.set(k, []); ANA_FIDX.get(k).push(n); }catch(e){} }); }
+  const mine = (M.entry.lib || '').toLowerCase(), key = smilesKey(M.entry.sm || '') ;
+  return (ANA_FIDX.get(benchFormula(M.counts)+'|'+M.q) || []).filter(n=>n.toLowerCase() !== mine && (!key || smilesKey(L3_LIB[n]) !== key)).slice(0, 14);
+}
+/* ---------- octanol-water partition: an estimate from fragment values (after Meylan and Howard's method) ---------- */
+function anaLogP(M, groups){
+  if(M.q || M.atoms.some(a=>a.ion || l3Metal(a)) || !M.counts.C || !M.counts.H) return null;
+  let s = 0.229; const cv = M.cov, sy = anaSym;
+  M.atoms.forEach(a=>{
+    const t = sy(a), nb = cv(a), ar = M.arom.has(a.id);
+    if(t === 'C'){
+      if(nb.some(x=>x.b.order === 2 && sy(x.o) === 'O')){
+        const oh = nb.find(x=>x.b.order === 1 && sy(x.o) === 'O' && M.hOn(x.o)), oe = nb.find(x=>x.b.order === 1 && sy(x.o) === 'O' && !M.hOn(x.o));
+        const arN = nb.some(x=>M.arom.has(x.o.id));
+        s += oh ? (arN ? -0.12 : -0.69) : oe ? (arN ? -0.71 : -0.95) : nb.some(x=>sy(x.o) === 'N') ? -0.52 : nb.some(x=>sy(x.o) === 'H') ? -0.94 : -1.56; return; }
+      if(nb.some(x=>x.b.order === 3 && sy(x.o) === 'N')){ s += -0.92; return; }
+      if(ar){ s += 0.294; return; }
+      const h = M.hOn(a); s += h === 3 ? 0.547 : h === 2 ? 0.491 : h === 1 ? 0.361 : h === 0 ? 0.268 : 0.55; return; }
+    if(t === 'O'){ if(nb.some(x=>x.b.order === 2)) return;
+      const c = nb.find(x=>sy(x.o) === 'C'); if(c && cv(c.o).some(y=>y.b.order === 2 && sy(y.o) === 'O')) return;   /* counted with its acid or ester */
+      const arO = nb.some(x=>M.arom.has(x.o.id)); s += M.hOn(a) ? (arO ? -0.48 : -1.41) : (arO ? -0.47 : -1.26); return; }
+    if(t === 'N'){ if(nb.filter(x=>sy(x.o) === 'O').length >= 2){ s += nb.some(x=>M.arom.has(x.o.id)) ? -0.18 : -0.81; return; }
+      if(nb.some(x=>x.b.order === 3)) return;
+      if(M.arom.has(a.id)){ s += -0.73; return; }
+      if(nb.some(x=>sy(x.o) === 'C' && cv(x.o).some(y=>y.b.order === 2 && sy(y.o) === 'O'))) return;   /* counted with its amide */
+      const h = M.hOn(a); s += h === 2 ? -1.41 : h === 1 ? -1.50 : -1.83; return; }
+    const X = {F:[-0.003, 0.20], Cl:[0.31, 0.64], Br:[0.40, 0.89], I:[0.81, 1.17]}[t];
+    if(X){ s += nb.some(x=>M.arom.has(x.o.id)) ? X[1] : X[0]; return; }
+    if(t === 'S'){ s += M.hOn(a) ? 0.0 : -0.4; }
+  });
+  return s;
+}
+/* ---------- molecular orbitals, for a diatomic molecule from the first two rows ---------- */
+function anaMO(M){
+  if(M.atoms.length !== 2 || M.atoms.some(a=>EL[a.e].z > 10 || a.ion)) return null;
+  const [p, q] = M.atoms, zp = EL[p.e].z, zq = EL[q.e].z;
+  if(zp <= 2 && zq <= 2){
+    const e = zp + zq - M.q, lv = [['σ1s', 2, 1], ['σ*1s', 2, -1]];
+    return anaMOFill(lv, e, M);
+  }
+  if(zp < 3 || zq < 3) return null;
+  const val = l3Valence(EL[p.e]) + l3Valence(EL[q.e]) - M.q;
+  /* O2 and F2 put sigma 2p below the pi pair; lighter pairs (B2, C2, N2) and the mixed ones like CO swap them */
+  const heavy = zp + zq >= 16 && zp >= 8 && zq >= 8;
+  const lv = heavy ? [['σ2s', 2, 1], ['σ*2s', 2, -1], ['σ2p', 2, 1], ['π2p', 4, 1], ['π*2p', 4, -1], ['σ*2p', 2, -1]]
+                   : [['σ2s', 2, 1], ['σ*2s', 2, -1], ['π2p', 4, 1], ['σ2p', 2, 1], ['π*2p', 4, -1], ['σ*2p', 2, -1]];
+  return anaMOFill(lv, val, M, heavy);
+}
+function anaMOFill(lv, e, M, heavy){
+  let left = e, bond = 0, anti = 0, unp = 0;
+  const levels = lv.map(([n, cap, s])=>{ const k = Math.min(cap, Math.max(0, left)); left -= k;
+    if(s > 0) bond += k; else anti += k;
+    /* Hund: a pair of pi orbitals fills one electron each before pairing */
+    const orbs = cap/2, arr = Array(orbs).fill(0); for(let i=0;i<k;i++) arr[i % orbs]++;
+    unp += arr.filter(x=>x === 1).length;
+    return {n, cap, k, s, arr}; });
+  return {levels, bo:(bond - anti)/2, unp, mag: unp ? 'paramagnetic: '+unp+' unpaired electron'+(unp > 1 ? 's' : '')+', so it is drawn into a magnet' : 'diamagnetic: every electron paired', e, heavy};
+}
+/* ---------- proton NMR ---------- */
+function anaShiftH(M, h, host){
+  const s = anaSym(host), nb = M.cov(host), sy = anaSym;
+  const carbonyl = c => M.cov(c).some(x=>x.b.order === 2 && sy(x.o) === 'O');
+  if(s === 'O'){ const c = nb.find(x=>sy(x.o) === 'C');
+    if(c && carbonyl(c.o)) return [11.5, 'carboxylic acid O–H, broad'];
+    if(c && M.arom.has(c.o.id)) return [5.5, 'phenol O–H, broad'];
+    if(nb.every(x=>sy(x.o) === 'H')) return [4.8, 'water'];
+    return [2.4, 'alcohol O–H, broad; it moves with concentration and swaps with D₂O']; }
+  if(s === 'N'){ const c = nb.find(x=>sy(x.o) === 'C');
+    if(anaQ(host) > 0) return [7.2, 'N⁺–H, broad'];
+    if(M.arom.has(host.id)) return [8.5, 'ring N–H, broad'];
+    if(c && carbonyl(c.o)) return [7.0, 'amide N–H, broad'];
+    return [1.6, 'amine N–H, broad']; }
+  if(s === 'S') return [1.4, 'thiol S–H'];
+  if(s !== 'C') return [2, s+'–H'];
+  if(carbonyl(host)) return [9.7, 'aldehyde H'];
+  if(M.arom.has(host.id)){
+    let d = 7.27; const ring = M.rings.find(r=>r.includes(host.id));
+    if(ring) ring.forEach(id=>M.cov(M.byId.get(id)).forEach(({o})=>{ if(ring.includes(o.id) || sy(o) === 'H') return;
+      if(sy(o) === 'O' || sy(o) === 'N' && !M.cov(o).some(y=>sy(y.o) === 'O')) d -= 0.25; else if(carbonyl(o) || sy(o) === 'N') d += 0.3; }));
+    return [clamp(d, 6.4, 8.3), 'on a benzene ring']; }
+  if(nb.some(x=>x.b.order === 2)) return [nb.some(x=>x.b.order === 2 && M.cov(x.o).some(y=>y.o !== host && carbonyl(y.o))) ? 6.1 : 5.3, 'on a C=C (alkene)'];
+  if(nb.some(x=>x.b.order === 3)) return [2.5, 'on a C≡C'];
+  const nH = M.hOn(host); let d = nH === 3 ? 0.9 : nH === 2 ? 1.3 : 1.5; const why = []; let k = 1;
+  nb.forEach(({o})=>{ const t = sy(o); if(t === 'H') return; let inc = 0, w = '';
+    if(t === 'O'){ const acyl = M.cov(o).some(y=>y.o !== host && sy(y.o) === 'C' && carbonyl(y.o)); inc = acyl ? 3.0 : 2.4; w = acyl ? 'next to an ester O' : 'next to O'; }
+    else if(t === 'N'){ const nitro = M.cov(o).filter(y=>sy(y.o) === 'O').length >= 2; inc = nitro ? 3.4 : 1.5; w = nitro ? 'next to NO₂' : 'next to N'; }
+    else if(t === 'F'){ inc = 3.4; w = 'next to F'; } else if(t === 'Cl'){ inc = 2.1; w = 'next to Cl'; } else if(t === 'Br'){ inc = 1.9; w = 'next to Br'; } else if(t === 'I'){ inc = 1.3; w = 'next to I'; }
+    else if(t === 'C'){ if(carbonyl(o)){ inc = 1.1; w = 'next to C=O'; } else if(M.arom.has(o.id)){ inc = 1.35; w = 'next to a ring'; }
+      else if(M.cov(o).some(y=>y.b.order === 2)){ inc = 0.7; w = 'next to C=C'; } else if(M.cov(o).some(y=>y.b.order === 3)){ inc = 1.0; w = 'next to C≡'; } }
+    if(inc){ d += inc*k; k *= 0.65; why.push(w); } });
+  /* one carbon further away still pulls a little: the CH3 of an ethyl ester sits at 1.2, not 0.9 */
+  if(!why.length && nb.some(({o})=>sy(o) === 'C' && M.cov(o).some(y=>y.o !== host && (['O','N','F','Cl','Br'].includes(sy(y.o)) || y.b.order === 2 && sy(y.o) === 'O')))){ d += 0.3; why.push('one carbon from an electronegative group'); }
+  return [clamp(d, 0.2, 6.2), (nH === 3 ? 'CH₃' : nH === 2 ? 'CH₂' : 'CH')+(why.length ? ', '+why.join(', ') : ', alkyl')];
+}
+function anaNMR(M){
+  const envs = new Map();
+  M.atoms.forEach(h=>{
+    if(anaSym(h) !== 'H' || M.cov(h).length !== 1) return;
+    const host = M.cov(h)[0].o, k = M.cls.get(h.id);
+    let e = envs.get(k);
+    if(!e){ const [d, note] = anaShiftH(M, h, host);
+      const exch = ['O','N','S'].includes(anaSym(host));
+      let n = 0; if(!exch) M.cov(host).forEach(({o})=>{ if(anaSym(o) !== 'C' || o === host) return; M.cov(o).forEach(({o:y})=>{ if(anaSym(y) === 'H' && M.cls.get(y.id) !== k) n++; }); });
+      e = {d, note, n:0, split:exch ? 0 : n, broad:exch, hosts:new Set(), ids:[]}; envs.set(k, e); }
+    e.n++; e.hosts.add(host.id); e.ids.push(h.id);
+  });
+  const list = [...envs.values()].sort((a, b)=>b.d - a.d);
+  list.forEach((e, i)=>{ e.tag = String.fromCharCode(97 + (i % 26)); e.mult = e.broad ? 'broad singlet' : e.split > 6 ? 'multiplet' : MULTIPLICITY[e.split]; });
+  return list;
+}
+function anaShiftC(M, c){
+  const nb = M.cov(c), sy = anaSym;
+  const dO = nb.find(x=>x.b.order === 2 && sy(x.o) === 'O');
+  if(dO){ const sO = nb.filter(x=>x.b.order === 1 && sy(x.o) === 'O');
+    if(M.atoms.length === 3 && nb.length === 2) return [125, 'CO₂'];
+    if(sO.some(x=>anaQ(x.o) < 0)) return [181, 'carboxylate C=O'];
+    if(sO.some(x=>M.hOn(x.o))) return [178, 'acid C=O'];
+    if(sO.length) return [171, 'ester C=O'];
+    if(nb.some(x=>sy(x.o) === 'N')) return [170, 'amide C=O'];
+    if(nb.some(x=>sy(x.o) === 'H')) return [200, 'aldehyde C=O'];
+    return [207, 'ketone C=O']; }
+  if(nb.some(x=>x.b.order === 3 && sy(x.o) === 'N')) return [118, 'nitrile C≡N'];
+  if(nb.some(x=>x.b.order === 3)) return [75, 'alkyne C'];
+  if(M.arom.has(c.id)){ const sub = nb.find(x=>!M.arom.has(x.o.id) && sy(x.o) !== 'H');
+    if(!sub) return [128.5, 'ring CH'];
+    const t = sy(sub.o); return t === 'O' ? [156, 'ring C–O'] : t === 'N' ? [146, 'ring C–N'] : t === 'Cl' ? [134, 'ring C–Cl'] : t === 'Br' ? [122, 'ring C–Br'] : [138, 'ring C, substituted']; }
+  if(nb.some(x=>x.b.order === 2)) return [M.hOn(c) === 2 ? 115 : 136, 'alkene C'];
+  const nH = M.hOn(c); let d = nH === 3 ? 14 : nH === 2 ? 23 : nH === 1 ? 30 : 36; const w = [];
+  nb.forEach(({o})=>{ const t = sy(o); if(t === 'H' || t === 'C' && !M.cov(o).some(y=>y.b.order === 2 && sy(y.o) === 'O') && !M.arom.has(o.id)) return;
+    if(t === 'O'){ d += 44; w.push('C–O'); } else if(t === 'N'){ d += 26; w.push('C–N'); } else if(t === 'F'){ d += 68; w.push('C–F'); }
+    else if(t === 'Cl'){ d += 28; w.push('C–Cl'); } else if(t === 'Br'){ d += 18; w.push('C–Br'); } else if(t === 'I'){ d -= 6; w.push('C–I'); }
+    else if(t === 'C'){ d += 14; w.push(M.arom.has(o.id) ? 'next to a ring' : 'next to C=O'); } });
+  return [clamp(d, 5, 95), (nH === 3 ? 'CH₃' : nH === 2 ? 'CH₂' : nH === 1 ? 'CH' : 'C')+(w.length ? ', '+w.join(', ') : '')];
+}
+function anaC13(M){
+  const envs = new Map();
+  M.atoms.forEach(c=>{ if(anaSym(c) !== 'C') return; const k = M.cls.get(c.id); let e = envs.get(k);
+    if(!e){ const [d, note] = anaShiftC(M, c); e = {d, note, n:0, ids:[]}; envs.set(k, e); } e.n++; e.ids.push(c.id); });
+  return [...envs.values()].sort((a, b)=>b.d - a.d);
+}
+/* ---------- mass spectrum ---------- */
+function anaMS(M){
+  if(M.atoms.some(a=>a.ion) || M.nc > 1) return {ions:M.pieces.map(p=>({f:p.f, m:0})), salt:true};
+  const iso = isotopePattern(M.counts).map(d=>({m:d.m, p:d.p}));
+  const top = Math.max(...iso.map(d=>d.p));
+  const arom = M.arom.size > 0;
+  const frags = [];
+  M.bonds.forEach(b=>{
+    if(b.type !== 'covalent' || b.order !== 1) return; const p = M.byId.get(b.a), q = M.byId.get(b.b);
+    if(anaSym(p) === 'H' || anaSym(q) === 'H') return;
+    if(M.rings.some(r=>r.includes(p.id) && r.includes(q.id))) return;
+    const side = new Set([p.id]), st = [p];
+    while(st.length){ const x = st.pop(); M.cov(x).forEach(({b:bb, o})=>{ if(bb !== b && !side.has(o.id)){ side.add(o.id); st.push(o); } }); }
+    [[p, [...side]], [q, M.atoms.filter(a=>!side.has(a.id)).map(a=>a.id)]].forEach(([end, ids])=>{
+      const list = ids.map(id=>M.byId.get(id)), m = list.reduce((t, a)=>t + EL[a.e].mass, 0);
+      if(m < 14.5) return;
+      let w = clamp(360/(b.energy||350), 0.25, 1.2);
+      const C = end, cn = M.cov(C);
+      if(anaSym(C) === 'C' && cn.some(x=>x.b.order === 2 && anaSym(x.o) === 'O')) w *= 1.9;              /* an acylium ion, R-C=O+ */
+      if(anaSym(C) === 'C' && cn.some(x=>M.arom.has(x.o.id)) && !M.arom.has(C.id)) w *= 2.2;            /* benzyl, which rearranges to tropylium */
+      if(anaSym(C) === 'C' && cn.filter(x=>anaSym(x.o) === 'C').length >= 3) w *= 1.5;                    /* a tertiary carbocation */
+      if(anaSym(C) === 'C' && cn.some(x=>['O','N'].includes(anaSym(x.o)) && x.b !== b)) w *= 1.4;        /* held by a lone pair next door */
+      if(Math.round(m) === 15) w *= 0.45;
+      const c = countsOf(list); frags.push({m:Math.round(m), p:w, f:anaFormula(c, 1)});
+    });
+  });
+  const byM = new Map(); frags.forEach(f=>{ const o = byM.get(f.m); if(!o || o.p < f.p) byM.set(f.m, f); });
+  const fl = [...byM.values()].sort((a, b)=>b.p - a.p).slice(0, 9);
+  const mol = M.mass, mPeak = arom ? 1.0 : M.counts.C > 4 ? 0.35 : 0.65;
+  const peaks = iso.map(d=>({m:Math.round(d.m), p:mPeak*d.p/top, M:true})).concat(fl.map(f=>({m:f.m, p:f.p, f:f.f})));
+  const mx = Math.max(...peaks.map(x=>x.p)); peaks.forEach(x=>x.p = x.p/mx*100);
+  const base = peaks.slice().sort((a, b)=>b.p - a.p)[0];
+  return {peaks, iso, base, M:Math.round(mol), fl,
+    note: M.counts.Cl ? 'chlorine’s two isotopes (35 and 37, 3:1) give an M+2 peak a third the height of M' : M.counts.Br ? 'bromine’s two isotopes (79 and 81, about 1:1) give M and M+2 peaks of equal height' : (M.counts.C||0) >= 1 ? 'the small M+1 peak is carbon-13, 1.1% of each carbon: its height says about how many carbons there are' : ''};
+}
+/* ---------- colour and ultraviolet ---------- */
+function anaUV(M){
+  const pi = M.bonds.filter(b=>anaCov(b) && (b.order >= 1.5 || b.arom || (M.arom.has(b.a) && M.arom.has(b.b) && b.order === 2)) && anaSym(M.byId.get(b.a)) !== 'H' && anaSym(M.byId.get(b.b)) !== 'H');
+  if(!pi.length) return {n:0, lam:0, note:'no π bonds: it absorbs only far in the ultraviolet, below 200 nm, and looks colourless'};
+  const touch = (b1, b2) => { const s1 = [b1.a, b1.b], s2 = [b2.a, b2.b]; if(s1.some(x=>s2.includes(x))) return true;
+    return s1.some(x=>M.cov(M.byId.get(x)).some(({o})=>s2.includes(o.id))); };
+  const seen = new Set(); let best = [];
+  pi.forEach(b=>{ if(seen.has(b)) return; const grp = [b]; seen.add(b);
+    for(let i=0;i<grp.length;i++) pi.forEach(c=>{ if(!seen.has(c) && touch(grp[i], c)){ seen.add(c); grp.push(c); } });
+    if(grp.length > best.length) best = grp; });
+  const atoms = new Set(); best.forEach(b=>{ atoms.add(b.a); atoms.add(b.b); });
+  const aromIn = [...atoms].some(id=>M.arom.has(id)), co = best.some(b=>['O','N'].includes(anaSym(M.byId.get(b.a))) || ['O','N'].includes(anaSym(M.byId.get(b.b))));
+  const n = Math.max(1, Math.round(best.length/(aromIn ? 1 : 1)));
+  let lam = aromIn ? 255 + 32*Math.max(0, (atoms.size - 6)/2) : n === 1 ? (co ? 280 : 175) : 217 + 30*(n - 2);
+  lam = Math.round(Math.min(lam, 720));
+  const col = lam >= 400 ? complementary(lam) : null;
+  return {n:best.length, atoms:atoms.size, lam, col, aromIn, co,
+    note: col ? 'a long conjugated chain of '+best.length+' π bonds pulls its absorption into the visible near '+lam+' nm, so it looks the colour that is left over'
+              : n === 1 && !aromIn ? 'one isolated π bond absorbs in the ultraviolet near '+lam+' nm'+(co ? ' (the weak n→π* band of C=O)' : '')+': colourless'
+              : (aromIn ? 'the ring’s shared π electrons' : best.length+' conjugated π bonds')+' absorb near '+lam+' nm, still in the ultraviolet: colourless, though it may absorb sunscreen-style'};
+}
+/* ---------- reading what was typed ---------- */
+function anaResolve(str){
+  str = String(str||'').trim(); if(!str) return null;
+  const ion = ionTyped(str);
+  if(ion && ion.err) return {err:ion.err};
+  if(ion) return {q:str, sm:ion.sm, lib:ion.name || '', label:ion.name || str};
+  const name = libLookup(libNormKey(str));
+  if(name) return {q:name, sm:L3_LIB[name], lib:name, label:name};
+  const card = LIBRARY.find(m=>m.n.toLowerCase() === libNormKey(str));
+  if(card) return {q:card.n.toLowerCase(), spec:card, lib:card.n.toLowerCase(), label:card.n.toLowerCase()};
+  /* an element by name or symbol: one atom of it */
+  const el1 = EL.find(x=>x.name.toLowerCase() === str.toLowerCase() || x.sym === str);
+  if(el1) return {q:el1.name.toLowerCase(), atom:el1.sym, lib:'', label:el1.name.toLowerCase()+' atom', note:'a single atom of the element'+(isMetal(el1) ? '; a real piece of the metal is billions of these in a lattice' : '')};
+  const smilesish = /[()=#\[\]@\/\\%.]/.test(str) || /^[cnos]|[a-z]\d/.test(str) || /(Cl|Br|[BCNOPSFI])\1/.test(str);
+  const tryS = () => { try{ const g = l3SmilesGraph(str); if(g && g.syms.length) return {q:str, sm:str, lib:'', label:str}; }catch(e){} return null; };
+  if(smilesish){ const s = tryS(); if(s) return s; }
+  const counts = l3ParseFormula(str);
+  if(counts){
+    anaIsomers({counts:{}, q:0, entry:{}});
+    const hits = ANA_FIDX.get(benchFormula(counts)+'|0') || [];
+    if(hits.length) return {q:hits[0], sm:L3_LIB[hits[0]], lib:hits[0], label:hits[0], note:hits.length > 1 ? subPlain(benchFormula(counts))+' could also be '+hits.slice(1, 4).join(', ')+': type a name for another' : ''};
+    return {q:str, sm:null, lib:'', label:subPlain(benchFormula(counts)), note:'not in the library, so built as a best guess at its structure'};
+  }
+  const s = tryS(); if(s) return s;
+  return {err:'I could not read “'+str+'” as a name, formula, SMILES string or ion.'};
+}
+function anaBuildOne(e, dx, dy){
+  const s = L3.seq;
+  L3.quiet = (L3.quiet||0) + 1;
+  try{
+    if(e.atom){ const a = l3Add(e.atom, 0, 0, 0); a.cool = 1; }
+    else if(e.spec) l3BuildGraph(e.spec.atoms.map(r=>r[0]), (e.spec.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1})), e.spec.atoms.map(r=>r[4]||0), e.spec.atoms.map(r=>r[3]||0), e.lib);
+    else if(e.sm) l3BuildSmiles(e.sm, e.lib || undefined); else l3BuildAny(e.q); }
+  catch(err){ console.warn('analysis build', err); }
+  finally{ L3.quiet--; }
+  const made = L3.atoms.filter(a=>a.id >= s);
+  if(dx || dy){ const cx = made.reduce((t, a)=>t + a.x, 0)/(made.length||1), cy = made.reduce((t, a)=>t + a.y, 0)/(made.length||1), cz = made.reduce((t, a)=>t + a.z, 0)/(made.length||1);
+    made.forEach(a=>{ a.x += (dx||0) - cx; a.y += (dy||0) - cy; a.z -= cz; }); }
+  return made;
+}
+/* one compound alone on a cold bench, relaxed into its shape, then measured */
+function anaReport(i){
+  const e = ANA.list[i]; if(!e) return null;
+  const key = e.q;
+  if(ANA.rep[key] && !ANA.rep[key].stale) return ANA.rep[key];
+  crsSetup.clear(420, 30);
+  const made = anaBuildOne(e);
+  if(!made.length) return (ANA.rep[key] = {err:'The bench could not build '+e.label+'.'});
+  for(let k=0;k<150;k++) l3Step(1/60);
+  const M = anaMol(e);
+  const R = {M, id:anaIdentity(M), bonds:anaBonds(M), shape:anaShape(M), el:anaElectrons(M), pol:anaPolarity(M), ox:anaOxidation(M), motion:anaMotion(M), elements:anaElements(M)};
+  R.forces = anaForces(M, R.pol); R.phase = anaPhase(M); R.ab = anaAcidBase(M); R.groups = anaGroups(M); R.energy = anaEnergy(M, R.bonds);
+  R.nmr = anaNMR(M); R.c13 = anaC13(M); R.ms = anaMS(M); R.uv = anaUV(M); R.mo = anaMO(M); R.isomers = anaIsomers(M); R.logP = anaLogP(M, R.groups);
+  R.reacts = anaReacts(M, R);
+  R.g = {syms:M.atoms.map(a=>anaSym(a)), chg:M.atoms.map(a=>anaQ(a)), bl:M.bonds.filter(anaCov).map(b=>({a:M.atoms.indexOf(M.byId.get(b.a)), b:M.atoms.indexOf(M.byId.get(b.b)), o:Math.round(b.order)}))};
+  R.lone = M.atoms.map(a=>a.ion && !M.cov(a).length ? 0 : l3Lone(a));
+  /* the drawing remembers which drawn atom is which, so NMR letters can sit on the right carbons */
+  R.tags = M.atoms.map(()=> '');
+  R.nmr.forEach(env=>env.hosts.forEach(id=>{ const k = M.atoms.indexOf(M.byId.get(id)); if(k >= 0 && !R.tags[k].includes(env.tag)) R.tags[k] += env.tag; }));
+  return (ANA.rep[key] = R);
+}
+/* what this compound would react with, each with a partner the panel can add */
+function anaReacts(M, R){
+  const out = [], G = new Set(R.groups.map(g=>g.k)), has = s => (M.counts[s]||0) > 0, nm = (M.entry.lib || M.name || M.f);
+  const ok = n => !!libLookup(libNormKey(n));
+  if(R.energy && R.energy.combEq) out.push({t:'Burns in oxygen', eq:R.energy.combEq, note:'complete combustion; it needs a flame or spark to get over the activation energy first'+(R.energy.hc ? '. About '+anaFmt(R.energy.hc)+' kJ per mole' : ''), with:'oxygen', n2:Math.max(2, Math.ceil(((M.counts.C||0) + (M.counts.H||0)/4)))});
+  const a0 = R.ab.acids[0], b0 = R.ab.bases[0];
+  if(a0 && a0.pk < 11) out.push({t:'Neutralised by a base', eq:M.f+' + OH⁻ → '+R.ab.conjBase+' + H₂O', note:'its proton (pKa '+anaFmt(a0.pk, 1)+') goes to hydroxide (pKa of water 15.7): K ≈ 10^'+anaFmt(15.7 - a0.pk, 1), with:'sodium hydroxide'});
+  if(a0 && a0.pk < 4 && !G.has('carboxylate')) out.push({t:'Gives its proton to water', eq:M.f+' + H₂O ⇌ '+R.ab.conjBase+' + H₃O⁺', note:'pKa '+anaFmt(a0.pk, 1)+' against −1.7 for H₃O⁺', with:'water', n2:6});
+  if(b0 && b0.pk > 3) out.push({t:'Takes a proton from an acid', eq:M.f+' + H⁺ → '+R.ab.conjAcid, note:'the pKa of its conjugate acid is '+anaFmt(b0.pk, 1)+', so even weak acids protonate it', with:'hydrogen chloride'});
+  if(G.has('alkene')){ out.push({t:'Adds hydrogen bromide', eq:M.f+' + HBr → a bromoalkane', note:'electrophilic addition across C=C; on an unsymmetric alkene the H goes to the carbon with more H (Markovnikov)', with:'hydrogen bromide'});
+    out.push({t:'Decolourises bromine', eq:M.f+' + Br₂ → a dibromide', note:'the test for C=C: orange bromine turns colourless', with:'bromine'}); }
+  if(G.has('primary alcohol') || G.has('secondary alcohol')) out.push({t:'Makes an ester with an acid', eq:'R–OH + CH₃COOH ⇌ ester + H₂O', note:'esterification: slow and reversible (K about 4); an acid catalyst speeds it up', with:'acetic acid'});
+  if(G.has('carboxylic acid')) out.push({t:'Makes an ester with an alcohol', eq:'R–COOH + C₂H₅OH ⇌ ester + H₂O', note:'esterification', with:'ethanol'});
+  if(G.has('ester')) out.push({t:'Split by water (hydrolysis)', eq:'ester + H₂O ⇌ acid + alcohol', note:'slow alone, faster with acid; with hydroxide it goes all the way (saponification)', with:'water', n2:6});
+  const metal = M.atoms.find(a=>l3Metal(a) && !a.ion);
+  if(metal){ const s = anaSym(metal), E = E0[s];
+    if(E != null && E < -2.3) out.push({t:'Reacts with water', eq:'2'+s+' + 2H₂O → 2'+s+'OH + H₂', note:'E° = '+E+' V: a very reactive metal, hydrogen fizzes off', with:'water', n2:6});
+    if(E != null && E < 0) out.push({t:'Dissolves in acid', eq:s+' + 2H⁺ → '+s+'²⁺ + H₂', note:'below hydrogen (E° = '+E+' V), so it can hand electrons to H⁺', with:'hydrogen chloride'});
+    out.push({t:'Burns in chlorine', eq:'2'+s+' + Cl₂ → 2'+s+'Cl', note:'electrons pass from metal to chlorine, making an ionic salt', with:'chlorine'}); }
+  if(M.atoms.some(a=>a.ion < 0 && ['Cl','Br','I'].includes(anaSym(a)))) out.push({t:'Precipitates with silver ions', eq:'Ag⁺ + X⁻ → AgX(s)', note:'the halide test: white AgCl, cream AgBr, yellow AgI', with:'silver ion'});
+  if(M.atoms.some(a=>a.ion > 0 && EL[a.e].gcol >= 3 && EL[a.e].gcol <= 12)) out.push({t:'Gathers ligands', eq:M.f+' + 6H₂O → [M(H₂O)₆]ⁿ⁺', note:'a transition-metal ion takes lone pairs into its empty orbitals', with:'ammonia', n2:6});
+  if(M.atoms.some(a=>['B','Al'].includes(anaSym(a)) && !a.ion && M.cov(a).length === 3)) out.push({t:'Takes a lone pair', eq:M.f+' + NH₃ → '+M.f+'·NH₃', note:'a Lewis acid: only six electrons round the central atom', with:'ammonia'});
+  if(nm === 'hydrogen') out.push({t:'Burns with oxygen', eq:'2H₂ + O₂ → 2H₂O', note:'ΔH = −286 kJ per mole of water; the squeaky pop test', with:'oxygen', n2:2});
+  return out.filter(r=>!r.with || ok(r.with)).slice(0, 8);
+}
+/* ---------- the reaction box ---------- */
+function anaCensus(){
+  const seen = new Set(), out = new Map();
+  L3.atoms.forEach(a=>{
+    if(a.dying || seen.has(a.id)) return;
+    const list = [a]; seen.add(a.id);
+    for(let i=0;i<list.length;i++) for(const b of l3Bonds(list[i])){ if(b.type !== 'covalent') continue; const o = l3Other(b, list[i].id); if(seen.has(o)) continue; const y = l3Find(o); if(y && !y.dying){ seen.add(o); list.push(y); } }
+    const sp = speciesOf(list, list.reduce((t, x)=>t + anaQ(x), 0));
+    const r = out.get(sp.f) || {f:sp.f, name:sp.name, n:0}; r.n++; out.set(sp.f, r);
+  });
+  return out;
+}
+function anaTally(){
+  const out = new Map();
+  L3.bonds.forEach(b=>{
+    const p = l3Find(b.a), q = l3Find(b.b); if(!p || !q || p.dying || q.dying) return;
+    const sp = anaSym(p), sq = anaSym(q), rank = s => s === 'C' ? 0 : s === 'H' ? 9 : 1 + (BY_SYM[s].en || 0);
+    const [x, y] = rank(sp) <= rank(sq) ? [sp, sq] : [sq, sp];
+    const o = Math.round(b.order) || 1;
+    const k = b.type === 'ionic' ? x+'⋯'+y : b.type === 'metallic' ? x+'·'+y : b.type === 'dative' ? x+'→'+y : x + (ANA_ORDER_GLYPH[o] || '–') + y;
+    const r = out.get(k) || {k, n:0, type:b.type, E:b.type === 'covalent' ? bondEnthalpy(x, y, o) : b.type === 'dative' ? (b.energy||60) : 0}; r.n++; out.set(k, r);
+  });
+  return out;
+}
+function anaReactSetup(){
+  /* one molecule of each seldom meets the other: two of each unless you chose */
+  ANA.list.forEach(e=>{ if(!e.nSet){ e.n = Math.max(e.n||1, ANA.list.length > 1 ? 2 : 3); e.nSet = true; } });
+  const tot = ANA.list.reduce((t, e)=>t + (e.n||1), 0);
+  const box = clamp(250 + 30*tot + (ANA.water ? 90 : 0), 300, 780);
+  crsSetup.clear(box, ANA.temp);
+  ANA.parts = ANA.list.map(e=>{ const ids = new Set(); for(let k=0;k<(e.n||1);k++) anaBuildOne(e).forEach(a=>ids.add(a.id)); return ids; });
+  if(ANA.water){ const ids = new Set(); for(let k=0;k<10;k++) anaBuildOne({q:'water', sm:L3_LIB.water, lib:'water'}).forEach(a=>ids.add(a.id)); ANA.parts.water = ids; }
+  /* let what was just built settle (rings turn aromatic, bonds find their lengths) before anything is counted */
+  for(let k=0;k<45;k++) l3Step(1/60);
+  ANA.held = true;
+  ANA.run = {started:false, t0:L3.simT||0, census0:anaCensus(), tally0:anaTally(), events:[], series:[], dH:0, done:false};
+  ANA.pred = anaPredict();
+  anaSample(true);
+  setTimeout(()=>{ try{ l3FitView(true); }catch(e){} }, 40);
+}
+function anaRunStart(){
+  ANA.tab = 'rx';
+  if(!ANA.run) anaReactSetup();
+  ANA.held = false; ANA.run.started = true; ANA.run.t0 = L3.simT||0;
+  if(paused) togglePause();
+  renderAna(true);
+}
+/* every step the engine reports during the run, kept with its reason */
+function anaOnNote(dE, what, m){
+  const R = ANA.run; if(!R || !R.started) return;
+  R.dH += dE||0;
+  if(m && R.events.length < 400) R.events.push({t:(L3.simT||0) - R.t0, dE:dE||0, title:m.title || what, eq:m.eq || '', why:m.why || '', c:m.c || ''});
+}
+function anaSample(force){
+  const R = ANA.run; if(!R || (!R.started && !force)) return;
+  const t = (L3.simT||0) - R.t0;
+  if(!force && R.series.length && t - R.series[R.series.length-1].t < 0.35) return;
+  const c = anaCensus(), counts = {}; c.forEach((v, k)=>{ counts[k] = v.n; });
+  const A = L3.atoms.filter(a=>!a.dying), T = A.length ? A.reduce((s, a)=>s + l3Temp(a), 0)/A.length : 0;
+  R.series.push({t, counts, T, dH:R.dH});
+  if(R.series.length > 500) R.series.splice(0, R.series.length - 500);
+}
+/* ---------- prediction ---------- */
+function anaPredict(){
+  const L = ANA.list, out = [];
+  const info = L.map((e, i)=>{
+    const A = L3.atoms.filter(a=>ANA.parts[i] && ANA.parts[i].has(a.id));
+    let acid = null, base = null;
+    A.forEach(h=>{ if(anaSym(h) !== 'H' || h.ion) return; const hb = l3Bonds(h).filter(anaCov); if(hb.length !== 1) return;
+      const host = l3Find(l3Other(hb[0], h.id)); let pk = null; try{ pk = l3AcidPKa(h, host); }catch(err){}
+      if(pk != null && (!acid || pk < acid.pk)) acid = {pk, h, host}; });
+    A.forEach(b=>{ if(!L3_DONOR[anaSym(b)]) return; let pk = null; try{ pk = l3BasePKa(b); }catch(err){} if(pk != null && (!base || pk > base.pk)) base = {pk, b}; });
+    const sp = A.length ? species3D(A[0]) : {f:e.label, name:e.label};
+    const c = A.length ? countsOf(A.filter(a=>species3D(a).f === sp.f).slice(0, A.length/(e.n||1))) : {};
+    const one = A.length ? (()=>{ const s = new Set([A[0].id]), list = [A[0]]; for(let k=0;k<list.length;k++) l3Bonds(list[k]).forEach(b=>{ const o = l3Other(b, list[k].id); if(!s.has(o)){ const y = l3Find(o); if(y){ s.add(o); list.push(y); } } }); return list; })() : [];
+    const oneC = countsOf(one), oneQ = one.reduce((t, a)=>t + anaQ(a), 0);
+    const bondsIn = L3.bonds.filter(b=>ANA.parts[i] && ANA.parts[i].has(b.a));
+    const isC = id => { const a = l3Find(id); return a && anaSym(a) === 'C'; };
+    const arom = b => b.arom || b.order === 1.5;
+    return {e, i, A, acid, base, f:anaFormula(oneC, oneQ), name:e.lib || sp.name || anaFormula(oneC, oneQ), c:oneC, q:oneQ,
+      metal:A.find(a=>l3Metal(a) && !a.ion), cations:A.filter(a=>a.ion > 0), anions:A.filter(a=>a.ion < 0),
+      alkene:bondsIn.some(b=>b.order === 2 && !arom(b) && isC(b.a) && isC(b.b)), alkyne:bondsIn.some(b=>b.order === 3 && isC(b.a) && isC(b.b)),
+      hx:one.length === 2 && one.some(a=>anaSym(a) === 'H') && one.some(a=>['Cl','Br','I'].includes(anaSym(a))),
+      x2:one.length === 2 && anaSym(one[0]) === anaSym(one[1]) && ['F','Cl','Br','I'].includes(anaSym(one[0])),
+      o2:one.length === 2 && one.every(a=>anaSym(a) === 'O'), h2:one.length === 2 && one.every(a=>anaSym(a) === 'H'),
+      water:one.length === 3 && oneC.H === 2 && oneC.O === 1 && !oneQ,
+      lewisB:A.some(a=>['B','Al'].includes(anaSym(a)) && !a.ion && l3Bonds(a).filter(anaCov).length === 3),
+      donor:A.some(a=>['N','O'].includes(anaSym(a)) && !a.ion && !(a.fq > 0) && l3Lone(a) > 0),
+      tmIon:A.find(a=>a.ion > 0 && EL[a.e].gcol >= 3 && EL[a.e].gcol <= 12),
+      cooh:A.some(a=>anaSym(a) === 'C' && l3Bonds(a).some(b=>b.order === 2 && anaSym(l3Find(l3Other(b, a.id))) === 'O') && l3Bonds(a).some(b=>{ const o = l3Find(l3Other(b, a.id)); return b.order === 1 && anaSym(o) === 'O' && l3Bonds(o).some(x=>anaSym(l3Find(l3Other(x, o.id))) === 'H'); })),
+      alcohol:A.some(a=>anaSym(a) === 'O' && !a.ion && l3Bonds(a).some(b=>anaSym(l3Find(l3Other(b, a.id))) === 'H') && l3Bonds(a).some(b=>{ const c2 = l3Find(l3Other(b, a.id)); return anaSym(c2) === 'C' && !l3Bonds(c2).some(x=>x.order > 1); })),
+      fuel:(oneC.C || oneC.H) && !oneQ && !(oneC.C === 1 && oneC.O === 2) && !(oneC.H === 2 && oneC.O === 1 && !oneC.C)};
+  });
+  /* the piece that actually gives or takes the proton: OH- in sodium hydroxide, not Na+ */
+  const piece = a => { const s0 = new Set([a.id]), list = [a]; for(let k=0;k<list.length;k++) l3Bonds(list[k]).forEach(b=>{ if(b.type !== 'covalent') return; const o = l3Other(b, list[k].id); if(!s0.has(o)){ const y = l3Find(o); if(y){ s0.add(o); list.push(y); } } });
+    const c = countsOf(list), q = list.reduce((t, x)=>t + anaQ(x), 0); return {c, q, f:anaFormula(c, q)}; };
+  info.forEach(I=>{ if(I.acid && I.acid.host) I.acidP = piece(I.acid.host); if(I.base && I.base.b) I.baseP = piece(I.base.b); });
+  const fAfter = (I, dH, dq) => { const c = Object.assign({}, I.c); c.H = (c.H||0) + dH; if(c.H <= 0) delete c.H; return anaFormula(c, I.q + dq); };
+  const pairs = []; for(let i=0;i<info.length;i++) for(let j=0;j<info.length;j++) if(i !== j) pairs.push([info[i], info[j]]);
+  if(ANA.water){ const W = {name:'water', f:'H₂O', c:{H:2, O:1}, q:0, acid:{pk:15.7}, base:{pk:-1.7}, water:true, donor:true, A:[]}; info.forEach(I=>{ pairs.push([I, W]); pairs.push([W, I]); }); }
+  /* acids and bases: the proton goes to whichever lone pair holds it more tightly */
+  let bestAB = null;
+  pairs.forEach(([X, Y])=>{ if(!X.acid || !Y.base || X.acid.pk > 30) return; const d = Y.base.pk - X.acid.pk; if(d > -3 && (!bestAB || d > bestAB.d)) bestAB = {X, Y, d}; });
+  if(bestAB){ const {X, Y, d} = bestAB, K = d;
+    const strong = d >= 3, part = d > -1;
+    out.push({kind:'acid–base', verdict:strong ? 'yes' : part ? 'partly' : 'barely', title:'Proton transfer: '+X.name+' gives H⁺ to '+Y.name,
+      eq:(X.acidP || X).f+' + '+(Y.baseP || Y).f+(strong ? ' → ' : ' ⇌ ')+fAfter(X.acidP || X, -1, -1)+' + '+fAfter(Y.baseP || Y, 1, 1),
+      why:'The acid’s proton has pKa '+anaFmt(X.acid.pk, 1)+'; the base’s conjugate acid has pKa '+anaFmt(Y.base.pk, 1)+'. The proton goes to the lone pair that holds it more tightly, so K = 10^('+anaFmt(Y.base.pk, 1)+' − '+(X.acid.pk < 0 ? '('+anaFmt(X.acid.pk, 1)+')' : anaFmt(X.acid.pk, 1))+') = 10^'+anaFmt(K, 1)+
+        (strong ? ': it goes essentially all the way.' : part ? ': an equilibrium with plenty of both sides.' : ': hardly any reacts at once, though some always does.')+
+        (X.acid.pk < 0 && Y.base.pk > 14 ? ' A strong acid meeting a strong base gives out about 57 kJ per mole of water made.' : '')});
+  }
+  /* precipitates */
+  const cats = info.flatMap(I=>I.cations.map(a=>[I, a])), ans = info.flatMap(I=>I.anions.map(a=>[I, a]));
+  const pp = new Set();
+  cats.forEach(([I, c])=>ans.forEach(([J, a])=>{ if(I === J) return; const P = l3Ppt(c, a); if(!P || pp.has(P.f)) return; pp.add(P.f);
+    out.push({kind:'precipitation', verdict:'yes', title:'A precipitate of '+P.n, eq:anaSym(c)+chargeSup(c.ion)+'(aq) + '+anaSym(a)+chargeSup(a.ion)+'(aq) → '+P.f+'(s)',
+      why:'These two ions hold each other more tightly than water can hold them apart: only '+P.g+' dissolves. It comes out as a '+P.look+' solid, ΔH = '+anaFmt(P.dH, 1)+' kJ/mol.'}); }));
+  /* metals: with acid, water, other metals' ions, halogens and oxygen */
+  info.forEach(I=>{ if(!I.metal) return; const s = anaSym(I.metal), E = E0[s];
+    info.concat(ANA.water ? [{water:true, name:'water'}] : []).forEach(J=>{ if(J === I) return;
+      if(J.acid && J.acid.pk < 5 && !J.water && E != null && E < 0) out.push({kind:'redox', verdict:'yes', title:I.name+' dissolves in '+J.name, eq:s+' + 2H⁺ → '+s+'²⁺ + H₂',
+        why:'E°('+s+'²⁺/'+s+') = '+E+' V is below hydrogen’s 0 V, so the metal hands electrons to H⁺: E°cell = '+anaFmt(-E, 2)+' V and ΔG° = −nFE° = '+anaFmt(-2*96.485*(-E))+' kJ/mol. Hydrogen fizzes off.'});
+      else if(J.water && E != null && E < -2.3) out.push({kind:'redox', verdict:'yes', title:I.name+' reacts with water', eq:'2'+s+' + 2H₂O → 2'+s+'⁺ + 2OH⁻ + H₂', why:'With E° = '+E+' V it is reactive enough to take the oxygen’s place and free hydrogen from water itself.'});
+      J.cations && J.cations.forEach(c=>{ const s2 = anaSym(c), E2 = E0[s2]; if(E2 == null || E == null || s2 === s) return;
+        if(E2 > E && !out.some(o=>o.title.includes('displaces '+s2))) out.push({kind:'redox', verdict:'yes', title:s+' displaces '+s2, eq:s+' + '+s2+chargeSup(c.ion)+' → '+s+chargeSup(c.ion)+' + '+s2,
+          why:'E°('+s2+') = '+E2+' V is above E°('+s+') = '+E+' V, so '+s2+' ions take electrons from '+s+' metal: E°cell = '+anaFmt(E2 - E, 2)+' V.'}); });
+      if(J.x2 || J.o2){ const X = J.x2 ? anaSym(J.A[0]) : 'O'; out.push({kind:'ionic', verdict:'yes', title:I.name+' burns in '+J.name, eq:J.x2 ? '2'+s+' + '+X+'₂ → 2'+s+X : '4'+s+' + O₂ → 2'+s+'₂O',
+        why:'The electronegativity gap ('+anaRnd(Math.abs((BY_SYM[X].en||3) - (BY_SYM[s].en||1)), 2)+') is far past 1.7, so electrons pass outright from metal to non-metal and the ions pack into a lattice. Very exothermic.'}); }
+    }); });
+  /* Lewis acids, ligands */
+  pairs.forEach(([X, Y])=>{ if(X.lewisB && Y.donor && !out.some(o=>o.kind === 'Lewis')) out.push({kind:'Lewis', verdict:'yes', title:Y.name+' gives a lone pair to '+X.name, eq:X.f+' + '+Y.f+' → '+X.f+'·'+Y.f, why:'The boron (or aluminium) has only six electrons; the lone pair fills its empty orbital as a coordinate bond.'});
+    if(X.tmIon && Y.donor && !out.some(o=>o.kind === 'complex')) out.push({kind:'complex', verdict:'yes', title:Y.name+' coordinates to '+anaSym(X.tmIon)+chargeSup(X.tmIon.ion), eq:anaSym(X.tmIon)+chargeSup(X.tmIon.ion)+' + n'+Y.f+' → ['+anaSym(X.tmIon)+'('+Y.f+')ₙ]'+chargeSup(X.tmIon.ion), why:'A transition-metal ion has empty d orbitals that lone pairs fill: up to six ligands round it.'}); });
+  /* organic */
+  pairs.forEach(([X, Y])=>{
+    if(X.alkene && (Y.hx || Y.x2) && !out.some(o=>o.kind === 'addition')) out.push({kind:'addition', verdict:'yes', title:Y.name+' adds across the C=C of '+X.name, eq:X.f+' + '+Y.f+' → '+anaFormula(Object.assign({}, X.c, Object.fromEntries(Object.entries(Y.c).map(([k, v])=>[k, (X.c[k]||0) + v]))), 0),
+      why:'The π electrons of the double bond attack the '+(Y.hx ? 'H of '+Y.f+' (it is δ+)' : 'bromine, which the π cloud polarises')+'; the C=C opens and both halves add on. '+(Y.hx ? 'Markovnikov: the H goes to the carbon that already has more H, leaving the more stable carbocation.' : 'Bromine water goes from orange to colourless.')});
+    if(X.cooh && Y.alcohol && !out.some(o=>o.kind === 'esterification')) out.push({kind:'esterification', verdict:'slow', title:X.name+' and '+Y.name+' make an ester', eq:X.f+' + '+Y.f+' ⇌ ester + H₂O', why:'The alcohol’s oxygen attacks the acid’s C=O carbon and water leaves. It is slow without an acid catalyst and reversible: K is only about 4.'});
+    if(X.fuel && Y.o2 && !out.some(o=>o.kind === 'combustion')) out.push({kind:'combustion', verdict:'needs heat', title:X.name+' burns in oxygen', eq:(ANA.rep[X.e && X.e.q] && ANA.rep[X.e.q].energy && ANA.rep[X.e.q].energy.combEq) || X.f+' + O₂ → CO₂ + H₂O',
+      why:'Strongly exothermic overall, but the first bonds must break before any form: at room temperature nothing happens. Heat the box past about 700 K (or think of a spark) and it goes.'});
+    if(X.h2 && (Y.x2 || Y.o2) && !out.some(o=>o.kind === 'synthesis')) out.push({kind:'synthesis', verdict:'needs heat', title:'Hydrogen and '+Y.name+(Y.o2 ? ' make water' : ' make H'+anaSym(Y.A[0])), eq:Y.o2 ? '2H₂ + O₂ → 2H₂O' : 'H₂ + '+Y.f+' → 2H'+anaSym(Y.A[0]), why:'Exothermic, but the H–H and the other bond must break first: a flame, spark or (for chlorine) ultraviolet light starts it.'});
+  });
+  info.forEach(I=>{ if(ANA.water && (I.cations.length || I.anions.length) && !out.some(o=>o.kind === 'precipitation')) out.push({kind:'dissolving', verdict:'yes', title:I.name+' dissolves into its ions', eq:I.f+'(s) → ions(aq)', why:'Water’s dipoles crowd round each ion (δ− O towards cations, δ+ H towards anions) and pay back almost all the lattice energy.'}); });
+  if(!out.length && L.length === 1){
+    const r = ANA.rep[L[0].q], wk = r && r.bonds.weakest;
+    out.push({kind:'on its own', verdict:'needs heat', title:anaCap(info[0].name)+' alone', eq:'', why:'With nothing to react with, molecules of '+info[0].name+' only bump and part'+(r ? ', held together by '+r.forces.strongest : '')+'. '+(wk ? 'Heat it far enough and bonds start to break, weakest first: '+wk.k+' at '+Math.round(wk.E)+' kJ/mol. The fragments then recombine into whatever is most stable. Turn the temperature up to a few thousand kelvin and watch.' : 'Raise the temperature to watch it melt, boil, and eventually fall apart.')});
+  }
+  if(!out.length){
+    const reps = info.map(I=>ANA.rep[I.e.q]).filter(Boolean);
+    const pol = reps.map(r=>r.forces.strongest);
+    const mix = reps.length >= 2 ? (pol.every(p=>p === 'London dispersion') || pol.every(p=>p !== 'London dispersion') ? 'They should mix: like dissolves like ('+pol.join(' and ')+').' : 'They will not mix well: one is held by '+pol.find(p=>p !== 'London dispersion')+', the other only by London forces, so they separate into layers like oil and water.') : '';
+    out.push({kind:'none', verdict:'no', title:'No reaction expected', eq:'', why:'Neither has a proton acidic enough for the other’s lone pairs, there is no metal to give electrons away, no π bond for the other to add to and no ions that would pair up as a solid. '+mix+' Heat can still break bonds: try the temperature slider.'});
+  }
+  return out;
+}
+/* ---------- the result of a run ---------- */
+function anaResults(){
+  const R = ANA.run; if(!R) return null;
+  const c1 = anaCensus(), keys = new Set([...R.census0.keys(), ...c1.keys()]);
+  const rows = [...keys].map(k=>{ const a = R.census0.get(k), b = c1.get(k); return {f:k, name:(b || a).name, n0:a ? a.n : 0, n1:b ? b.n : 0}; }).map(r=>Object.assign(r, {d:r.n1 - r.n0}));
+  rows.sort((a, b)=>a.d - b.d || b.n1 - a.n1);
+  const ch = rows.filter(r=>r.d), gcd = (a, b) => b ? gcd(b, a % b) : a, g = ch.length ? ch.map(r=>Math.abs(r.d)).reduce(gcd) : 1;
+  const side = list => list.map(r=>(Math.abs(r.d)/g > 1 ? Math.abs(r.d)/g : '')+r.f).join(' + ');
+  const eq = ch.length ? side(ch.filter(r=>r.d < 0))+' → '+side(ch.filter(r=>r.d > 0)) : '';
+  const t1 = anaTally(), bk = new Set([...R.tally0.keys(), ...t1.keys()]);
+  const brk = [], frm = [];
+  bk.forEach(k=>{ const a = R.tally0.get(k), b = t1.get(k), n0 = a ? a.n : 0, n1 = b ? b.n : 0, E = (a || b).E, type = (a || b).type;
+    if(n1 < n0) brk.push({k, n:n0 - n1, E, type}); if(n1 > n0) frm.push({k, n:n1 - n0, E, type}); });
+  const sum = l => l.filter(x=>x.type === 'covalent' || x.type === 'dative').reduce((t, x)=>t + x.n*x.E, 0);
+  const hess = sum(brk) - sum(frm);
+  const groups = new Map(); R.events.forEach(ev=>{ const k = ev.title; const o = groups.get(k) || Object.assign({n:0, dEsum:0, first:ev.t}, ev); o.n++; o.dEsum += ev.dE; groups.set(k, o); });
+  const ppt = L3.atoms.filter(a=>!a.dying && a._ppt).length;
+  return {rows, eq, g, brk, frm, hess, ppt, bench:R.dH, steps:[...groups.values()].sort((a, b)=>a.first - b.first), t:(L3.simT||0) - R.t0};
+}
+/* ---------- charts, drawn as SVG ---------- */
+const ANA_W = 470;
+function anaAxis(x0, x1, ticks, w, h, fmt){
+  return ticks.map(t=>{ const x = 30 + (t - x0)/(x1 - x0)*(w - 40); return '<line x1="'+x.toFixed(1)+'" y1="8" x2="'+x.toFixed(1)+'" y2="'+(h-16)+'" class="ana-grid"/><text x="'+x.toFixed(1)+'" y="'+(h-4)+'" class="ana-tick">'+(fmt ? fmt(t) : t)+'</text>'; }).join('');
+}
+function anaIRSvg(B){
+  const w = ANA_W, h = 170, X = wn => 30 + (4000 - wn)/3600*(w - 40), Y = T => 12 + (1 - T)*(h - 32);
+  const bands = B.bands.filter(r=>r.ir.wn).map(r=>Object.assign({}, r.ir, {s:(r.ir.s||0.4)*Math.min(1.6, Math.sqrt(r.n))}));
+  let d = '';
+  for(let px=0; px<=w-40; px+=2){ const wn = 4000 - px/(w-40)*3600; let A = 0;
+    bands.forEach(b=>{ const g = (wn - b.wn)/(b.w||30); A += b.s*0.8/(1 + g*g); if(b.lab === 'C–H (aldehyde)'){ const g2 = (wn - 2820)/30; A += b.s*0.6/(1 + g2*g2); } if(b.lab === 'C=C (aromatic)'){ const g3 = (wn - 1500)/18; A += b.s*0.6/(1 + g3*g3); } if(/nitro/.test(b.lab)){ const g4 = (wn - 1350)/25; A += b.s*0.7/(1 + g4*g4); } if(b.lab === 'S=O'){ const g5 = (wn - 1150)/25; A += b.s*0.7/(1 + g5*g5); } });
+    const T = Math.max(0.04, 1 - Math.min(0.96, A)); d += (px ? 'L' : 'M') + (30 + px).toFixed(1) + ' ' + Y(T).toFixed(1); }
+  const seen = new Set(), labs = bands.slice().sort((a, b)=>b.s - a.s).filter(b=>{ const k = Math.round(b.wn/120); if(seen.has(k)) return false; seen.add(k); return true; }).slice(0, 7)
+    .map((b, i)=>'<text x="'+clamp(X(b.wn), 40, w - 20).toFixed(1)+'" y="'+(Y(1 - Math.min(0.9, b.s*0.8)) + 12 + (i % 2)*9).toFixed(1)+'" class="ana-plab">'+anaEsc(b.lab)+'</text>').join('');
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="ana-chart"><rect x="'+X(1500)+'" y="8" width="'+(X(400) - X(1500))+'" height="'+(h-24)+'" class="ana-fp"/>'+
+    '<text x="'+((X(1500) + X(400))/2)+'" y="18" class="ana-tick">fingerprint region</text>'+anaAxis(4000, 400, [4000, 3500, 3000, 2500, 2000, 1500, 1000, 500], w, h)+
+    '<path d="'+d+'" class="ana-line"/>'+labs+'<text x="'+(w - 8)+'" y="'+(h-4)+'" class="ana-tick" text-anchor="end">cm⁻¹</text></svg>';
+}
+function anaNMRSvg(envs){
+  const w = ANA_W, h = 160, hi = envs.some(e=>e.d > 10) ? 13 : 10.5, X = d => 30 + (hi - d)/hi*(w - 40);
+  const top = Math.max(1, ...envs.map(e=>e.n));
+  const pas = n => { let r = [1]; for(let i=0;i<n;i++){ const nx = [1]; for(let j=1;j<r.length;j++) nx.push(r[j-1] + r[j]); nx.push(1); r = nx; } return r; };
+  let s = '';
+  envs.forEach(e=>{ const x = X(e.d), H = (e.n/top)*(h - 52);
+    if(e.broad){ s += '<path d="M'+(x-9)+' '+(h-16)+' Q'+x+' '+(h-16-H*1.6)+' '+(x+9)+' '+(h-16)+'" class="ana-peak broad"/>'; }
+    else { const L = Math.min(e.split, 6), p = pas(L), mx = Math.max(...p), sp = 3.2;
+      p.forEach((v, i)=>{ const xx = x + (i - L/2)*sp, hh = H*v/mx; s += '<line x1="'+xx.toFixed(1)+'" y1="'+(h-16)+'" x2="'+xx.toFixed(1)+'" y2="'+(h-16-hh).toFixed(1)+'" class="ana-peak"/>'; }); }
+    s += '<text x="'+x.toFixed(1)+'" y="'+(h-22-H - (e.broad ? H*0.6 : 0)).toFixed(1)+'" class="ana-plab"><tspan class="ana-tag">'+e.tag+'</tspan> '+e.n+'H</text>'; });
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="ana-chart">'+anaAxis(hi, 0, [12, 10, 8, 6, 4, 2, 0].filter(t=>t <= hi), w, h)+
+    '<line x1="'+X(0)+'" y1="'+(h-16)+'" x2="'+X(0)+'" y2="'+(h-30)+'" class="ana-peak tms"/><text x="'+(X(0) - 2)+'" y="'+(h-33)+'" class="ana-tick" text-anchor="end">TMS</text>'+s+
+    '<text x="'+(w - 8)+'" y="'+(h-4)+'" class="ana-tick" text-anchor="end">δ / ppm</text></svg>';
+}
+function anaC13Svg(envs){
+  const w = ANA_W, h = 120, X = d => 30 + (220 - d)/220*(w - 40);
+  let s = ''; const top = Math.max(1, ...envs.map(e=>e.n));
+  envs.forEach((e, i)=>{ const x = X(e.d), H = (0.45 + 0.55*e.n/top)*(h - 44)*(/C=O|C≡N|substituted|C–O|C–N/.test(e.note) && !/CH/.test(e.note) ? 0.55 : 1);
+    s += '<line x1="'+x.toFixed(1)+'" y1="'+(h-16)+'" x2="'+x.toFixed(1)+'" y2="'+(h-16-H).toFixed(1)+'" class="ana-peak c13"/><text x="'+x.toFixed(1)+'" y="'+(h-20-H - (i % 2)*8).toFixed(1)+'" class="ana-plab">'+Math.round(e.d)+'</text>'; });
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="ana-chart">'+anaAxis(220, 0, [220, 180, 140, 100, 60, 20, 0], w, h, t=>t)+s+'<text x="'+(w - 8)+'" y="'+(h-4)+'" class="ana-tick" text-anchor="end">δ / ppm</text></svg>';
+}
+function anaMSSvg(ms){
+  const w = ANA_W, h = 150, mx = Math.max(...ms.peaks.map(p=>p.m)) + 12, X = m => 30 + m/mx*(w - 40);
+  const step = mx > 300 ? 100 : mx > 120 ? 50 : mx > 50 ? 20 : 10, ticks = []; for(let t=0; t<=mx; t+=step) ticks.push(t);
+  const s = ms.peaks.map(p=>'<line x1="'+X(p.m).toFixed(1)+'" y1="'+(h-16)+'" x2="'+X(p.m).toFixed(1)+'" y2="'+(h-16 - p.p/100*(h-40)).toFixed(1)+'" class="ana-bar'+(p.M ? ' mol' : '')+'"/>').join('');
+  const lab = ms.peaks.filter(p=>p.p > 18 || p.M && p.p > 4).sort((a, b)=>b.p - a.p).slice(0, 7).map(p=>'<text x="'+X(p.m).toFixed(1)+'" y="'+(h-20 - p.p/100*(h-40)).toFixed(1)+'" class="ana-plab'+(p.M ? ' mol' : '')+'">'+p.m+'</text>').join('');
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="ana-chart">'+anaAxis(0, mx, ticks, w, h)+s+lab+'<text x="'+(w - 8)+'" y="'+(h-4)+'" class="ana-tick" text-anchor="end">m/z</text></svg>';
+}
+function anaUVSvg(uv){
+  const w = ANA_W, h = 110, X = nm => 30 + (nm - 190)/(760 - 190)*(w - 40);
+  let strip = ''; for(let nm=380; nm<760; nm+=6) strip += '<rect x="'+X(nm).toFixed(1)+'" y="'+(h-24)+'" width="'+(X(nm+6) - X(nm) + 0.6).toFixed(1)+'" height="6" fill="'+wavelengthColor(nm)+'" opacity=".55"/>';
+  let d = ''; if(uv.lam){ for(let nm=190; nm<=760; nm+=4){ const a = Math.exp(-Math.pow((nm - uv.lam)/(uv.lam > 300 ? 38 : 24), 2)); d += (nm === 190 ? 'M' : 'L') + X(nm).toFixed(1) + ' ' + (h-30 - a*(h-48)).toFixed(1); } }
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="ana-chart"><rect x="'+X(190)+'" y="8" width="'+(X(380) - X(190))+'" height="'+(h-34)+'" class="ana-fp"/><text x="'+((X(190) + X(380))/2)+'" y="18" class="ana-tick">ultraviolet</text>'+strip+
+    anaAxis(190, 760, [200, 300, 400, 500, 600, 700], w, h)+(d ? '<path d="'+d+'" class="ana-line"/><text x="'+X(uv.lam).toFixed(1)+'" y="'+22+'" class="ana-plab">λmax '+uv.lam+'</text>' : '')+'<text x="'+(w - 8)+'" y="'+(h-4)+'" class="ana-tick" text-anchor="end">nm</text></svg>';
+}
+function anaMOSvg(mo, M){
+  const w = 300, gap = 30, lv = mo.levels, h = 24 + lv.length*gap;
+  const s = lv.map((L, i)=>{ const y = h - 16 - i*gap, orbs = L.cap/2, bw = 34, tot = orbs*bw + (orbs - 1)*8, x0 = 150 - tot/2;
+    let g = '<text x="18" y="'+(y + 4)+'" class="ana-mo-n'+(L.s < 0 ? ' anti' : '')+'">'+L.n+'</text>';
+    L.arr.forEach((k, j)=>{ const x = x0 + j*(bw + 8);
+      g += '<line x1="'+x+'" y1="'+y+'" x2="'+(x + bw)+'" y2="'+y+'" class="ana-mo-l'+(L.s < 0 ? ' anti' : '')+'"/>';
+      if(k >= 1) g += '<text x="'+(x + bw/2 - 6)+'" y="'+(y - 3)+'" class="ana-mo-e">↑</text>';
+      if(k >= 2) g += '<text x="'+(x + bw/2 + 6)+'" y="'+(y - 3)+'" class="ana-mo-e">↓</text>'; });
+    return g; }).join('');
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="ana-chart mo">'+s+'<text x="292" y="14" class="ana-tick" text-anchor="end">energy ↑</text></svg>';
+}
+function anaLineChart(series, keys, getY, opts){
+  const w = ANA_W, h = opts.h || 130; if(series.length < 2) return '<p class="ana-note">The chart fills in as the run goes.</p>';
+  const t1 = series[series.length-1].t || 1, ys = []; series.forEach(p=>keys.forEach(k=>ys.push(getY(p, k))));
+  let lo = Math.min(0, ...ys), hi = Math.max(1, ...ys); if(opts.lo != null) lo = opts.lo; if(hi - lo < 1e-6) hi = lo + 1;
+  const X = t => 34 + t/t1*(w - 44), Y = v => 10 + (hi - v)/(hi - lo)*(h - 30);
+  const cols = ['#2F5BEA', '#C0503A', '#2A7A78', '#C2711C', '#8A5BB0', '#3B8F5A', '#6B7A8A', '#B04A7A'];
+  const lines = keys.map((k, i)=>'<path d="'+series.map((p, j)=>(j ? 'L' : 'M')+X(p.t).toFixed(1)+' '+Y(getY(p, k)).toFixed(1)).join('')+'" fill="none" stroke="'+cols[i % cols.length]+'" stroke-width="1.6"/>').join('');
+  const leg = keys.length > 1 || opts.legend ? '<div class="ana-leg">'+keys.map((k, i)=>'<span><i style="background:'+cols[i % cols.length]+'"></i>'+anaEsc(opts.label ? opts.label(k) : k)+'</span>').join('')+'</div>' : '';
+  return '<svg viewBox="0 0 '+w+' '+h+'" class="ana-chart"><line x1="34" y1="'+Y(lo)+'" x2="'+(w-10)+'" y2="'+Y(lo)+'" class="ana-grid"/>'+(lo < 0 ? '<line x1="34" y1="'+Y(0)+'" x2="'+(w-10)+'" y2="'+Y(0)+'" class="ana-grid zero"/>' : '')+
+    '<text x="30" y="'+(Y(hi) + 4)+'" class="ana-tick" text-anchor="end">'+anaRnd(hi, hi < 10 ? 1 : 0)+'</text><text x="30" y="'+(Y(lo) + 4)+'" class="ana-tick" text-anchor="end">'+anaRnd(lo, 0)+'</text>'+
+    lines+'<text x="'+(w-10)+'" y="'+(h-4)+'" class="ana-tick" text-anchor="end">'+anaRnd(t1, 1)+' s of bench time</text><text x="36" y="'+(h-4)+'" class="ana-tick" text-anchor="start">'+anaEsc(opts.unit || '')+'</text></svg>'+leg;
+}
+/* ---------- the panel ---------- */
+const ANA_EXAMPLES = [
+  ['One compound', [['caffeine'], ['aspirin'], ['ethanol'], ['benzene'], ['glucose'], ['oxygen'], ['acetic acid'], ['ammonium']]],
+  ['Compare', [['ethanol', 'dimethyl ether'], ['butane', 'isobutane'], ['water', 'hydrogen sulfide'], ['benzene', 'cyclohexane'], ['acetic acid', 'ethanol', 'phenol']]],
+  ['React', [['hydrogen chloride', 'ammonia'], ['acetic acid', 'sodium hydroxide'], ['silver ion', 'chloride'], ['ethene', 'hydrogen bromide'], ['boron trifluoride', 'ammonia'], ['zinc', 'copper(II) ion'], ['methane', 'oxygen']]]
+];
+const anaSec = (k, title, inner, note) => '<details class="ana-sec" data-sec="'+k+'"'+(ANA.open[k] === false ? '' : ' open')+'><summary>'+title+(note ? '<em>'+note+'</em>' : '')+'</summary><div class="ana-in">'+inner+'</div></details>';
+const anaDL = rows => '<dl class="ana-dl">'+rows.filter(Boolean).map(([k, v])=>'<dt>'+k+'</dt><dd>'+v+'</dd>').join('')+'</dl>';
+const anaTbl = (head, rows, cls) => '<div class="ana-tw"><table class="ana-t'+(cls ? ' '+cls : '')+'"><thead><tr>'+head.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
+const anaHL = ids => ' data-hl="'+[...new Set(ids)].join(' ')+'"';
+function anaCompoundHTML(i){
+  const R = anaReport(i), e = ANA.list[i];
+  if(!R || R.err) return '<p class="ana-note">'+anaEsc(R ? R.err : 'Nothing to analyse.')+'</p>';
+  const M = R.M, B = R.bonds, F = R.forces, P = R.pol, AB = R.ab, E = R.energy, I = R.id;
+  const T = kelvin(), ph = R.phase, state = K => !ph ? null : ph[0] == null ? (K < ph[1] ? 'solid' : 'gas') : K < ph[0] ? 'solid' : ph[1] == null || K < ph[1] ? 'liquid' : 'gas';
+  /* header */
+  let h = '<div class="ana-hero"><div class="ana-pic">'+thumbSVG(R.g, {w:440, h:170, L:36, fs:15, sw:1.6})+'</div>'+
+    '<div class="ana-id"><b class="ana-f">'+M.f+'</b><span class="ana-n">'+anaEsc(M.name || e.label)+'</span>'+(e.note ? '<span class="ana-note">'+anaEsc(e.note)+'</span>' : '')+'</div>'+
+    '<div class="ana-facts">'+[
+      ['Molar mass', anaRnd(M.mass, 2)+' g/mol'], ['Atoms', M.atoms.length+(M.heavy.length !== M.atoms.length ? ' ('+M.heavy.length+' heavy)' : '')],
+      M.q ? ['Charge', (M.q > 0 ? '+' : '−')+Math.abs(M.q)] : null,
+      I.dou != null ? ['Unsaturation', I.dou+(I.dou ? ' ('+I.rings+' ring'+(I.rings === 1 ? '' : 's')+', '+I.pi+' π)' : '')] : null,
+      ['Polarity', P.mu == null ? 'an ion' : (P.polar ? 'polar ' : 'non-polar ')+anaRnd(P.mu, 2)+' D'],
+      ['Strongest force', F.strongest], ph ? ['At '+T+' K', state(T)] : null,
+      R.logP != null ? ['logP (est.)', anaFmt(R.logP, 2)] : null, ['Rotatable bonds', R.motion.rot], ['Vibrations', R.motion.modes+' modes']
+    ].filter(Boolean).map(([k, v])=>'<span><i>'+k+'</i><b>'+v+'</b></span>').join('')+'</div>'+
+    (e.sm ? '<div class="ana-smiles"><i>SMILES</i> <code>'+anaEsc(e.sm)+'</code></div>' : '')+
+    '<div class="ana-tools"><span class="ana-seg">'+['ball','space','esp'].map(v=>'<button type="button" data-a="view" data-v="'+v+'" class="'+(L3.view === v ? 'on' : '')+'">'+({ball:'Ball & stick', space:'Space-filling', esp:'Charge cloud'})[v]+'</button>').join('')+'</span>'+
+      '<button type="button" class="ana-tg'+(L3.showLP ? ' on' : '')+'" data-a="lp">Lone pairs</button><button type="button" class="ana-tg'+(L3.showQ ? ' on' : '')+'" data-a="dq">δ charges</button>'+
+      '<button type="button" class="ana-tg" data-a="heat">'+(kelvin() > 600 ? 'Cool it' : 'Heat it')+'</button><button type="button" class="ana-tg" data-a="rebuild">Rebuild</button></div>'+
+    '<div class="ana-temp"><label>Bench temperature</label><input type="range" id="anaTemp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P_TEMP()+'"><span>'+T+' K</span></div></div>';
+  if(I.stereo.length || I.ez.length) h += '<p class="ana-callout">'+(I.stereo.length ? '<b>Chiral.</b> '+I.stereo.length+' stereocentre'+(I.stereo.length > 1 ? 's' : '')+' ('+I.stereo.join(', ')+'), each a carbon with four different groups: it has a mirror-image form that cannot be laid over it'+(I.stereo.length > 1 ? ', and up to '+Math.pow(2, I.stereo.length)+' stereoisomers in all' : '')+'. ' : '')+(I.ez.length ? '<b>Cis/trans.</b> The double bond'+(I.ez.length > 1 ? 's' : '')+' '+I.ez.join(', ')+' cannot turn, and each end carries two different groups, so it exists as E and Z isomers.' : '')+'</p>';
+  /* composition */
+  const comp = R.elements;
+  h += anaSec('comp', 'Composition', '<div class="ana-stack">'+comp.map(x=>'<i style="width:'+x.massPct.toFixed(2)+'%;background:'+x.e.col+'" title="'+x.s+' '+x.massPct.toFixed(1)+'%"></i>').join('')+'</div>'+
+    anaTbl(['Element','Atoms','Mass','By mass'], comp.map(x=>'<tr><td><b style="color:'+x.e.col+'">'+x.s+'</b> '+x.e.name+'</td><td>'+x.n+'</td><td>'+anaRnd(x.n*x.e.mass, 2)+'</td><td>'+x.massPct.toFixed(1)+'%</td></tr>'))+
+    '<p class="ana-note">Empirical formula '+(()=>{ const ks = Object.keys(M.counts), gc = (a, b) => b ? gc(b, a % b) : a, g = ks.map(k=>M.counts[k]).reduce(gc); const c = {}; ks.forEach(k=>c[k] = M.counts[k]/g); return anaFormula(c, 0)+(g > 1 ? ', the molecular formula divided by '+g : ', the same as the molecular formula'); })()+'.</p>', comp.length+' element'+(comp.length > 1 ? 's' : ''));
+  /* elements */
+  h += anaSec('elems', 'The elements in it', '<div class="ana-els">'+comp.map(x=>'<div class="ana-el" style="--ec:'+x.e.col+'"><b>'+x.s+'</b><span>'+x.e.name+'</span><dl><dt>Z</dt><dd>'+x.e.z+'</dd><dt>config.</dt><dd>'+x.cfg+'</dd><dt>EN</dt><dd>'+(x.e.en != null ? x.e.en : '—')+'</dd><dt>radius</dt><dd>'+x.e.rc+' pm</dd><dt>IE₁</dt><dd>'+(x.ie ? x.ie+' kJ/mol' : '—')+'</dd><dt>valence e⁻</dt><dd>'+l3Valence(x.e)+'</dd></dl></div>').join('')+'</div>');
+  /* bonds */
+  h += anaSec('bonds', 'Bonds', anaTbl(['Bond','×','Length','Enthalpy','ΔEN','Character','IR'], B.list.map(r=>'<tr'+anaHL(r.ids)+'><td><b>'+r.k+'</b></td><td>'+r.n+'</td><td>'+Math.round(r.d)+' pm'+(r.ref ? '<small>table '+Math.round(r.ref)+'</small>' : '')+'</td><td>'+(r.E ? Math.round(r.E)+' kJ/mol' : '—')+'</td><td>'+r.den.toFixed(2)+'</td><td>'+r.kind+'</td><td>'+(r.ir && r.ir.wn ? r.ir.wn : r.ir ? 'inactive' : '—')+'</td></tr>'))+
+    (B.total ? '<p class="ana-note">Breaking every covalent bond (atomising one molecule’s worth, per mole) takes <b>'+Math.round(B.total)+' kJ/mol</b>.'+(B.weakest ? ' The weakest is <b>'+B.weakest.k+'</b> at '+Math.round(B.weakest.E)+' kJ/mol: heat it and that one breaks first, and light shorter than <b>'+Math.round(119627/B.weakest.E)+' nm</b> carries enough energy per photon to split it.' : '')+' Measured lengths are from the molecule on the bench, after it relaxed; “table” is the sum of covalent radii.</p>' : ''), B.list.reduce((t, r)=>t + r.n, 0)+' bonds');
+  /* shape */
+  const S = R.shape;
+  h += anaSec('shape', 'Shape and hybridisation', S.length ? anaTbl(['Centre','×','Bonds + lone pairs','Electron geometry','Shape','Hybrid','Ideal','Measured'], S.slice(0, 14).map(r=>'<tr'+anaHL(r.ids)+'><td><b>'+r.what+'</b><small>'+r.labs.slice(0, 3).join(', ')+(r.labs.length > 3 ? '…' : '')+'</small></td><td>'+r.n+'</td><td>'+r.bonds+' + '+r.lp+'</td><td>'+r.egeom+'</td><td>'+r.shape+'</td><td>'+r.hyb+'</td><td>'+(r.ideal ? r.ideal+'°' : '')+'</td><td>'+r.mean+'°'+(r.max - r.min > 4 ? '<small>'+r.min+'–'+r.max+'°</small>' : '')+'</td></tr>'))+
+    (S.length > 14 ? '<p class="ana-note">and '+(S.length - 14)+' more kinds of centre.</p>' : '')+
+    (S.length === 1 ? '<p class="ana-note">'+anaCap(S[0].what)+' has '+S[0].bonds+' bonded atom'+(S[0].bonds > 1 ? 's' : '')+' and '+S[0].lp+' lone pair'+(S[0].lp === 1 ? '' : 's')+': '+S[0].sn+' regions of electrons, which push apart into a '+S[0].egeom+' arrangement. '+(S[0].lp ? 'Lone pairs take up room but are not seen in the shape, so the molecule is '+S[0].shape+', and they squeeze the bond angle below the ideal.' : 'With no lone pairs the shape is the arrangement itself: '+S[0].shape+'.')+'</p>' : '')
+    : '<p class="ana-note">No atom here has two or more bonds, so there is no bond angle to speak of.</p>', S.length ? S.reduce((t, r)=>t + r.n, 0)+' centres' : '');
+  /* electrons */
+  const EE = R.el, lewisOK = M.atoms.length <= 26;
+  h += anaSec('elec', 'Electrons, Lewis structure and oxidation states', anaDL([
+      ['Valence electrons', EE.val+(M.q ? ' (charge '+(M.q > 0 ? '+' : '−')+Math.abs(M.q)+' included)' : '')],
+      ['In bonds', (EE.bp*2)+' ('+EE.bp+' pairs)'], ['As lone pairs', (EE.lp*2)+' ('+EE.lp+' pairs)'], EE.rad ? ['Unpaired', EE.rad+': a radical, reactive'] : null,
+      ['Formal charges', EE.fq.length ? EE.fq.map(([l, q])=>l+' '+(q > 0 ? '+' : '−')+Math.abs(q)).join(', ') : 'none: every atom has its usual number of bonds'],
+      ['Octets', EE.octet.length ? EE.octet.map(([l, n, want])=>l+' has '+n+' (not '+want+'): '+(n > want ? 'an expanded octet, possible from period 3 on' : 'electron-deficient, so it is a Lewis acid')).join('; ') : 'every atom has a full shell']])+
+    (lewisOK ? '<div class="ana-lewis">'+thumbSVG(R.g, {w:440, h:200, L:42, fs:15, sw:1.5, explicit:true, lone:R.lone})+'<span class="ana-note">Lewis structure: every atom, every bond, and the lone pairs as dots</span></div>' : '')+
+    (R.mo ? '<div class="ana-mo">'+anaMOSvg(R.mo, M)+'<div><b>Molecular orbitals</b><p class="ana-note">'+R.mo.e+' '+(R.mo.levels[0].n.includes('1s') ? '' : 'valence ')+'electrons fill the orbitals from the bottom, one per orbital across a pair before any pair up (Hund). Bond order = (bonding − antibonding)/2 = <b>'+R.mo.bo+'</b>. It is <b>'+R.mo.mag+'</b>.'+(R.mo.unp && M.f === 'O₂' ? ' This is why liquid oxygen sticks between the poles of a magnet, something a Lewis structure with every electron paired cannot explain.' : '')+(R.mo.heavy === false && R.mo.levels.length > 2 ? ' For lighter atoms the σ2p orbital sits above the π2p pair, because 2s and 2p mix.' : '')+'</p></div></div>' : '')+
+    '<b class="ana-sub">Oxidation states</b>'+anaTbl(['Element','State','Atoms'], R.ox.map(r=>'<tr><td><b>'+r.sym+'</b></td><td>'+(r.ox > 0 ? '+' : r.ox < 0 ? '−' : '')+Math.abs(r.ox)+'</td><td>'+r.n+' ('+r.labs.slice(0, 6).join(', ')+(r.labs.length > 6 ? '…' : '')+')</td></tr>'))+
+    '<p class="ana-note">Each bond’s electrons are given to its more electronegative atom; the oxidation state is how many electrons an atom has then lost (+) or gained (−). They add up to the overall charge, '+M.q+'.</p>');
+  /* polarity */
+  h += anaSec('pol', 'Charge and polarity', (P.mu != null ? '<p class="ana-big">'+anaRnd(P.mu, 2)+' D <span>'+(P.polar ? 'polar' : 'non-polar')+'</span></p>' : '')+
+    '<p class="ana-note">'+(M.q ? 'An ion: its overall charge of '+(M.q > 0 ? '+' : '−')+Math.abs(M.q)+' dominates everything about how it attracts others.' : P.polar ? 'The bond dipoles add up to an overall dipole: one end of the molecule is δ+ and the other δ−, so molecules line up and attract each other, and an electric field turns them.'
+      : P.polarBonds ? 'It has polar bonds, but its shape is symmetric, so their dipoles point in opposite directions and cancel: the molecule as a whole is non-polar.' : 'Its bonds share their electrons almost equally, so there are no real dipoles: non-polar.')+'</p>'+
+    (P.pos.length || P.neg.length ? anaTbl(['Most δ+','q','Most δ−','q'], Array.from({length:Math.min(5, Math.max(P.pos.length, P.neg.length))}, (_, k)=>{ const a = P.pos[k], b = P.neg[k];
+      return '<tr><td'+(a ? anaHL([a.a.id]) : '')+'>'+(a ? a.lab : '')+'</td><td>'+(a ? '+'+a.q.toFixed(2) : '')+'</td><td'+(b ? anaHL([b.a.id]) : '')+'>'+(b ? b.lab : '')+'</td><td>'+(b ? b.q.toFixed(2) : '')+'</td></tr>'; })) : '')+
+    '<p class="ana-note">Partial charges are the bench’s own, from each bond’s electronegativity difference. Charge cloud colours the molecule by them: red δ−, blue δ+.</p>');
+  /* forces and physical properties */
+  const near = ANA_ALKANES.slice().sort((a, b)=>Math.abs(a[1] - M.mass) - Math.abs(b[1] - M.mass))[0];
+  const lip = R.logP != null && M.heavy.length >= 6 ? [M.mass <= 500, R.logP <= 5, F.donors <= 5, ((M.counts.N||0) + (M.counts.O||0)) <= 10] : null;
+  h += anaSec('forces', 'Between molecules: forces, melting, boiling, dissolving', anaDL([
+      ['London dispersion', F.electrons+' electrons to be distorted (polarisability '+anaRnd(F.pol, 1)+'): '+(F.electrons > 60 ? 'strong, it is a big molecule' : F.electrons > 25 ? 'moderate' : 'weak')],
+      ['Dipole–dipole', P.mu == null ? 'n/a (ion)' : P.polar ? 'yes, '+anaRnd(P.mu, 1)+' D' : 'no'],
+      ['Hydrogen bonds', F.donors || F.acceptors ? F.donors+' donor H (on N, O, F) and '+F.acceptors+' acceptor atom'+(F.acceptors === 1 ? '' : 's')+(F.donors && F.acceptors ? ': it hydrogen bonds to itself' : F.acceptors ? ': it can accept hydrogen bonds from water, but not give them' : '') : 'none'],
+      ['Strongest', F.strongest],
+      ph ? ['Melts / boils', (ph[0] != null ? ph[0]+' K ('+(ph[0] - 273)+' °C)' : 'sublimes')+' / '+(ph[1] != null ? ph[1]+' K ('+(ph[1] - 273)+' °C)' : 'decomposes first')] : null,
+      ph ? ['State', 'at 298 K: '+state(298)+'; on the bench now ('+T+' K): '+state(T)] : null,
+      !F.ionic && near ? ['Compared with', near[0]+' ('+near[1]+' g/mol, boils at '+near[2]+' K), an alkane of about the same mass with London forces only'+(ph && ph[1] ? ': this boils '+(ph[1] > near[2] + 15 ? (ph[1] - near[2])+' K higher, the extra forces at work' : ph[1] < near[2] - 15 ? (near[2] - ph[1])+' K lower' : 'at about the same temperature') : F.strongest !== 'London dispersion' ? ': expect this to boil higher' : '')] : null,
+      ['In water', F.sol],
+      R.logP != null ? ['logP (est.)', anaFmt(R.logP, 2)+': '+(R.logP > 3 ? 'strongly prefers fats and oils to water' : R.logP > 1 ? 'prefers oil to water' : R.logP > -0.5 ? 'splits about evenly' : 'prefers water')+' (octanol against water, estimated from its fragments)'] : null,
+      lip ? ['Drug-likeness', (lip.every(Boolean) ? 'passes' : 'breaks '+lip.filter(x=>!x).length+' of')+' Lipinski’s rule of five (mass ≤ 500, logP ≤ 5, ≤ 5 H donors, ≤ 10 N + O)'] : null]));
+  /* acids and bases */
+  const acidRows = AB.acids.slice(0, 5).map(r=>'<tr><td>'+r.lab+'</td><td>'+r.n+'</td><td>'+anaFmt(r.pk, 1)+'</td><td>'+(r.pk < -1.74 ? 'strong' : r.pk < 15.7 ? 'weak' : 'not acidic in water')+'</td></tr>');
+  const baseRows = AB.bases.slice(0, 5).map(r=>'<tr'+anaHL([r.at.id])+'><td>'+r.lab+'</td><td>'+r.n+'</td><td>'+anaFmt(r.pk, 1)+'</td><td>'+(r.pk > 15.7 ? 'strong' : r.pk > 0 ? 'weak' : 'barely basic')+'</td></tr>');
+  h += anaSec('ab', 'Acids and bases', (acidRows.length ? '<b class="ana-sub">Acidic hydrogens</b>'+anaTbl(['Proton','×','pKa','As an acid'], acidRows) : '<p class="ana-note">No hydrogen here is acidic enough to give away.</p>')+
+    (baseRows.length ? '<b class="ana-sub">Basic sites</b>'+anaTbl(['Site','×','pKa of its conjugate acid','As a base'], baseRows) : '<p class="ana-note">No lone pair here takes a proton readily.</p>')+
+    anaDL([AB.acidPH != null ? ['0.10 mol/L in water', 'pH ≈ <b>'+anaRnd(AB.acidPH, 1)+'</b>: '+AB.acidNote] : null, AB.basePH != null ? ['0.10 mol/L in water', 'pH ≈ <b>'+anaRnd(AB.basePH, 1)+'</b>: '+AB.baseNote] : null,
+      AB.conjBase && AB.acids[0] && AB.acids[0].pk < 20 ? ['Conjugate base', AB.conjBase] : null, AB.conjAcid && AB.bases[0] && AB.bases[0].pk > -3 ? ['Conjugate acid', AB.conjAcid] : null,
+      AB.acids[0] && AB.bases[0] && AB.acids[0].pk < 15.7 && AB.bases[0].pk > 0 ? ['Amphoteric', 'yes: it can give a proton or take one, depending on its partner'] : null])+
+    '<p class="ana-note">pKa values are the ones the bench itself uses for proton transfers. The lower the pKa, the more easily the proton leaves; a proton moves from a lower pKa to a higher one.</p>');
+  /* functional groups and isomers */
+  h += anaSec('groups', 'Functional groups and isomers', (R.groups.length ? '<ul class="ana-groups">'+R.groups.map(g=>'<li><b>'+anaCap(g.k)+(g.n > 1 ? ' ×'+g.n : '')+'</b><span>'+g.note+'</span></li>').join('')+'</ul>' : '<p class="ana-note">No organic functional groups: '+(M.counts.C ? 'it is a simple carbon compound.' : 'it is inorganic.')+'</p>')+
+    (R.isomers.length ? '<b class="ana-sub">Same formula, different structure ('+R.isomers.length+' in the library)</b><div class="ana-iso">'+R.isomers.map(n=>'<button type="button" data-a="addq" data-q="'+anaEsc(n)+'">'+anaEsc(n)+'</button>').join('')+'</div><p class="ana-note">Isomers have the same atoms joined differently. Add one to compare them side by side.</p>' : ''), R.groups.length ? R.groups.length+'' : '');
+  /* reactions */
+  if(R.reacts.length) h += anaSec('reacts', 'What it reacts with', '<ul class="ana-rx">'+R.reacts.map(r=>'<li><b>'+r.t+'</b><code>'+r.eq+'</code><span>'+r.note+'</span>'+(r.with ? '<button type="button" data-a="try" data-q="'+anaEsc(r.with)+'" data-n="'+(r.n2||1)+'">Try it with '+anaEsc(r.with)+' →</button>' : '')+'</li>').join('')+'</ul>', R.reacts.length+'');
+  /* energetics */
+  if(E.hf != null || E.atomise) h += anaSec('energy', 'Energetics (estimated)', anaDL([
+      ['Atomisation', Math.round(E.atomise)+' kJ/mol to pull it apart into gaseous atoms'],
+      E.hf != null ? ['ΔH°f (gas)', '≈ '+anaFmt(E.hf)+' kJ/mol: the atoms’ own enthalpies ('+Object.keys(M.counts).map(s=>M.counts[s]+'×'+s).join(', ')+') minus the bonds it makes'] : null,
+      E.combEq ? ['Combustion', '<code>'+E.combEq+'</code>'] : null,
+      E.hc != null ? ['ΔH°c', '≈ '+anaFmt(E.hc)+' kJ/mol ('+anaFmt(E.perG, 1)+' kJ/g)'+(E.hcKnown ? '; measured '+E.hcKnown+' kJ/mol, so the estimate is '+Math.round(Math.abs((E.hc - E.hcKnown)/E.hcKnown)*100)+'% off' : '')] : null])+
+    '<p class="ana-note">From average bond enthalpies, so good to a few percent at best: real molecules differ from the averages, and the estimate is for the gas.</p>');
+  /* spectra */
+  const irB = B.bands.filter(r=>r.ir.wn).sort((a, b)=>b.ir.wn - a.ir.wn);
+  const ms = R.ms, uv = R.uv;
+  h += anaSec('ir', 'Infrared spectrum', (irB.length ? anaIRSvg(B)+anaTbl(['Band','cm⁻¹','What it means'], irB.map(r=>'<tr'+anaHL(r.ids)+'><td><b>'+r.ir.lab+'</b></td><td>'+r.ir.wn+'</td><td>'+(r.ir.note || '')+'</td></tr>')) : '<p class="ana-note">No bond here changes its dipole when it stretches, so it absorbs no infrared.</p>')+
+    '<p class="ana-note">Each bond stretches at its own frequency, set by its stiffness and the masses on its ends: light bonds to hydrogen high up, heavy atoms low. Peaks point down (light absorbed).</p>');
+  if(R.nmr.length) h += anaSec('nmr', 'Proton NMR', anaNMRSvg(R.nmr)+'<div class="ana-nmrpic">'+thumbSVG(R.g, {w:440, h:150, L:34, fs:13, sw:1.4, tags:R.tags})+'</div>'+
+    anaTbl(['','δ (ppm)','H','Splitting','Environment'], R.nmr.map(e=>'<tr'+anaHL(e.ids.concat([...e.hosts]))+'><td><b class="ana-tag">'+e.tag+'</b></td><td>'+e.d.toFixed(1)+'</td><td>'+e.n+'</td><td>'+e.mult+(e.split && !e.broad ? '<small>'+e.split+' H next door</small>' : '')+'</td><td>'+e.note+'</td></tr>'))+
+    '<p class="ana-note">'+R.nmr.length+' environment'+(R.nmr.length > 1 ? 's' : '')+': hydrogens related by the molecule’s symmetry give one signal. The area of each is its number of H; the n+1 rule splits it by the H on neighbouring carbons (multiplets widened here so the lines show). Shifts are estimates from tables of typical values.</p>', R.nmr.length+' signals');
+  if(R.c13.length) h += anaSec('c13', 'Carbon-13 NMR', anaC13Svg(R.c13)+anaTbl(['δ (ppm)','C','Environment'], R.c13.map(e=>'<tr'+anaHL(e.ids)+'><td>'+Math.round(e.d)+'</td><td>'+e.n+'</td><td>'+e.note+'</td></tr>'))+
+    '<p class="ana-note">'+R.c13.length+' different carbon'+(R.c13.length > 1 ? 's' : '')+' out of '+(M.counts.C||0)+': symmetry makes some identical.</p>', R.c13.length+' signals');
+  h += anaSec('ms', 'Mass spectrum', ms.salt ? '<p class="ana-note">A salt is not volatile: electrospray shows its ions separately ('+ms.ions.map(x=>x.f).join(', ')+').</p>'
+    : anaMSSvg(ms)+anaDL([['Molecular ion', 'm/z '+ms.M+(ms.iso.length > 1 ? ', with isotope peaks at '+ms.iso.filter(d=>d.p > 0.02).map(d=>Math.round(d.m)+' ('+Math.round(d.p/ms.iso[0].p*100)+'%)').slice(0, 4).join(', ') : '')],
+      ms.base ? ['Base peak', 'm/z '+ms.base.m+(ms.base.f ? ' ('+ms.base.f+')' : ' (the molecular ion)')] : null, ms.note ? ['Isotopes', ms.note] : null])+
+      (ms.fl.length ? anaTbl(['m/z','Fragment','From breaking'], ms.fl.slice(0, 7).map(f=>'<tr><td>'+f.m+'</td><td>'+f.f+'</td><td>loses '+(ms.M - f.m)+'</td></tr>')) : '')+
+      '<p class="ana-note">The molecule is knocked into a positive ion, which falls apart at its weakest bonds; ions that are stabilised (C=O⁺, a benzyl ring, a crowded carbon) come out strongest.</p>');
+  h += anaSec('uv', 'Colour and UV–visible', anaUVSvg(uv)+'<p class="ana-note">'+(uv.col ? '<span class="ana-sw" style="background:'+uv.col+'"></span>' : '')+uv.note+'.</p>');
+  return h;
+}
+const P_TEMP = () => P.temp;
+function anaCompareHTML(){
+  const reps = ANA.list.map((e, i)=>anaReport(i));
+  anaShowAll();
+  const ok = reps.filter(r=>r && !r.err); if(ok.length < 2) return '<p class="ana-note">Add a second compound to compare.</p>';
+  const cell = f => reps.map(r=>'<td>'+(r && !r.err ? f(r) : '—')+'</td>').join('');
+  const ph = r => r.phase ? (r.phase[0] != null ? r.phase[0] : '—')+' / '+(r.phase[1] != null ? r.phase[1] : '—')+' K' : '—';
+  const rows = [
+    ['Structure', r=>'<div class="ana-cpic">'+thumbSVG(r.g, {w:200, h:90, L:26, fs:12})+'</div>'], ['Formula', r=>'<b>'+r.M.f+'</b>'], ['Molar mass', r=>anaRnd(r.M.mass, 1)+' g/mol'],
+    ['Dipole', r=>r.pol.mu == null ? 'ion' : anaRnd(r.pol.mu, 2)+' D'], ['Strongest force', r=>r.forces.strongest], ['H-bond donors / acceptors', r=>r.forces.donors+' / '+r.forces.acceptors],
+    ['Melts / boils', ph], ['In water', r=>r.forces.sol.split(';')[0]], ['logP (est.)', r=>r.logP != null ? anaFmt(r.logP, 2) : '—'],
+    ['Most acidic H', r=>r.ab.acids[0] ? 'pKa '+anaFmt(r.ab.acids[0].pk, 1) : 'none'], ['Most basic site', r=>r.ab.bases[0] ? 'pKa(H⁺) '+anaFmt(r.ab.bases[0].pk, 1) : 'none'],
+    ['Groups', r=>r.groups.map(g=>g.k).join(', ') || '—'], ['Bond enthalpy, total', r=>Math.round(r.bonds.total)+' kJ/mol'], ['Weakest bond', r=>r.bonds.weakest ? r.bonds.weakest.k+' '+Math.round(r.bonds.weakest.E) : '—'],
+    ['ΔH°c (est.)', r=>r.energy.hc != null ? anaFmt(r.energy.hc)+' kJ/mol' : '—'], ['Key IR band', r=>{ const b = r.bonds.bands.filter(x=>x.ir.wn).sort((a, b)=>(b.ir.s||0) - (a.ir.s||0))[0]; return b ? b.ir.lab+' '+b.ir.wn : '—'; }],
+    ['¹H / ¹³C signals', r=>r.nmr.length+' / '+r.c13.length], ['λmax', r=>r.uv.lam ? r.uv.lam+' nm' : '< 200 nm']];
+  let h = anaTbl([''].concat(reps.map((r, i)=>anaEsc(ANA.list[i].label))), rows.map(([k, f])=>'<tr><th>'+k+'</th>'+cell(f)+'</tr>'), 'cmp');
+  /* what the numbers say, in words */
+  const say = [];
+  const fk = ok.map(r=>benchFormula(r.M.counts)+'|'+r.M.q);
+  if(new Set(fk).size === 1) say.push('<b>They are isomers</b>: the same formula, '+ok[0].M.f+', with the atoms joined differently, and that alone changes their properties.');
+  const withBp = ok.filter(r=>r.phase && r.phase[1] != null);
+  if(withBp.length >= 2){ const s = withBp.slice().sort((a, b)=>b.phase[1] - a.phase[1]); const hi = s[0], lo = s[s.length-1];
+    say.push('<b>'+anaCap(hi.M.name || hi.M.f)+' boils highest</b> ('+hi.phase[1]+' K against '+lo.phase[1]+' K for '+(lo.M.name || lo.M.f)+'): '+(hi.forces.strongest !== lo.forces.strongest ? 'its molecules are held by '+hi.forces.strongest+', '+lo.M.f+'’s only by '+lo.forces.strongest+'.' : hi.forces.electrons > lo.forces.electrons ? 'both are held by '+hi.forces.strongest+', but it has more electrons ('+hi.forces.electrons+' against '+lo.forces.electrons+'), so stronger London forces.' : 'its shape lets the molecules pack closer.')); }
+  const ac = ok.filter(r=>r.ab.acids[0] && r.ab.acids[0].pk < 20).sort((a, b)=>a.ab.acids[0].pk - b.ab.acids[0].pk);
+  if(ac.length >= 2) say.push('<b>'+anaCap(ac[0].M.name || ac[0].M.f)+' is the stronger acid</b> (pKa '+anaFmt(ac[0].ab.acids[0].pk, 1)+' against '+anaRnd(ac[ac.length-1].ab.acids[0].pk, 1)+'): a lower pKa means the proton leaves more easily, here about '+Math.round(Math.pow(10, Math.min(12, ac[ac.length-1].ab.acids[0].pk - ac[0].ab.acids[0].pk))).toLocaleString()+' times more.');
+  const pl = ok.filter(r=>r.pol.mu != null); if(pl.length >= 2 && pl.some(r=>r.pol.polar) && pl.some(r=>!r.pol.polar)) say.push('<b>Polarity</b>: '+pl.filter(r=>r.pol.polar).map(r=>r.M.name || r.M.f).join(', ')+' '+(pl.filter(r=>r.pol.polar).length > 1 ? 'are' : 'is')+' polar; '+pl.filter(r=>!r.pol.polar).map(r=>r.M.name || r.M.f).join(', ')+' '+(pl.filter(r=>!r.pol.polar).length > 1 ? 'are' : 'is')+' not, so they would not mix well.');
+  return h + (say.length ? '<div class="ana-says">'+say.map(s=>'<p>'+s+'</p>').join('')+'</div>' : '') + '<p class="ana-note">All of them are on the bench side by side. Open a compound’s own tab for its full report.</p>';
+}
+/* every compound on the bench at once, side by side, for the comparison */
+function anaShowAll(){
+  if(ANA.shown === 'all:'+ANA.list.map(e=>e.q).join('|')) return;
+  crsSetup.clear(Math.max(420, 200*ANA.list.length), 30);
+  const n = ANA.list.length; ANA.list.forEach((e, i)=>anaBuildOne(e, (i - (n - 1)/2)*Math.max(330, 1100/n), 0));
+  ANA.shown = 'all:'+ANA.list.map(e=>e.q).join('|');
+  setTimeout(()=>{ try{ l3FitView(true); }catch(err){} }, 40);
+}
+function anaReactionHTML(){
+  if(!ANA.run) anaReactSetup();
+  const R = ANA.run, res = R.started ? anaResults() : null;
+  let h = '<div class="ana-rxset">'+ANA.list.map((e, i)=>'<span class="ana-step"><b>'+anaEsc(e.label)+'</b><button type="button" data-a="n-" data-i="'+i+'">−</button><i>'+(e.n||1)+'</i><button type="button" data-a="n+" data-i="'+i+'">+</button></span>').join('')+
+    '<label class="ana-chk"><input type="checkbox" id="anaWater"'+(ANA.water ? ' checked' : '')+'> in water</label></div>'+
+    '<div class="ana-temp"><label>Temperature</label><input type="range" id="anaTemp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span>'+kelvin()+' K</span></div>'+
+    '<div class="ana-ctl">'+(R.started && !ANA.held ? '<button type="button" class="ana-go" data-a="pause">Pause</button>' : '<button type="button" class="ana-go" data-a="run">'+(R.started ? 'Carry on ▶' : 'Run the reaction ▶')+'</button>')+
+      (R.started ? '<button type="button" class="ana-tg" data-a="nudge" title="Move the molecules part of the way towards each other">Bring them together</button>' : '')+
+      '<button type="button" class="ana-tg" data-a="reset">Start again</button><span class="ana-clock">'+(R.started ? anaRnd((L3.simT||0) - R.t0, 1)+' s · '+R.events.length+' step'+(R.events.length === 1 ? '' : 's') : 'set out and waiting')+'</span></div>';
+  h += anaSec('pred', 'Prediction', ANA.pred.map(p=>'<div class="ana-pred v-'+p.verdict.replace(/\s/g, '')+'"><span class="ana-kind">'+p.kind+' · '+p.verdict+'</span><b>'+p.title+'</b>'+(p.eq ? '<code>'+p.eq+'</code>' : '')+'<p>'+p.why+'</p></div>').join('')+
+    '<p class="ana-note">Worked out before anything moves, from the pKa values, electrode potentials, solubilities and structures the bench knows. Then run it and see.</p>');
+  if(!R.started) return h;
+  /* live and result */
+  const S = R.series, sp = new Map(); S.forEach(p=>Object.entries(p.counts).forEach(([k, v])=>sp.set(k, Math.max(sp.get(k)||0, v))));
+  const keys = [...sp.keys()].filter(k=>k !== 'H₂O' || !ANA.water).sort((a, b)=>{ const r0 = R.census0; return (r0.has(b) - r0.has(a)) || sp.get(b) - sp.get(a); }).slice(0, 7);
+  h += anaSec('species', 'Species over time', anaLineChart(S, keys, (p, k)=>p.counts[k]||0, {unit:'molecules / ions', legend:true}), keys.length+' species');
+  h += anaSec('thermo', 'Heat', anaLineChart(S, ['dH'], p=>p.dH, {unit:'kJ/mol given out (−) or taken in (+), summed', h:110})+anaLineChart(S, ['T'], p=>p.T, {unit:'K, temperature of the atoms', h:100, lo:0}));
+  if(res){
+    h += anaSec('result', 'What happened', (res.ppt ? '<p class="ana-callout"><b>A precipitate.</b> '+res.ppt+' ions are now packed together as a solid, drawn in the solid\u2019s colour on the bench. The species list counts molecules and free ions, so a solid shows up as ionic contacts formed rather than a new formula.</p>' : '')+(res.eq ? '<p class="ana-eq"><code>'+res.eq+'</code></p><p class="ana-note">The net change on the bench so far'+(res.g > 1 ? ', divided by '+res.g : '')+'. Run longer and it may go further, or settle into an equilibrium.</p>' : '<p class="ana-note">Nothing has changed yet: no molecule is different from how it started.</p>')+
+      anaTbl(['Species','Before','Now','Change'], res.rows.map(r=>'<tr><td><b>'+r.f+'</b> '+anaEsc(r.name||'')+'</td><td>'+r.n0+'</td><td>'+r.n1+'</td><td class="'+(r.d > 0 ? 'up' : r.d < 0 ? 'dn' : '')+'">'+(r.d > 0 ? '+' : '')+(r.d || '')+'</td></tr>'))+
+      (res.brk.length || res.frm.length ? '<div class="ana-two"><div><b class="ana-sub">Bonds broken</b>'+anaTbl(['Bond','×','kJ/mol'], res.brk.map(b=>'<tr><td>'+b.k+'</td><td>'+b.n+'</td><td>'+(b.E ? '+'+Math.round(b.n*b.E) : '—')+'</td></tr>'))+'</div><div><b class="ana-sub">Bonds formed</b>'+anaTbl(['Bond','×','kJ/mol'], res.frm.map(b=>'<tr><td>'+b.k+'</td><td>'+b.n+'</td><td>'+(b.E ? '−'+Math.round(b.n*b.E) : '—')+'</td></tr>'))+'</div></div>'+
+        anaDL([['Hess’s law', 'ΔH ≈ Σ(broken) − Σ(formed) = <b>'+anaFmt(res.hess)+' kJ/mol</b> for everything on the bench'+(res.g > 1 && res.eq ? ', or '+anaFmt(res.hess/res.g)+' per equation as written' : '')+', from average bond enthalpies'],
+          ['The bench’s own sum', anaFmt(res.bench)+' kJ/mol, adding every step it logged (it includes things the averages miss: proton affinities, hydration, lattice energy)'],
+          ['So it is', (res.bench || res.hess) < 0 ? 'exothermic: heat is given out, and the bench’s thermostat carries it away' : 'endothermic: heat is taken in from the surroundings']]) : (res.eq ? '<p class="ana-note">The bonds broken and made are the same kinds (an O\u2013H broken, an O\u2013H made), so average bond enthalpies see no change at all. The real heat comes from how much more tightly the new site holds the proton or electron, which is what the bench\u2019s own sum, '+anaFmt(res.bench)+' kJ/mol, measures.</p>' : '<p class="ana-note">No bonds have changed yet.</p>')));
+    h += anaSec('steps', 'Every step, with its reason', res.steps.length ? res.steps.map(s=>'<div class="ana-ev"><span>'+anaRnd(s.first, 1)+' s'+(s.n > 1 ? ' · ×'+s.n : '')+' · '+(s.dEsum < 0 ? '−' : '+')+Math.abs(Math.round(s.dEsum))+' kJ/mol</span><b>'+anaEsc(s.title)+'</b>'+(s.eq ? '<code>'+s.eq+'</code>' : '')+(s.why ? '<p>'+s.why+'</p>' : '')+'</div>').join('') : '<p class="ana-note">No reaction step has happened yet. Molecules need to meet with enough energy: give it time, or raise the temperature.</p>', res.steps.length+'');
+  }
+  return h;
+}
+function anaHomeHTML(){
+  return '<div class="ana-home"><p>Pick one compound to take apart in detail, two or more to compare, or set them reacting. Type a name, formula, SMILES string or ion above, or start from one of these.</p>'+
+    ANA_EXAMPLES.map(([t, sets])=>'<b class="ana-sub">'+t+'</b><div class="ana-ex">'+sets.map(s=>'<button type="button" data-a="ex" data-set="'+anaEsc(JSON.stringify(s))+'" data-t="'+(t === 'React' ? 'rx' : t === 'Compare' ? 'cmp' : '0')+'">'+s.map(n=>anaEsc(n)).join(t === 'React' ? ' + ' : ' vs ')+'</button>').join('')+'</div>').join('')+
+    '<p class="ana-note">Each compound gets its structure, composition, every bond, its shape, electrons and Lewis structure, polarity, the forces between its molecules, acids and bases, functional groups and isomers, what it reacts with, energetics, and simulated infrared, NMR, mass and UV spectra. Everything is measured from the molecule as the 3D bench builds it.</p></div>';
+}
+function anaHTML(){
+  const L = ANA.list;
+  let h = '<div class="ana-head"><div><span class="eyebrow">Analysis</span><b class="ana-title">'+(L.length ? L.map(e=>anaEsc(e.label)).join(ANA.tab === 'rx' ? ' + ' : ', ') : 'Look closely')+'</b></div><button type="button" class="ld-exit" data-a="exit">Exit ✕</button></div>'+
+    '<div class="ana-pick"><div class="ana-tabs">'+L.map((e, i)=>'<span class="ana-chip'+(ANA.tab === i ? ' on' : '')+'"><button type="button" data-a="tab" data-i="'+i+'">'+anaEsc(e.label)+'</button><button type="button" class="x" data-a="rm" data-i="'+i+'" aria-label="Remove">×</button></span>').join('')+
+    (L.length >= 2 ? '<button type="button" class="ana-chip t'+(ANA.tab === 'cmp' ? ' on' : '')+'" data-a="tab" data-i="cmp">Compare</button>' : '')+
+    (L.length >= 1 ? '<button type="button" class="ana-chip t'+(ANA.tab === 'rx' ? ' on' : '')+'" data-a="tab" data-i="rx">'+(L.length >= 2 ? 'React' : 'Heat it alone')+'</button>' : '')+'</div>'+
+    (L.length < 4 ? '<div class="ana-add"><input id="anaIn" type="text" placeholder="Add: caffeine, C2H6O, CCO, NH4+…" autocomplete="off" spellcheck="false"><button type="button" data-a="add">Add</button><div class="ana-ac" id="anaAc"></div></div>' : '')+
+    (ANA.err ? '<p class="ana-err">'+anaEsc(ANA.err)+'</p>' : '')+'</div>';
+  h += '<div class="ana-body">'+(!L.length ? anaHomeHTML() : ANA.tab === 'cmp' ? anaCompareHTML() : ANA.tab === 'rx' ? anaReactionHTML() : anaCompoundHTML(ANA.tab))+'</div>';
+  return h;
+}
+function renderAna(force){
+  const host = el('anaDock'), btn = el('anaBtn');
+  if(btn) btn.classList.toggle('on', ANA.on);
+  if(!host) return;
+  if(!ANA.on){ host.hidden = true; host._html = ''; return; }
+  host.hidden = false;
+  if(typeof ANA.tab === 'number' && ANA.tab >= ANA.list.length) ANA.tab = ANA.list.length ? 0 : 0;
+  /* the compound tab shows that compound alone on the bench */
+  if(typeof ANA.tab === 'number' && ANA.list[ANA.tab] && ANA.shown !== 'one:'+ANA.list[ANA.tab].q){
+    anaReport(ANA.tab);
+    crsSetup.clear(420, 30); const made = anaBuildOne(ANA.list[ANA.tab]);
+    for(let k=0;k<60;k++) l3Step(1/60);
+    if(made.length){ let r = 0; const cx = made.reduce((t, a)=>t + a.x, 0)/made.length, cy = made.reduce((t, a)=>t + a.y, 0)/made.length, cz = made.reduce((t, a)=>t + a.z, 0)/made.length;
+      made.forEach(a=>{ r = Math.max(r, Math.hypot(a.x-cx, a.y-cy, a.z-cz)); }); L3.box = L3.boxTo = clamp(r*1.25 + 170, 240, 900); }
+    ANA.shown = 'one:'+ANA.list[ANA.tab].q; ANA.held = false;
+    setTimeout(()=>{ try{ l3FitView(true); }catch(err){} }, 40);
+  }
+  if(ANA.tab !== 'rx'){ ANA.held = false; }
+  if(!ANA.list.length && ANA.shown !== 'home'){ crsSetup.clear(420, 298); ANA.shown = 'home'; }
+  const h = anaHTML();
+  if(force || host._html !== h){
+    const inp = el('anaIn'), keep = inp ? {v:inp.value, f:document.activeElement === inp, s:inp.selectionStart} : null, sc = host.scrollTop;
+    host.innerHTML = h; host._html = h; host.scrollTop = sc;
+    const ni = el('anaIn'); if(ni && keep){ ni.value = keep.v; if(keep.f){ ni.focus(); try{ ni.setSelectionRange(keep.s, keep.s); }catch(e){} } anaSuggest(); }
+  }
+  L3.shiftX = L3.on ? Math.round((host.offsetWidth || 560)/2 + 8) : 0;
+}
+function anaSave(){ try{ localStorage.setItem('bondingbench.analysis', JSON.stringify({list:ANA.list.map(e=>({q:e.q, n:e.n||1})), tab:ANA.tab, water:ANA.water})); }catch(e){} }
+function anaAdd(str, n){
+  const r = anaResolve(str);
+  if(!r){ return false; }
+  if(r.err){ ANA.err = r.err; renderAna(true); return false; }
+  if(ANA.list.length >= 4){ ANA.err = 'Four at a time: remove one first.'; renderAna(true); return false; }
+  if(ANA.list.some(e=>e.q === r.q)){ ANA.err = ''; ANA.tab = ANA.list.findIndex(e=>e.q === r.q); renderAna(true); return true; }
+  r.n = n || 1; ANA.list.push(r); ANA.err = ''; ANA.run = null; ANA.shown = '';
+  anaSave(); return true;
+}
+function anaSuggest(){
+  const inp = el('anaIn'), box = el('anaAc'); if(!inp || !box) return;
+  const q = inp.value.trim().toLowerCase();
+  if(q.length < 2){ box.innerHTML = ''; box.hidden = true; ANA.ac = []; return; }
+  const names = Object.keys(L3_LIB);
+  const hits = names.filter(n=>n.toLowerCase().includes(q)).sort((a, b)=>(b.toLowerCase().startsWith(q) - a.toLowerCase().startsWith(q)) || a.length - b.length).slice(0, 7);
+  ANA.ac = hits; if(ANA.acI >= hits.length) ANA.acI = -1;
+  box.hidden = !hits.length;
+  box.innerHTML = hits.map((n, i)=>'<button type="button" data-a="acpick" data-q="'+anaEsc(n)+'" class="'+(i === ANA.acI ? 'on' : '')+'">'+anaEsc(n)+'</button>').join('');
+}
+function anaStart(list, tab){
+  if(LEARN.on) learnMode(false);
+  if(CRS.on) courseExit();
+  if(!ANA.on){
+    ANA.keep = {temp:P.temp, bench:L3.on ? '3D' : '2D', snap:JSON.stringify(L3.on ? l3Snap() : snapshot()), step:STEP.on, gear:JSON.stringify(L3.gear||[]), view:L3.view};
+    ANA.on = true; document.body.classList.add('analysing');
+    if(!ANA.list.length){ try{ const s = JSON.parse(localStorage.getItem('bondingbench.analysis')||'null'); if(s){ s.list.forEach(x=>anaAdd(x.q, x.n)); ANA.tab = s.tab; ANA.water = !!s.water; } }catch(e){} }
+    setTimeout(()=>{ try{ resize(); }catch(e){} L3.dirty = true; }, 30);
+  }
+  if(!L3.on) set3D(true);
+  stepMode(false, true);
+  if(list){ ANA.list = []; ANA.rep = {}; list.forEach(q=>anaAdd(q)); }
+  if(tab != null) ANA.tab = tab;
+  ANA.shown = ''; ANA.run = null;
+  renderAna(true);
+}
+function anaExit(){
+  if(!ANA.on) return;
+  ANA.on = false; ANA.held = false; ANA.hl = null; document.body.classList.remove('analysing');
+  if(ANA.keep){
+    try{ L3.gear = JSON.parse(ANA.keep.gear||'[]'); }catch(e){ L3.gear = []; }
+    L3.view = ANA.keep.view || L3.view;
+    if(ANA.keep.bench === '3D'){ if(!L3.on) set3D(true); try{ l3Restore(JSON.parse(ANA.keep.snap)); }catch(e){} }
+    else { if(L3.on) set3D(false); try{ loadState(JSON.parse(ANA.keep.snap)); }catch(e){} }
+    setSlider('temp', ANA.keep.temp); stepMode(ANA.keep.step, true);
+  }
+  L3.shiftX = 0; try{ renderLeft3D(); l3Build(); }catch(e){}
+  setTimeout(()=>{ try{ resize(); }catch(e){} L3.dirty = true; }, 30);
+  renderAna(); say('Left analysis. Your own bench is back.', 'learn');
+}
+function anaTick(){
+  if(!ANA.on) return;
+  if(ANA.tab === 'rx' && ANA.run && ANA.run.started){ anaSample(); renderAna(); }
+  else if(typeof ANA.tab === 'number'){ const t = el('anaTemp'); if(t && t.nextElementSibling) t.nextElementSibling.textContent = kelvin()+' K'; }
+}
+function wireAna(){
+  const host = el('anaDock'); if(!host) return;
+  host.addEventListener('click', ev=>{
+    const b = ev.target.closest('[data-a]'); if(!b) return;
+    const k = b.dataset.a, i = b.dataset.i;
+    if(k === 'exit') anaExit();
+    else if(k === 'add'){ const v = el('anaIn').value; if(anaAdd(v)){ ANA.tab = ANA.list.length - 1; ANA.shown = ''; } renderAna(true); }
+    else if(k === 'acpick' || k === 'addq'){ if(anaAdd(b.dataset.q)){ ANA.tab = k === 'addq' ? 'cmp' : ANA.list.length - 1; } const inp = el('anaIn'); if(inp) inp.value = ''; renderAna(true); }
+    else if(k === 'tab'){ ANA.tab = i === 'cmp' || i === 'rx' ? i : +i; ANA.err = ''; if(ANA.tab !== 'rx'){ ANA.run = null; } ANA.shown = ANA.tab === 'rx' ? '' : ANA.shown; anaSave(); renderAna(true); host.scrollTop = 0; }
+    else if(k === 'rm'){ ANA.list.splice(+i, 1); ANA.run = null; ANA.shown = ''; if(typeof ANA.tab === 'number' && ANA.tab >= ANA.list.length) ANA.tab = Math.max(0, ANA.list.length - 1); if(ANA.tab === 'cmp' && ANA.list.length < 2) ANA.tab = 0; anaSave(); renderAna(true); }
+    else if(k === 'ex'){ const set = JSON.parse(b.dataset.set); anaStart(set, b.dataset.t === '0' ? 0 : b.dataset.t); }
+    else if(k === 'try'){ const q = b.dataset.q, n = +b.dataset.n || 2; const me = ANA.list[ANA.tab]; ANA.list = me ? [me] : []; if(me){ me.n = 2; me.nSet = true; } if(anaAdd(q, n)) ANA.list[ANA.list.length-1].nSet = true; ANA.tab = 'rx'; ANA.run = null; anaSave(); renderAna(true); host.scrollTop = 0; }
+    else if(k === 'run') anaRunStart();
+    else if(k === 'pause'){ ANA.held = true; renderAna(true); }
+    else if(k === 'reset'){ ANA.run = null; renderAna(true); }
+    else if(k === 'nudge'){ crsNudge(); say('Nudged the molecules closer together.', 'bench', true); }
+    else if(k === 'n-' || k === 'n+'){ const e = ANA.list[+i]; e.n = clamp((e.n||1) + (k === 'n+' ? 1 : -1), 1, 12); e.nSet = true; ANA.run = null; anaSave(); renderAna(true); }
+    else if(k === 'view'){ L3.view = b.dataset.v; L3.dirty = true; renderAna(true); }
+    else if(k === 'lp'){ L3.showLP = !L3.showLP; L3.dirty = true; renderAna(true); }
+    else if(k === 'dq'){ L3.showQ = !L3.showQ; L3.dirty = true; renderAna(true); }
+    else if(k === 'heat'){ setSlider('temp', kelvin() > 600 ? crsK(30) : crsK(2400)); renderAna(true); }
+    else if(k === 'rebuild'){ ANA.shown = ''; renderAna(true); }
+  });
+  host.addEventListener('input', ev=>{
+    if(ev.target.id === 'anaIn'){ ANA.acI = -1; anaSuggest(); }
+    if(ev.target.id === 'anaTemp'){ setSlider('temp', +ev.target.value); ANA.temp = kelvin(); const s = ev.target.nextElementSibling; if(s) s.textContent = kelvin()+' K'; }
+  });
+  host.addEventListener('change', ev=>{ if(ev.target.id === 'anaWater'){ ANA.water = ev.target.checked; ANA.run = null; anaSave(); renderAna(true); } });
+  host.addEventListener('keydown', ev=>{
+    if(ev.target.id === 'anaIn'){
+      if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){ ev.preventDefault(); const n = ANA.ac.length; if(n){ ANA.acI = (ANA.acI + (ev.key === 'ArrowDown' ? 1 : -1) + n + 1) % (n + 1) - 1; if(ANA.acI < -1) ANA.acI = n - 1; anaSuggest(); } }
+      else if(ev.key === 'Enter'){ const v = ANA.acI >= 0 && ANA.ac[ANA.acI] ? ANA.ac[ANA.acI] : ev.target.value; if(anaAdd(v)){ ANA.tab = ANA.list.length - 1; ANA.shown = ''; } ANA.acI = -1; renderAna(true); const ni = el('anaIn'); if(ni){ ni.value = ''; ni.focus(); } }
+      else if(ev.key === 'Escape'){ ev.target.value = ''; anaSuggest(); }
+    }
+    ev.stopPropagation();
+  });
+  /* pointing at a row lights up its atoms on the bench */
+  host.addEventListener('mouseover', ev=>{ const r = ev.target.closest('[data-hl]'); const ids = r ? new Set(r.dataset.hl.split(' ').map(Number)) : null;
+    if(String(ids && [...ids]) !== String(ANA.hl && [...ANA.hl])){ ANA.hl = ids; L3.dirty = true; } });
+  host.addEventListener('mouseleave', ()=>{ ANA.hl = null; L3.dirty = true; });
+  host.addEventListener('toggle', ev=>{ const d = ev.target; if(d.matches && d.matches('details.ana-sec')){ ANA.open[d.dataset.sec] = d.open; } }, true);
+  const btn = el('anaBtn'); if(btn) btn.onclick = ()=>{ if(ANA.on) anaExit(); else anaStart(); };
+  document.addEventListener('keydown', ev=>{ if(ANA.on && ev.key === 'Escape' && !/INPUT|TEXTAREA/.test((ev.target.tagName||''))){ anaExit(); } });
+  setInterval(anaTick, 500);
+}
 
 function examStart(){
   /* twelve fresh questions, each on a different skill, with all their data given:
@@ -8000,6 +9405,7 @@ const learnHeld = () => LEARN.on && (LEARN.phase === 'exam' ? !(LEARN.exam && LE
 function learnMode(on){
   if(!!on === LEARN.on) return;
   if(on && CRS.on) courseExit();
+  if(on && ANA.on) anaExit();
   if(on){
     /* it runs on whichever bench is up; your own bench comes back, just as it was, when you leave */
     LEARN.keep = {step:STEP.on, temp:P.temp, bench:L3.on ? '3D' : '2D', snap:JSON.stringify(L3.on ? l3Snap() : snapshot()), gear:JSON.stringify(L3.gear||[]), metal:L3.metalSym};
@@ -9629,10 +11035,12 @@ function thumbLayout(n, adj){
   const a2 = refine(ring0());
   return a2[1] < a1[1] ? a2[0] : a1[0];
 }
-function thumbSVG(g){
+function thumbSVG(g, o){
+  o = o || {};
+  const VW = o.w || 120, VH = o.h || 46, Lmax = o.L || 20, fsMax = o.fs || 11.5;
   const N = g.syms.length;
   const heavyIdx = g.syms.map((s, i)=>s !== 'H' ? i : -1).filter(i=>i >= 0);
-  const explicit = heavyIdx.length <= 1;
+  const explicit = o.explicit || heavyIdx.length <= 1;
   const keep = explicit ? g.syms.map((s, i)=>i) : heavyIdx, map = new Map(keep.map((v, k)=>[v, k]));
   const n = keep.length, adj = Array.from({length:n}, ()=>[]), hN = new Array(N).fill(0), bonds = [];
   g.bl.forEach(b=>{ const A = map.get(b.a), B = map.get(b.b);
@@ -9653,34 +11061,54 @@ function thumbSVG(g){
     Q = Q.map(([x, y])=>[(x-mx)*c1 - (y-my)*s1, (x-mx)*s1 + (y-my)*c1]);
     const lo = Math.min(...Q.map(p=>p[0])), hi = Math.max(...Q.map(p=>p[0]));
     ids.forEach((id, k)=>{ P[id] = [Q[k][0] - lo + x0, Q[k][1]]; });
-    x0 += hi - lo + 1.25;
+    x0 += hi - lo + (o.lone ? 1.9 : 1.25);
   }
   const carbons = keep.filter(i=>g.syms[i] === 'C').length;
   const labelled = k => { const i = keep[k], s = g.syms[i]; return explicit || s !== 'C' || carbons <= 1 || (g.chg[i]||0) !== 0 || !adj[k].length; };
-  /* fit the box: 112 x 44, bonds no longer than 20 px */
+  /* fit the box, with bonds no longer than L */
   const xs = P.map(p=>p[0]), ys = P.map(p=>p[1]);
-  const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
-  const L = Math.min(20, w ? 96/w : 20, h ? 32/h : 20), cx = (Math.max(...xs) + Math.min(...xs))/2, cy = (Math.max(...ys) + Math.min(...ys))/2;
-  const X = k => 60 + (P[k][0] - cx)*L, Y = k => 23 + (P[k][1] - cy)*L;
-  const fs = n === 1 ? 16 : Math.max(7, Math.min(11.5, L*0.6)), r0 = fs*0.5;
+  const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys), pad = o.lone ? 2.2 : 1;
+  const L = Math.min(Lmax, w ? (VW - 24*pad)/w : Lmax, h ? (VH - 14*pad)/h : Lmax), cx = (Math.max(...xs) + Math.min(...xs))/2, cy = (Math.max(...ys) + Math.min(...ys))/2;
+  const X = k => VW/2 + (P[k][0] - cx)*L, Y = k => VH/2 + (P[k][1] - cy)*L;
+  const fs = n === 1 ? Math.min(30, 16*VW/120) : Math.max(7, Math.min(fsMax, L*0.6)), r0 = fs*0.5;
+  /* the directions round an atom that are clear of its bonds, for lone pairs and labels */
+  const clear = (k, m, extra) => { const used = adj[k].map(j=>Math.atan2(Y(j) - Y(k), X(j) - X(k))).concat(extra || []), out = [];
+    if(!used.length && m === 1) return [-Math.PI/2];
+    for(let t=0;t<m;t++){ let best = 0, bs = -1; for(let a=0;a<360;a+=10){ const r = a*Math.PI/180; const all = used.concat(out);
+      const sc = all.length ? Math.min(...all.map(u=>{ const d = Math.abs(((r - u + 3*Math.PI) % (2*Math.PI)) - Math.PI); return d; })) : (Math.abs(r + Math.PI/2) < 0.01 ? 9 : 0);
+      if(sc > bs + 1e-6){ bs = sc; best = r; } } out.push(best); }
+    return out; };
   let out = '';
-  bonds.forEach(([a, b, o])=>{
+  bonds.forEach(([a, b, ord])=>{
     let x1 = X(a), y1 = Y(a), x2 = X(b), y2 = Y(b); const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1;
     if(labelled(a)){ x1 += dx/d*r0; y1 += dy/d*r0; } if(labelled(b)){ x2 -= dx/d*r0; y2 -= dy/d*r0; }
     const nx = -dy/d, ny = dx/d, off = Math.max(1.3, L*0.11);
     const line = k => '<line x1="'+(x1+nx*k).toFixed(1)+'" y1="'+(y1+ny*k).toFixed(1)+'" x2="'+(x2+nx*k).toFixed(1)+'" y2="'+(y2+ny*k).toFixed(1)+'"/>';
-    out += o >= 3 ? line(-off*1.3) + line(0) + line(off*1.3) : o >= 2 ? line(-off) + line(off) : line(0);
+    out += ord >= 3 ? line(-off*1.3) + line(0) + line(off*1.3) : ord >= 2 ? line(-off) + line(off) : line(0);
   });
-  let txt = '';
-  keep.forEach((i, k)=>{ if(!labelled(k)) return;
+  let txt = '', dots = '', tags = '';
+  keep.forEach((i, k)=>{
     const s = g.syms[i], q = g.chg[i] || 0, nh = explicit ? 0 : hN[i];
-    const hs = nh ? 'H' + (nh > 1 ? '<tspan font-size="'+(fs*0.7).toFixed(1)+'" dy="2">'+nh+'</tspan>' : '') : '';
-    const left = nh && adj[k].length && adj[k].every(j=>P[j][0] > P[k][0] + 0.2);
-    const qs = q ? '<tspan font-size="'+(fs*0.72).toFixed(1)+'" dy="'+(nh > 1 ? -6 : -4)+'">'+(Math.abs(q) > 1 ? Math.abs(q) : '')+(q > 0 ? '+' : '−')+'</tspan>' : '';
-    const body = left ? hs + (nh > 1 ? '<tspan dy="-2">' : '<tspan>') + s + '</tspan>' + qs : s + hs + qs;
-    txt += '<text x="'+X(k).toFixed(1)+'" y="'+(Y(k) + fs*0.36).toFixed(1)+'" fill="'+(THUMB_COL[s] || (s === 'C' || s === 'H' ? '#30343A' : '#6B5A8A'))+'" text-anchor="'+(nh && !left && adj[k].length ? 'start' : nh && left ? 'end' : 'middle')+'" dx="'+(nh && adj[k].length ? (left ? fs*0.4 : -fs*0.4).toFixed(1) : 0)+'">'+body+'</text>';
+    if(labelled(k)){
+      const hs = nh ? 'H' + (nh > 1 ? '<tspan font-size="'+(fs*0.7).toFixed(1)+'" dy="2">'+nh+'</tspan>' : '') : '';
+      const left = nh && adj[k].length && adj[k].every(j=>P[j][0] > P[k][0] + 0.2);
+      const qs = q ? '<tspan font-size="'+(fs*0.72).toFixed(1)+'" dy="'+(nh > 1 ? -6 : -4)+'">'+(Math.abs(q) > 1 ? Math.abs(q) : '')+(q > 0 ? '+' : '−')+'</tspan>' : '';
+      const body = left ? hs + (nh > 1 ? '<tspan dy="-2">' : '<tspan>') + s + '</tspan>' + qs : s + hs + qs;
+      txt += '<text x="'+X(k).toFixed(1)+'" y="'+(Y(k) + fs*0.36).toFixed(1)+'" fill="'+(THUMB_COL[s] || (s === 'C' || s === 'H' ? '#30343A' : '#6B5A8A'))+'" text-anchor="'+(nh && !left && adj[k].length ? 'start' : nh && left ? 'end' : 'middle')+'" dx="'+(nh && adj[k].length ? (left ? fs*0.4 : -fs*0.4).toFixed(1) : 0)+'">'+body+'</text>';
+    }
+    /* Lewis structures: each lone pair as two dots, set where there is room */
+    const lp = o.lone ? o.lone[i] || 0 : 0;
+    if(lp){ const R = fs*0.92, sp = fs*0.2;
+      clear(k, Math.min(lp, 4)).forEach(t=>{ const cx2 = X(k) + Math.cos(t)*R, cy2 = Y(k) + Math.sin(t)*R, px = -Math.sin(t)*sp, py = Math.cos(t)*sp;
+        dots += '<circle cx="'+(cx2+px).toFixed(1)+'" cy="'+(cy2+py).toFixed(1)+'" r="'+(fs*0.11).toFixed(2)+'"/><circle cx="'+(cx2-px).toFixed(1)+'" cy="'+(cy2-py).toFixed(1)+'" r="'+(fs*0.11).toFixed(2)+'"/>'; }); }
+    /* letters that tie a drawn atom to a row elsewhere (NMR environments) */
+    const tg = o.tags ? o.tags[i] : '';
+    if(tg){ const t = clear(k, 1, nh ? [0] : [])[0], R = labelled(k) ? fs*1.15 : fs*0.75;
+      tags += '<text x="'+(X(k) + Math.cos(t)*R).toFixed(1)+'" y="'+(Y(k) + Math.sin(t)*R + fs*0.3).toFixed(1)+'" text-anchor="middle" class="tg">'+tg+'</text>'; }
   });
-  return '<svg viewBox="0 0 120 46" aria-hidden="true"><g stroke="#3A3F46" stroke-width="1.15" stroke-linecap="round">'+out+'</g><g font-size="'+fs.toFixed(1)+'" font-weight="600" font-family="Archivo, system-ui, sans-serif">'+txt+'</g></svg>';
+  return '<svg viewBox="0 0 '+VW+' '+VH+'" aria-hidden="true"><g stroke="#3A3F46" stroke-width="'+(o.sw || 1.15)+'" stroke-linecap="round">'+out+'</g>'+
+    (dots ? '<g fill="#2F5BEA">'+dots+'</g>' : '')+'<g font-size="'+fs.toFixed(1)+'" font-weight="600" font-family="Archivo, system-ui, sans-serif">'+txt+'</g>'+
+    (tags ? '<g font-size="'+(fs*0.85).toFixed(1)+'" font-weight="700" font-style="italic" fill="#C2711C" font-family="Archivo, system-ui, sans-serif">'+tags+'</g>' : '')+'</svg>';
 }
 function libThumb(e){
   const k = e.n; if(THUMB.has(k)) return THUMB.get(k);
@@ -13878,6 +15306,7 @@ function l3Clear(){ L3.hist = []; L3.P = 0; L3.Z = 1; L3.fissions = 0; L3.fusion
    carries it off only gradually. 1 kJ/mol here is the kinetic scale RT sets. */
 const L3_KJ = 22000/(0.008314*298);            /* kinetic units per kJ/mol */
 function l3Note(dE, what, p, q, m){
+  if(ANA.on && ANA.run) anaOnNote(dE, what, m);
   L3.ledger.push({t:performance.now(), dE, what, c: m ? m.c : null});
   /* a reaction step is written up in the notebook too, with its equation and why */
   if(m) logRx(Object.assign({dH:dE, bench:'3D', atoms:[p && p.id, q && q.id]}, m));
@@ -15449,7 +16878,13 @@ function libLookup(key){
   if(L3_ALIAS[key]) return L3_ALIAS[key];
   if(L3_LIB[key]) return key;
   if(!LIB_NORM){ LIB_NORM = {}; Object.keys(L3_LIB).forEach(n=>{ LIB_NORM[libNormKey(n)] = n; }); Object.keys(L3_ALIAS).forEach(a=>{ const t = L3_ALIAS[a]; if(L3_LIB[t] && !LIB_NORM[libNormKey(a)]) LIB_NORM[libNormKey(a)] = t; }); }
-  return LIB_NORM[libNormKey(key)] || null;
+  const k = libNormKey(key);
+  if(LIB_NORM[k]) return LIB_NORM[k];
+  /* common names with the number in front: 2-butanol is butan-2-ol, 2-butene but-2-ene, 2-pentanone pentan-2-one */
+  const alt = [[/^(\d[\d,]*) ([a-z]+)anol$/, '$2an $1 ol'], [/^(\d[\d,]*) ([a-z]+)anone$/, '$2an $1 one'], [/^(\d[\d,]*) ([a-z]+)ene$/, '$2 $1 ene'],
+    [/^(\d[\d,]*) ([a-z]+)yne$/, '$2 $1 yne'], [/^(\d[\d,]*) ([a-z]+)anamine$/, '$2an $1 amine'], [/^n ([a-z]+)anol$/, '$1an 1 ol']];
+  for(const [re, to] of alt) if(re.test(k)){ const t = k.replace(re, to); if(LIB_NORM[t]) return LIB_NORM[t]; }
+  return null;
 }
 /* An ion typed the way chemists write it: H+, H⁺, Na+, Fe3+, Fe+3, Fe+++, O2-,
    NO3-, SO4 2-, SO4^2-, SO₄²⁻, NH4+, H3O+, CH3COO-, or a name: proton, sodium ion.
@@ -15872,6 +17307,9 @@ function l3BuildAny(str){
   if(ion){ if(ion.err){ say(ion.err,'bench'); return null; } return l3BuildSmiles(ion.sm, ion.name || undefined); }
   const name = libLookup(key);
   if(name) return l3BuildSmiles(L3_LIB[name], name);
+  /* the hand-drawn library cards (oxygen, carbon dioxide...) by name */
+  const card = LIBRARY.find(m=>m.n.toLowerCase() === key);
+  if(card) return specTo3D(card, card.n.toLowerCase());
   /* SMILES look: brackets, bonds, ring digits after letters, aromatic lowercase, or an element twice running */
   const counts = l3ParseFormula(str);
   const smilesish = /[()=#\[\]@\/\\%.]/.test(str) || /[a-z]\d|^[cnos]|[^A-Z][cnos]|[A-Z]\d.*[A-Z]\d/.test(str) && !counts ||
@@ -15914,9 +17352,10 @@ function buildCompound2D(str, ox, oy){
   const libOf = k => { try{ return benchFormula(l3SmilesCounts(L3_LIB[k])); } catch(e){ return null; } };
   const ion = ionTyped(str);
   if(ion && ion.err){ say(ion.err,'bench'); return null; }
-  const name = ion ? null : libLookup(key);
+  const name = ion ? null : libLookup(key), card = ion || name ? null : LIBRARY.find(m=>m.n.toLowerCase() === key);
   if(ion){ graph = l3SmilesGraph(ion.sm); label = ion.name; }
   else if(name){ graph = l3SmilesGraph(L3_LIB[name]); label = name; }
+  else if(card){ graph = {syms:card.atoms.map(a=>a[0]), chg:card.atoms.map(a=>a[3]||0), iso:card.atoms.map(a=>a[4]||0), bl:(card.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1}))}; label = card.n.toLowerCase(); }
   else {
     const counts = l3ParseFormula(str);
     const smilesish = /[()=#\[\]@\/\\%.]/.test(str) || /(Cl|Br|[BCNOPSFI])\1/.test(str) || !counts;
@@ -16553,6 +17992,8 @@ function l3Draw(){
         g.strokeStyle = 'rgba(47,91,234,.9)'; g.lineWidth = 2; g.setLineDash([4,4]); g.lineDashOffset = -performance.now()/60;
         g.beginPath(); g.arc(p.x,p.y,r+5,0,TAU); g.stroke(); g.setLineDash([]);
       }
+      /* analysis: the atoms of the row under the pointer */
+      if(ANA.hl && ANA.hl.has(a.id)){ g.strokeStyle = 'rgba(194,113,28,.95)'; g.lineWidth = 2.6; g.beginPath(); g.arc(p.x, p.y, r + 4, 0, TAU); g.stroke(); }
       /* (the symbol is painted into the sprite now: see l3Sprite) */
       const qz = (a.ion||0) + (a.fq||0);
       if((a.Ts||0) > 1300 && (l3Metal(a) || a.ion > 0) && L3.view !== 'esp'){
@@ -17619,7 +19060,7 @@ function l3Undo(){
 }
 function l3Save(){ try{ localStorage.setItem('bondingbench.3d', JSON.stringify(l3Snap())); }catch(e){} }
 function l3Load(){ try{ const s = JSON.parse(localStorage.getItem('bondingbench.3d')||'null'); if(s && s.atoms && s.atoms.length){ l3Restore(s); return true; } }catch(e){} return false; }
-setInterval(()=>{ if(L3.on && !LEARN.on) l3Save(); }, 4000);   /* a Learn mode set-up is not your bench */
+setInterval(()=>{ if(L3.on && !LEARN.on && !CRS.on && !ANA.on) l3Save(); }, 4000);   /* a Learn, Course or Analysis set-up is not your bench */
 window.addEventListener('keydown', ev=>{
   if(!L3.on) return;
   if((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'z' && !/INPUT|TEXTAREA/.test((ev.target||{}).tagName||'')){ ev.preventDefault(); ev.stopImmediatePropagation(); l3Undo(); }
@@ -18112,8 +19553,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 123;
+const VERSION = 124;
 const CHANGELOG = [
+  [124, 'Analysis mode, from the Analyse button in the header. Pick up to four compounds (by name, formula, SMILES or ion, with suggestions as you type) and the bench and its panels step aside for one wide report. Each compound is built alone on a cold bench, relaxed and measured, then taken apart: its structure drawing, molar mass, unsaturation, rings, stereocentres and cis/trans bonds; composition by mass and the empirical formula; a card for each element; every kind of bond with its measured length, enthalpy, \u0394EN, character and infrared band, the total atomisation energy and the weakest bond with the light that would split it; the shape, electron geometry, hybridisation and measured angle at every centre; the electron count, formal charges and octets, a Lewis structure with its lone pairs drawn as dots, a molecular-orbital diagram for diatomics (O\u2082 comes out paramagnetic, with bond order 2) and the oxidation state of every atom; partial charges and the dipole, with why it is or is not polar; the forces between molecules, melting and boiling points, a comparison with an alkane of the same mass, solubility in water, an estimated logP and Lipinski\u2019s rule of five; every acidic hydrogen and basic site with its pKa, the pH of a 0.10 mol/L solution and the conjugate acid and base; functional groups with what each does, and the isomers in the library with the same formula; what it reacts with, each with a Try it button; estimated enthalpies of formation and combustion, checked against measured values where known; and simulated infrared, proton NMR (environments lettered on the structure, with integrals and n+1 splitting), carbon-13 NMR, mass (isotope pattern and fragments) and UV\u2013visible spectra with the colour it would be. Pointing at a row lights its atoms up on the bench. Compare puts two to four side by side in one table, and on the bench, and says in words what the numbers mean (isomers, which boils higher and why, which is the stronger acid and by how much). React sets them in a box of their own: before anything moves it predicts what should happen (proton transfer with K from the two pKa values, precipitates, metals with acids, water and other metals\u2019 ions with E\u00b0cell and \u0394G, Lewis adducts, ligands, additions, esters, combustion, or no reaction and whether they would mix), then runs the real engine and accounts for it: species before and now, the net equation, the bonds broken and formed with a Hess\u2019s law \u0394H beside the bench\u2019s own, every step with its reason, and charts of the species, the heat and the temperature. Also: typed names like 2-butanol and 2-pentanone now find butan-2-ol and pentan-2-one, Build understands the hand-drawn library names (oxygen, carbon dioxide) on both benches, and a lesson or analysis no longer overwrites your saved 3D bench.'],
   [123, 'H\u207a ions. Hydrogen can now give up its only electron (\u2212 e\u207b in the Atom tab, on either bench), leaving a bare proton, and a bare proton behaves like one: the first lone pair it touches takes it, so H\u207a + H\u2082O makes H\u2083O\u207a, + NH\u2083 makes NH\u2084\u207a, + OH\u207b makes water and + Cl\u207b makes HCl, each written up in the Notebook with its gas-phase proton affinity. On the 3D bench it is drawn as a bright speck you can see, its badge clear of it. Build reads ions as chemists type them: H+, H\u207a, Na+, Fe3+, Fe+3, O2-, OH-, NH4+, H3O+, SO4 2-, SO4^2-, SO\u2084\u00b2\u207b, CO32-, CH3COO-, and names like proton or sodium ion (Cl- used to build HCl). Hydrogen ion and hydride ion join the library. A prettier library: every card has a small structure drawing (carbons as corners, OH and NH\u2082 written out, rings as rings, salts as their ions side by side) and a colour dot for its family, matched on the family chips. The reactions in the left panel are colour-coded by kind, and on a narrow bench the atom count sits above the speed control instead of under the zoom buttons.'],
   [122, 'Clear away whole kinds of molecule at once. Every card in the Bench panel (one per kind of molecule, and one row per kind of lone atom on the flat bench) now has a tick box and a bin, shown when you point at it. The bin deletes every molecule of that kind; ticking kinds brings up a bar to delete them all, keep only them and delete everything else, select every kind, or clear the selection. Undo brings anything back. On the 3D bench ions are now kept apart from neutral atoms of the same element (Na\u207a has its own card from Na), so you can clear one without the other.'],
   [121, 'The molecule library now holds 1000 compounds, and about 1080 names can be typed into Build. New are whole homologous series named the IUPAC way (alkanes to icosane, alkenes, alkynes, alcohols, aldehydes, ketones, carboxylic and dicarboxylic acids, thirty esters, ethers, amines, nitriles, amides, thiols, haloalkanes, rings and branched alkanes), substituted benzenes (chloro-, bromo-, nitro- and methyl- phenols, anilines, benzoic acids, toluenes and anisoles), a hundred salts with their charges balanced (and nothing that does not exist), and about a hundred more by hand: medicines, natural products and flavours, vitamins, nucleosides, fatty acids, oxyanions and other ions, and inorganic molecules, each checked against its molecular formula. The library sheet is rebuilt for its size: family chips with counts, a compact grid, search by name or formula with the best matches first, and Enter to build the top one. Names are found whatever their case or hyphens (pentan-2-ol, Pentan 2 ol, IRON(III) SULFATE), which also fixes typed names with hyphens on both benches. A compact pass on the interface, with nothing taken away: a slimmer header (Share and Clear keep their full descriptions as tooltips), the reactions as small chips instead of large boxes, tighter readout tiles and a shorter chart.'],
@@ -18300,7 +19742,7 @@ function frameBody(now){
     /* the 3D bench's own speed, 0.1x to 3x; at 3x a frame is cut into more steps so it stays steady */
     /* step through slows it further, and holds it still after each reaction step */
     stepTick(now);
-    if(!paused && !STEP.hold && !learnHeld()){ const sp = (L3.speed || 1)*stepRate(now), n = sp > 1.5 ? 2 : 1; for(let i=0;i<n;i++) l3Step(dt*sp/n); }
+    if(!paused && !STEP.hold && !learnHeld() && !(ANA.on && ANA.held)){ const sp = (L3.speed || 1)*stepRate(now), n = sp > 1.5 ? 2 : 1; for(let i=0;i<n;i++) l3Step(dt*sp/n); }
     if(LEARN.on && now - (renderLearnDock._t||0) > 1000){ renderLearnDock._t = now; renderLearnDock(); }
     l3Draw();
     if(dirty && now - lastPanel > 140){ dirty=false; lastPanel = now; renderPanel(); }
@@ -22229,7 +23671,7 @@ function start(data){
   initGutters();
   buildTable(); buildLadder(); buildTools(); buildControls(); buildTabs(); setTool('move');
   el('clearLog').onclick=()=>{ LOG.length=0; renderLog(); };
-  wireLog(); wireGuide(); wireStepCard(); wireLearnDock(); wireCourse(); wirePurge(); wireElementCards();
+  wireLog(); wireGuide(); wireStepCard(); wireLearnDock(); wireCourse(); wireAna(); wirePurge(); wireElementCards();
   resize();
   pistonInit();
   if(window.ResizeObserver) new ResizeObserver(resize).observe(stage);
