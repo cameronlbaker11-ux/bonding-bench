@@ -11974,6 +11974,24 @@ function libThumb(e){
   const svg = g && g.syms.length && g.syms.length <= 400 ? thumbSVG(g) : '';
   THUMB.set(k, svg); return svg;
 }
+/* structure drawings are made as their cards come into view: two thousand at
+   once held the sheet up for a second */
+let LIB_IO = null;
+function libFillThumbs(all){
+  const host = el('libList'), sheet = host && host.closest('.sheet'); if(!host) return;
+  const fill = p => { if(!p.dataset.t) return; p.innerHTML = libThumb(all[+p.dataset.t]); p.removeAttribute('data-t'); };
+  const pics = [...host.querySelectorAll('.lib-pic[data-t]')];
+  pics.slice(0, 120).forEach(fill);
+  if(LIB_IO) LIB_IO.disconnect();
+  if(typeof IntersectionObserver !== 'undefined'){
+    LIB_IO = new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting){ fill(en.target); LIB_IO.unobserve(en.target); } }), {root:sheet, rootMargin:'400px'});
+    pics.slice(120).forEach(p=>LIB_IO.observe(p));
+  }
+  /* and on scrolling, in case the observer is held back (a background tab) */
+  if(sheet && !sheet._thumbScroll){ sheet._thumbScroll = true; let t = null;
+    sheet.addEventListener('scroll', ()=>{ clearTimeout(t); t = setTimeout(()=>{ const r0 = sheet.getBoundingClientRect();
+      sheet.querySelectorAll('.lib-pic[data-t]').forEach(p=>{ const r = p.getBoundingClientRect(); if(r.bottom > r0.top - 500 && r.top < r0.bottom + 500) fill(p); }); }, 60); }, {passive:true}); }
+}
 const LIB_UI = {cat:'all', q:'', more:false};
 function buildLibrary(){
   const all = libEntries();
@@ -11982,7 +12000,7 @@ function buildLibrary(){
     '<div class="lib-chips" id="libChips"><button type="button" data-lc="all">All <i>'+all.length+'</i></button>'+LIB_CATS.filter(([c])=>counts[c]).map(([c, l])=>'<button type="button" class="lc-'+c+'" data-lc="'+c+'">'+l+' <i>'+counts[c]+'</i></button>').join('')+'</div>'+
     '<div id="libList"></div><p class="lib-more">Not here? Build understands '+Object.keys(L3_LIB).length+' names, any formula and any SMILES string. Press Enter in the search box to build the first match.</p>';
   const plain = f => f.replace(/[⁰-₟²³¹]/g, d=>'0123456789+-'['⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'.indexOf(d)] || '');
-  const card = (e, i) => '<button class="lib lc-'+e.cat+'" type="button" data-i="'+i+'" title="'+e.n.replace(/"/g, '&quot;')+'"><i class="lib-pic">'+libThumb(e)+'</i><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>';
+  const card = (e, i) => '<button class="lib lc-'+e.cat+'" type="button" data-i="'+i+'" title="'+e.n.replace(/"/g, '&quot;')+'"><i class="lib-pic"'+(THUMB.has(e.n) ? '>'+THUMB.get(e.n) : ' data-t="'+i+'">')+'</i><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>';
   const draw = () => {
     const q = LIB_UI.q.trim().toLowerCase(), qf = q.replace(/\s/g, '');
     el('libChips').querySelectorAll('[data-lc]').forEach(b=>b.classList.toggle('on', b.dataset.lc === LIB_UI.cat && !q));
@@ -12000,6 +12018,7 @@ function buildLibrary(){
         return '<span class="eyebrow lib-cat">'+label+' <i>'+list.length+'</i></span><div class="lib-grid">'+list.map(([e, i])=>card(e, i)).join('')+'</div>'; }).join('');
     } else h = '<div class="lib-grid">'+idx.map(([e, i])=>card(e, i)).join('')+'</div>';
     el('libList').innerHTML = h;
+    libFillThumbs(all);
   };
   const build = m => {
     if(m.spec){
@@ -17804,6 +17823,181 @@ const libAdd = (cat, name, sm, pri, f, expect) => {
     libAdd('salt', nm, Array(nc).fill(csm).concat(Array(na).fill(asm)).join('.'), pri + ci*12 + ai, cf + af);
   }));
 })();
+/* ---------- the library grows to two thousand ----------
+   More of the same rules (longer and branched chains, more positions, more
+   substituents on the ring, the heterocycles) and more salts, these from a list
+   of compounds that really exist rather than every pairing that balances. */
+(function(){
+  const P = ['meth','eth','prop','but','pent','hex','hept','oct','non','dec','undec','dodec','tridec','tetradec','pentadec','hexadec','heptadec','octadec','nonadec','icos','henicos','docos'];
+  const C = n => 'C'.repeat(Math.max(0, n));
+  let pri = 1400;
+  /* hydrocarbons: longer, more positions, more branches */
+  for(let n=17;n<=20;n++) libAdd('hydrocarbon', P[n-1]+'-1-ene', 'C=C'+C(n-2), pri + n);
+  for(let n=9;n<=12;n++) libAdd('hydrocarbon', P[n-1]+'-2-ene', 'CC=C'+C(n-3), pri + 20 + n);
+  for(let n=6;n<=10;n++) libAdd('hydrocarbon', P[n-1]+'-3-ene', 'CCC=C'+C(n-4), pri + 30 + n);
+  for(let n=13;n<=16;n++) libAdd('hydrocarbon', P[n-1]+'-1-yne', 'C#C'+C(n-2), pri + 40 + n);
+  for(let n=4;n<=10;n++) libAdd('hydrocarbon', P[n-1]+'-2-yne', 'CC#C'+C(n-3), pri + 55 + n);
+  for(let n=6;n<=10;n++) libAdd('hydrocarbon', P[n-1]+'-3-yne', 'CCC#C'+C(n-4), pri + 65 + n);
+  for(let n=11;n<=16;n++) libAdd('hydrocarbon', '2-methyl'+P[n-2]+'ane', 'CC(C)'+C(n-3), pri + 75 + n);
+  for(let n=11;n<=14;n++) libAdd('hydrocarbon', '3-methyl'+P[n-2]+'ane', 'CCC(C)'+C(n-4), pri + 90 + n);
+  for(let n=7;n<=12;n++) libAdd('hydrocarbon', '3-ethyl'+P[n-3]+'ane', 'CCC(CC)'+C(n-5), pri + 105 + n);
+  for(let n=6;n<=12;n++) libAdd('hydrocarbon', '2,3-dimethyl'+P[n-3]+'ane', 'CC(C)C(C)'+C(n-5), pri + 115 + n);
+  for(let n=7;n<=12;n++) libAdd('hydrocarbon', '2,4-dimethyl'+P[n-3]+'ane', 'CC(C)CC(C)'+C(n-6), pri + 130 + n);
+  for(let n=7;n<=12;n++) libAdd('hydrocarbon', '3,3-dimethyl'+P[n-3]+'ane', 'CCC(C)(C)'+C(n-5), pri + 140 + n);
+  [['2,2,3-trimethylbutane','CC(C)C(C)(C)C'],['2,2,4-trimethylpentane','CC(C)CC(C)(C)C'],['2,3,4-trimethylpentane','CC(C)C(C)C(C)C'],['2,2,3,3-tetramethylbutane','CC(C)(C)C(C)(C)C']].forEach(([n, sm], i)=>libAdd('hydrocarbon', n, sm, pri + 155 + i));
+  for(let n=3;n<=8;n++) libAdd('hydrocarbon', 'methylcyclo'+P[n-1]+'ane', 'CC1'+C(n-1)+'1', pri + 160 + n);
+  for(let n=5;n<=6;n++) libAdd('hydrocarbon', 'ethylcyclo'+P[n-1]+'ane', 'CCC1'+C(n-1)+'1', pri + 170 + n);
+  [['1,1-dimethylcyclohexane','CC1(C)CCCCC1'],['1,2-dimethylcyclohexane','CC1CCCCC1C'],['1,3-dimethylcyclohexane','CC1CCCC(C)C1'],['1,4-dimethylcyclohexane','CC1CCC(C)CC1'],
+   ['cyclopropene','C1=CC1'],['cyclobutene','C1=CCC1'],['cyclopenta-1,3-diene','C1=CC=CC1'],['cyclohexa-1,3-diene','C1=CC=CCC1'],['cyclohexa-1,4-diene','C1=CCC=CC1'],['cycloocta-1,5-diene','C1=CCCC=CCC1'],
+   ['penta-1,3-diene','CC=CC=C'],['penta-1,4-diene','C=CCC=C'],['hexa-1,3-diene','CCC=CC=C'],['hexa-1,5-diene','C=CCCC=C'],['hexa-1,3,5-triene','C=CC=CC=C'],['2,3-dimethylbuta-1,3-diene','CC(=C)C(C)=C'],
+   ['bicyclo[2.2.1]heptane','C1CC2CCC1C2'],['bicyclo[2.2.2]octane','C1CC2CCC1CC2'],['spiro[4.5]decane','C1CCC2(C1)CCCCC2'],['decahydronaphthalene','C1CCC2CCCCC2C1'],['adamantane','C1C2CC3CC1CC(C2)C3'],['cubane','C12C3C4C1C5C2C3C45']].forEach(([n, sm], i)=>libAdd('hydrocarbon', n, sm, pri + 180 + i));
+  for(let n=7;n<=12;n++) libAdd('aromatic', P[n-1]+'ylbenzene', C(n)+'c1ccccc1', pri + 210 + n);
+  [['1,2,3-trimethylbenzene','Cc1cccc(C)c1C'],['1,2,4-trimethylbenzene','Cc1ccc(C)c(C)c1'],['1,3,5-trimethylbenzene','Cc1cc(C)cc(C)c1'],['1-ethyl-2-methylbenzene','CCc1ccccc1C'],['1-ethyl-3-methylbenzene','CCc1cccc(C)c1'],
+   ['1-ethyl-4-methylbenzene','CCc1ccc(C)cc1'],['1,2-diethylbenzene','CCc1ccccc1CC'],['1,3-diethylbenzene','CCc1cccc(CC)c1'],['1,4-diethylbenzene','CCc1ccc(CC)cc1'],['tert-butylbenzene','CC(C)(C)c1ccccc1'],
+   ['sec-butylbenzene','CCC(C)c1ccccc1'],['isobutylbenzene','CC(C)Cc1ccccc1'],['diphenylmethane','C(c1ccccc1)c1ccccc1'],['triphenylmethane','C(c1ccccc1)(c1ccccc1)c1ccccc1'],['1,2-diphenylethane','C(Cc1ccccc1)c1ccccc1'],
+   ['indane','C1Cc2ccccc2C1'],['indene','C1C=Cc2ccccc12'],['tetralin','C1CCc2ccccc2C1'],['azulene','c1ccc2cccc2cc1'],['fluorene','C1c2ccccc2-c2ccccc12'],['acenaphthene','C1Cc2cccc3cccc1c23'],['acenaphthylene','C1=Cc2cccc3cccc1c23'],
+   ['fluoranthene','c1ccc2c(c1)-c1cccc3cccc-2c13'],['chrysene','c1ccc2c(c1)ccc1c3ccccc3ccc21'],['tetracene','c1ccc2cc3cc4ccccc4cc3cc2c1'],['triphenylene','c1ccc2c(c1)c1ccccc1c1ccccc21'],['perylene','c1cc2cccc3c4cccc5cccc(c(c1)c23)c54'],
+   ['coronene','c1cc2ccc3ccc4ccc5ccc6ccc1c1c2c3c4c5c61'],['benzo[a]pyrene','c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34'],['terphenyl','c1ccc(cc1)-c1ccc(cc1)-c1ccccc1']].forEach(([n, sm], i)=>libAdd('aromatic', n, sm, pri + 225 + i));
+  /* oxygen compounds */
+  pri = 1700;
+  for(let n=19;n<=20;n++) libAdd('oxygen', P[n-1]+'an-1-ol', C(n)+'O', pri + n);
+  for(let n=11;n<=14;n++) libAdd('oxygen', P[n-1]+'an-2-ol', 'CC(O)'+C(n-2), pri + 20 + n);
+  for(let n=5;n<=10;n++) libAdd('oxygen', P[n-1]+'an-3-ol', 'CCC(O)'+C(n-3), pri + 35 + n);
+  for(let n=7;n<=10;n++) libAdd('oxygen', P[n-1]+'an-4-ol', 'CCCC(O)'+C(n-4), pri + 45 + n);
+  for(let n=13;n<=16;n++) libAdd('oxygen', P[n-1]+'anal', C(n-1)+'C=O', pri + 55 + n);
+  for(let n=13;n<=15;n++) libAdd('oxygen', P[n-1]+'an-2-one', 'CC(=O)'+C(n-2), pri + 70 + n);
+  for(let n=11;n<=12;n++) libAdd('oxygen', P[n-1]+'an-3-one', 'CCC(=O)'+C(n-3), pri + 85 + n);
+  for(let n=7;n<=10;n++) libAdd('oxygen', P[n-1]+'an-4-one', 'CCCC(=O)'+C(n-4), pri + 95 + n);
+  [['2-methylpropan-1-ol','CC(C)CO'],['2-methylpropan-2-ol','CC(C)(C)O'],['2-methylbutan-1-ol','CCC(C)CO'],['3-methylbutan-1-ol','CC(C)CCO'],['2-methylbutan-2-ol','CCC(C)(C)O'],['3-methylbutan-2-ol','CC(C)C(C)O'],
+   ['2,2-dimethylpropan-1-ol','CC(C)(C)CO'],['prop-2-en-1-ol','C=CCO'],['prop-2-yn-1-ol','C#CCO'],['but-3-en-1-ol','C=CCCO'],['2-methylpropanal','CC(C)C=O'],['3-methylbutanal','CC(C)CC=O'],['2-methylbutanal','CCC(C)C=O'],
+   ['propenal','C=CC=O'],['but-2-enal','CC=CC=O'],['3-methylbutan-2-one','CC(C)C(C)=O'],['4-methylpentan-2-one','CC(C)CC(C)=O'],['3,3-dimethylbutan-2-one','CC(=O)C(C)(C)C'],['but-3-en-2-one','C=CC(C)=O'],['pentane-2,4-dione','CC(=O)CC(C)=O'],
+   ['butanedione','CC(=O)C(C)=O'],['propane-1,2-diol','CC(O)CO'],['butane-1,2-diol','CCC(O)CO'],['butane-1,3-diol','CC(O)CCO'],['butane-2,3-diol','CC(O)C(C)O'],['heptane-1,7-diol','OCCCCCCCO'],['octane-1,8-diol','OCCCCCCCCO'],
+   ['decane-1,10-diol','OCCCCCCCCCCO'],['oxetane','C1COC1'],['oxane','C1CCOCC1'],['2-methyloxolane','CC1CCCO1'],['oxirane','C1CO1'],['methyloxirane','CC1CO1'],['1,3-dioxolane','C1COCO1'],['1,3,5-trioxane','C1OCOCO1'],
+   ['cyclopropanol','OC1CC1'],['cyclobutanol','OC1CCC1'],['cyclobutanone','O=C1CCC1'],['cyclononanone','O=C1CCCCCCCC1'],['cyclodecanone','O=C1CCCCCCCCC1'],['cyclododecanone','O=C1CCCCCCCCCCC1'],['cyclohex-2-en-1-one','O=C1CCCC=C1'],
+   ['2-methoxyethanol','COCCO'],['2-ethoxyethanol','CCOCCO'],['1,2-dimethoxyethane','COCCOC'],['diethylene glycol','OCCOCCO'],['triethylene glycol','OCCOCCOCCO'],['methoxyethene','COC=C'],['ethoxyethene','CCOC=C'],['allyl alcohol ether','C=CCOCC=C']].forEach(([n, sm], i)=>{ if(n !== 'allyl alcohol ether') libAdd('oxygen', n, sm, pri + 110 + i); });
+  libAdd('oxygen', 'diallyl ether', 'C=CCOCC=C', pri + 170);
+  const al = ['methyl','ethyl','propyl','butyl','pentyl','hexyl'];
+  for(let i=0;i<6;i++) for(let j=i;j<6;j++){ if(j < 4) continue; const nm = i === j ? 'di'+al[i]+' ether' : [al[i], al[j]].sort().join(' ')+' ether'; libAdd('oxygen', nm, C(i+1)+'O'+C(j+1), pri + 175 + i*6 + j); }
+  /* acids and esters */
+  pri = 1950;
+  for(let n=21;n<=22;n++) libAdd('acid', P[n-1]+'anoic acid', C(n-1)+'C(=O)O', pri + n);
+  for(let n=11;n<=12;n++) libAdd('acid', P[n-1]+'anedioic acid', 'OC(=O)'+C(n-2)+'C(=O)O', pri + 25 + n);
+  const acyl = ['methanoate','ethanoate','propanoate','butanoate','pentanoate','hexanoate','heptanoate','octanoate','nonanoate','decanoate'];
+  for(let m=1;m<=10;m++) for(let r=1;r<=6;r++){ if(m <= 6 && r <= 5) continue; libAdd('acid', al[r-1]+' '+acyl[m-1], (m === 1 ? '' : C(m-1))+'C(=O)O'+C(r), pri + 40 + m*6 + r); }
+  [['isopropyl','OC(C)C'],['isobutyl','OCC(C)C'],['isopentyl','OCCC(C)C'],['tert-butyl','OC(C)(C)C'],['benzyl','OCc1ccccc1'],['phenyl','Oc1ccccc1'],['vinyl','OC=C'],['allyl','OCC=C']].forEach(([r, os], ri)=>
+    ['methanoate','ethanoate','propanoate','butanoate'].forEach((ac, ai)=>libAdd('acid', r+' '+ac, (ai === 0 ? '' : C(ai))+'C(=O)'+os, pri + 110 + ri*4 + ai)));
+  [['methyl benzoate','COC(=O)c1ccccc1'],['ethyl benzoate','CCOC(=O)c1ccccc1'],['propyl benzoate','CCCOC(=O)c1ccccc1'],['benzyl benzoate','O=C(OCc1ccccc1)c1ccccc1'],['methyl salicylate','COC(=O)c1ccccc1O'],['dimethyl phthalate','COC(=O)c1ccccc1C(=O)OC'],
+   ['diethyl phthalate','CCOC(=O)c1ccccc1C(=O)OCC'],['dimethyl terephthalate','COC(=O)c1ccc(cc1)C(=O)OC'],['methyl acrylate','COC(=O)C=C'],['ethyl acrylate','CCOC(=O)C=C'],['methyl methacrylate','COC(=O)C(C)=C'],['dimethyl carbonate','COC(=O)OC'],
+   ['diethyl carbonate','CCOC(=O)OCC'],['ethylene carbonate','O=C1OCCO1'],['propylene carbonate','CC1COC(=O)O1'],['gamma-butyrolactone','O=C1CCCO1'],['delta-valerolactone','O=C1CCCCO1'],['epsilon-caprolactone','O=C1CCCCCO1'],['diethyl malonate','CCOC(=O)CC(=O)OCC'],
+   ['ethyl acetoacetate','CCOC(=O)CC(C)=O'],['triacetin','CC(=O)OCC(COC(C)=O)OC(C)=O'],
+   ['2-methylpropanoic acid','CC(C)C(=O)O'],['3-methylbutanoic acid','CC(C)CC(=O)O'],['2-methylbutanoic acid','CCC(C)C(=O)O'],['2,2-dimethylpropanoic acid','CC(C)(C)C(=O)O'],['hydroxyethanoic acid','OCC(=O)O'],['3-hydroxypropanoic acid','OCCC(=O)O'],
+   ['3-oxobutanoic acid','CC(=O)CC(=O)O'],['4-oxopentanoic acid','CC(=O)CCC(=O)O'],['propenoic acid','C=CC(=O)O'],['2-methylpropenoic acid','CC(=C)C(=O)O'],['but-2-enoic acid','CC=CC(=O)O'],['hexa-2,4-dienoic acid','CC=CC=CC(=O)O'],['cinnamic acid','OC(=O)C=Cc1ccccc1'],
+   ['chloroethanoic acid','OC(=O)CCl'],['dichloroethanoic acid','OC(=O)C(Cl)Cl'],['trichloroethanoic acid','OC(=O)C(Cl)(Cl)Cl'],['bromoethanoic acid','OC(=O)CBr'],['fluoroethanoic acid','OC(=O)CF'],['trifluoroethanoic acid','OC(=O)C(F)(F)F'],
+   ['ethanoyl chloride','CC(Cl)=O'],['propanoyl chloride','CCC(Cl)=O'],['butanoyl chloride','CCCC(Cl)=O'],['benzoyl chloride','ClC(=O)c1ccccc1'],['propanoic anhydride','CCC(=O)OC(=O)CC'],['succinic anhydride','O=C1CCC(=O)O1'],['maleic anhydride','O=C1C=CC(=O)O1'],['phthalic anhydride','O=C1OC(=O)c2ccccc12'],
+   ['phenylethanoic acid','OC(=O)Cc1ccccc1'],['phthalic acid','OC(=O)c1ccccc1C(=O)O'],['isophthalic acid','OC(=O)c1cccc(c1)C(=O)O'],['terephthalic acid','OC(=O)c1ccc(cc1)C(=O)O'],['mandelic acid','OC(C(=O)O)c1ccccc1']].forEach(([n, sm], i)=>libAdd('acid', n, sm, pri + 150 + i));
+  /* nitrogen and sulfur */
+  pri = 2150;
+  for(let n=13;n<=16;n++) libAdd('nitrogen', P[n-1]+'an-1-amine', C(n)+'N', pri + n);
+  for(let n=3;n<=8;n++) libAdd('nitrogen', P[n-1]+'an-2-amine', 'CC(N)'+C(n-2), pri + 20 + n);
+  const am = ['methyl','ethyl','propyl','butyl'];
+  for(let i=0;i<4;i++) for(let j=i;j<4;j++) libAdd('nitrogen', i === j ? 'di'+am[i]+'amine' : 'N-'+am[i]+(j === 1 ? 'ethan' : j === 2 ? 'propan-1-' : 'butan-1-')+'amine', C(i+1)+'N'+C(j+1), pri + 30 + i*4 + j);
+  for(let i=0;i<4;i++) libAdd('nitrogen', 'tri'+am[i]+'amine', 'N('+C(i+1)+')('+C(i+1)+')'+C(i+1), pri + 50 + i);
+  for(let n=11;n<=14;n++) libAdd('nitrogen', P[n-1]+'anenitrile', C(n-1)+'C#N', pri + 55 + n);
+  for(let n=11;n<=12;n++) libAdd('nitrogen', P[n-1]+'anamide', C(n-1)+'C(N)=O', pri + 70 + n);
+  for(let n=9;n<=12;n++) libAdd('nitrogen', P[n-1]+'ane-1-thiol', C(n)+'S', pri + 85 + n);
+  [['N-methylmethanamide','CNC=O'],['N-methylethanamide','CNC(C)=O'],['N,N-dimethylethanamide','CN(C)C(C)=O'],['N-phenylethanamide','CC(=O)Nc1ccccc1'],['benzamide','NC(=O)c1ccccc1'],['propenamide','C=CC(N)=O'],
+   ['propenenitrile','C=CC#N'],['butanedinitrile','N#CCCC#N'],['benzyl cyanide','N#CCc1ccccc1'],['nitroethane','CC[N+](=O)[O-]'],['1-nitropropane','CCC[N+](=O)[O-]'],['2-nitropropane','CC(C)[N+](=O)[O-]'],
+   ['diethyl sulfide','CCSCC'],['ethyl methyl sulfide','CCSC'],['dipropyl sulfide','CCCSCCC'],['dimethyl disulfide','CSSC'],['diethyl disulfide','CCSSCC'],['dimethyl sulfone','CS(C)(=O)=O'],['sulfolane','O=S1(=O)CCCC1'],['thiophenol','Sc1ccccc1'],
+   ['methanesulfonic acid','CS(=O)(=O)O'],['benzenesulfonic acid','OS(=O)(=O)c1ccccc1'],['p-toluenesulfonic acid','Cc1ccc(cc1)S(=O)(=O)O'],['sulfanilamide','Nc1ccc(cc1)S(N)(=O)=O'],['thiourea','NC(N)=S'],['guanidine','NC(N)=N'],['semicarbazide','NNC(N)=O'],
+   ['hydroxylamine','NO'],['methylhydrazine','CNN'],['phenylhydrazine','NNc1ccccc1'],['azobenzene','c1ccc(cc1)N=Nc1ccccc1'],['nitrosobenzene','O=Nc1ccccc1'],['ethylenediamine','NCCN'],['diethylenetriamine','NCCNCCN'],['hexamethylenetetramine','C1N2CN3CN1CN(C2)C3'],
+   ['beta-alanine','NCCC(=O)O'],['ornithine','NCCCC(N)C(=O)O'],['citrulline','NC(=O)NCCCC(N)C(=O)O'],['taurine','NCCS(=O)(=O)O'],['sarcosine','CNCC(=O)O'],['creatine','CN(CC(=O)O)C(N)=N'],['norleucine','CCCCC(N)C(=O)O'],['carnitine','C[N+](C)(C)CC(O)CC(=O)[O-]'],
+   ['pyrrolidine','C1CCNC1'],['piperidine','C1CCNCC1'],['morpholine','C1COCCN1'],['piperazine','C1CNCCN1'],['azetidine','C1CNC1'],['aziridine','C1CN1'],['pyrazine','c1cnccn1'],['pyrimidine','c1cncnc1'],['pyridazine','c1ccnnc1'],
+   ['1,3,5-triazine','c1ncncn1'],['pyrazole','c1cn[nH]c1'],['oxazole','c1cocn1'],['isoxazole','c1conc1'],['thiazole','c1cscn1'],['1,2,4-triazole','c1nc[nH]n1'],['1H-tetrazole','c1nnn[nH]1'],['quinoline','c1ccc2ncccc2c1'],['isoquinoline','c1ccc2cnccc2c1'],
+   ['quinoxaline','c1ccc2nccnc2c1'],['indazole','c1ccc2[nH]ncc2c1'],['benzimidazole','c1ccc2[nH]cnc2c1'],['benzothiazole','c1ccc2scnc2c1'],['benzoxazole','c1ccc2ocnc2c1'],['benzofuran','c1ccc2occc2c1'],['benzothiophene','c1ccc2sccc2c1'],
+   ['carbazole','c1ccc2c(c1)[nH]c1ccccc12'],['acridine','c1ccc2nc3ccccc3cc2c1'],['phenanthridine','c1ccc2c(c1)cnc1ccccc12'],['purine','c1ncc2[nH]cnc2n1'],['pteridine','c1cnc2ncncc2n1'],['2,2\u2032-bipyridine','c1ccc(nc1)-c1ccccn1'],
+   ['1,10-phenanthroline','c1cnc2c(c1)ccc1cccnc12'],['2-pyrrolidone','O=C1CCCN1'],['N-methyl-2-pyrrolidone','CN1CCCC1=O'],['caprolactam','O=C1CCCCCN1'],['succinimide','O=C1CCC(=O)N1'],['phthalimide','O=C1NC(=O)c2ccccc12'],
+   ['hydantoin','O=C1CNC(=O)N1'],['barbituric acid','O=C1CC(=O)NC(=O)N1'],['cyanuric acid','O=C1NC(=O)NC(=O)N1'],['melamine','Nc1nc(N)nc(N)n1']].forEach(([n, sm], i)=>libAdd('nitrogen', n, sm, pri + 100 + i));
+  /* pyridines and naphthalenes with a group on them */
+  pri = 2350;
+  const pyG = [['methyl','C','methylpyridine'],['amino','N','aminopyridine'],['chloro','Cl','chloropyridine'],['bromo','Br','bromopyridine'],['hydroxy','O','pyridinol'],['carboxy','C(=O)O','pyridinecarboxylic acid']];
+  const pyR = pos => pos === 2 ? 'c1ccccn1' : pos === 3 ? 'c1cccnc1' : 'c1ccncc1';
+  pyG.forEach(([g, gs, base], gi)=>[2,3,4].forEach(pos=>{
+    const name = base === 'pyridinol' ? 'pyridin-'+pos+'-ol' : base === 'pyridinecarboxylic acid' ? 'pyridine-'+pos+'-carboxylic acid' : base === 'aminopyridine' ? 'pyridin-'+pos+'-amine' : pos+'-'+base;
+    libAdd('aromatic', name, gs+pyR(pos), pri + gi*3 + pos); }));
+  const nG = [['methyl','C','methylnaphthalene'],['chloro','Cl','chloronaphthalene'],['bromo','Br','bromonaphthalene'],['nitro','[N+](=O)[O-]','nitronaphthalene'],['hydroxy','O','naphthol'],['amino','N','naphthylamine'],['carboxy','C(=O)O','naphthoic acid']];
+  nG.forEach(([g, gs, base], gi)=>[1,2].forEach(pos=>{
+    const name = base === 'naphthol' ? 'naphthalen-'+pos+'-ol' : base === 'naphthylamine' ? 'naphthalen-'+pos+'-amine' : base === 'naphthoic acid' ? 'naphthalene-'+pos+'-carboxylic acid' : pos+'-'+base;
+    libAdd('aromatic', name, gs+(pos === 1 ? 'c1cccc2ccccc12' : 'c1ccc2ccccc2c1'), pri + 20 + gi*2 + pos); }));
+  /* two groups on a benzene ring, named on the parent the senior group makes */
+  pri = 2400;
+  const sub = {F:['fluoro','F'], Cl:['chloro','Cl'], Br:['bromo','Br'], I:['iodo','I'], NO2:['nitro','[N+](=O)[O-]'], CH3:['methyl','C'], OH:['hydroxy','O'], NH2:['amino','N'], OCH3:['methoxy','OC']};
+  const ring = (a, pos, b) => a+'c1'+(pos === 2 ? 'c('+b+')cccc1' : pos === 3 ? 'cc('+b+')ccc1' : 'ccc('+b+')cc1');
+  const par = [['benzaldehyde','O=C',['F','Cl','Br','I','NO2','CH3','OH','NH2','OCH3']], ['benzonitrile','N#C',['F','Cl','Br','I','NO2','CH3','OH','NH2','OCH3']], ['benzamide','NC(=O)',['F','Cl','Br','NO2','CH3','OH','NH2','OCH3']],
+    ['phenol','O',['NH2','OCH3']], ['aniline','N',['OCH3','NH2']], ['benzoic acid','OC(=O)',['OH','NH2','OCH3']], ['benzenesulfonic acid','OS(=O)(=O)',['CH3','NH2','Cl']]];
+  par.forEach(([pn, ps, subs], pi)=>subs.forEach((sk, si)=>[2,3,4].forEach(pos=>libAdd('aromatic', pn === 'aniline' && sk === 'NH2' ? 'benzene-1,'+pos+'-diamine' : pos+'-'+sub[sk][0]+pn, ring(ps, pos, sub[sk][1]), pri + pi*30 + si*3 + pos))));
+  /* acetophenones named as IUPAC does: 1-(2-chlorophenyl)ethan-1-one */
+  ['F','Cl','Br','NO2','CH3','OH','NH2','OCH3'].forEach((sk, si)=>[2,3,4].forEach(pos=>libAdd('aromatic', '1-('+pos+'-'+sub[sk][0]+'phenyl)ethan-1-one', ring('CC(=O)', pos, sub[sk][1]), pri + 220 + si*3 + pos)));
+  /* only prefixes: 1-bromo-2-chlorobenzene, in alphabetical order */
+  const hal = ['bromo','chloro','fluoro','iodo'], hs = {bromo:'Br', chloro:'Cl', fluoro:'F', iodo:'I'};
+  for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) [2,3,4].forEach(pos=>libAdd('aromatic', '1-'+hal[i]+'-'+pos+'-'+hal[j]+'benzene', ring(hs[hal[i]], pos, hs[hal[j]]), pri + 260 + i*12 + j*3 + pos));
+  hal.forEach((h, k)=>[2,3,4].forEach(pos=>libAdd('aromatic', '1-'+h+'-'+pos+'-nitrobenzene', ring(hs[h], pos, '[N+](=O)[O-]'), pri + 310 + k*3 + pos)));
+  [2,3,4].forEach(pos=>{ libAdd('aromatic', '1,'+pos+'-dinitrobenzene', ring('[O-][N+](=O)', pos, '[N+](=O)[O-]'), pri + 330 + pos); libAdd('aromatic', '1,'+pos+'-dimethoxybenzene', ring('CO', pos, 'OC'), pri + 335 + pos);
+    libAdd('aromatic', 'benzene-1,'+pos+'-dicarbonitrile', ring('N#C', pos, 'C#N'), pri + 340 + pos); });
+  [['1,3,5-trinitrobenzene','[O-][N+](=O)c1cc(cc(c1)[N+](=O)[O-])[N+](=O)[O-]'],['2,4,6-trinitrotoluene','Cc1c(cc(cc1[N+](=O)[O-])[N+](=O)[O-])[N+](=O)[O-]'],['1,2,4-trichlorobenzene','Clc1ccc(Cl)c(Cl)c1'],['hexachlorobenzene','Clc1c(Cl)c(Cl)c(Cl)c(Cl)c1Cl'],
+   ['hexafluorobenzene','Fc1c(F)c(F)c(F)c(F)c1F'],['2,4-dinitrophenol','Oc1ccc(cc1[N+](=O)[O-])[N+](=O)[O-]'],['2,4,6-trichlorophenol','Oc1c(Cl)cc(Cl)cc1Cl'],['pentachlorophenol','Oc1c(Cl)c(Cl)c(Cl)c(Cl)c1Cl'],['pyrogallol','Oc1cccc(O)c1O'],
+   ['phloroglucinol','Oc1cc(O)cc(O)c1'],['benzyl alcohol','OCc1ccccc1'],['benzylamine','NCc1ccccc1'],['benzyl chloride','ClCc1ccccc1'],['benzyl bromide','BrCc1ccccc1'],['1-phenylethanol','CC(O)c1ccccc1'],['2-phenylethylamine','NCCc1ccccc1'],
+   ['benzophenone oxime','ON=C(c1ccccc1)c1ccccc1'],['diphenyl ether','c1ccc(cc1)Oc1ccccc1'],['diphenylamine','c1ccc(cc1)Nc1ccccc1'],['triphenylphosphine','c1ccc(cc1)P(c1ccccc1)c1ccccc1'],['triphenylamine','c1ccc(cc1)N(c1ccccc1)c1ccccc1'],
+   ['N,N-dimethylaniline','CN(C)c1ccccc1'],['N-methylaniline','CNc1ccccc1'],['4-aminobenzenesulfonic acid','Nc1ccc(cc1)S(=O)(=O)O'],['4-hydroxybenzaldehyde','O=Cc1ccc(O)cc1'],['anisaldehyde','COc1ccc(C=O)cc1'],['piperonal','O=Cc1ccc2OCOc2c1'],
+   ['1,4-benzoquinone','O=C1C=CC(=O)C=C1'],['1,4-naphthoquinone','O=C1C=CC(=O)c2ccccc12'],['anthraquinone','O=C1c2ccccc2C(=O)c2ccccc12'],['9-fluorenone','O=C1c2ccccc2-c2ccccc12'],['xanthene','C1c2ccccc2Oc2ccccc12'],['dibenzofuran','c1ccc2c(c1)oc1ccccc12'],
+   ['thianthrene','c1ccc2Sc3ccccc3Sc2c1'],['phenothiazine','c1ccc2Sc3ccccc3Nc2c1'],['phenoxazine','c1ccc2Oc3ccccc3Nc2c1'],['styrene oxide','C1OC1c1ccccc1'],['alpha-methylstyrene','CC(=C)c1ccccc1'],['4-vinylpyridine','C=Cc1ccncc1'],
+   ['divinylbenzene','C=Cc1ccc(C=C)cc1'],['ferrocene ring (cyclopentadienyl)','[cH-]1cccc1']].forEach(([n, sm], i)=>{ if(!/ferrocene/.test(n)) libAdd('aromatic', n, sm, pri + 350 + i); });
+  /* halogen compounds */
+  pri = 2800;
+  [['F','fluoro'],['Cl','chloro'],['Br','bromo'],['I','iodo']].forEach(([X, x], k)=>{ for(let n=9;n<=12;n++) libAdd('halogen', '1-'+x+P[n-1]+'ane', C(n)+X, pri + k*10 + n); });
+  [['Cl','chloro'],['Br','bromo'],['I','iodo']].forEach(([X, x], k)=>{ for(let n=3;n<=8;n++) libAdd('halogen', '2-'+x+P[n-1]+'ane', 'CC('+X+')'+C(n-2), pri + 50 + k*10 + n); });
+  [['dibromomethane','BrCBr'],['diiodomethane','ICI'],['bromochloromethane','ClCBr'],['tribromomethane','BrC(Br)Br'],['triiodomethane','IC(I)I'],['dichlorofluoromethane','FC(Cl)Cl'],['chlorodifluoromethane','FC(F)Cl'],
+   ['dichlorodifluoromethane','FC(F)(Cl)Cl'],['trichlorofluoromethane','FC(Cl)(Cl)Cl'],['bromotrifluoromethane','FC(F)(F)Br'],['tetrafluoromethane','FC(F)(F)F'],['1,1,1,2-tetrafluoroethane','FCC(F)(F)F'],['1,2-dichloroethane','ClCCCl'],
+   ['1,1-dichloroethane','CC(Cl)Cl'],['1,1,1-trichloroethane','CC(Cl)(Cl)Cl'],['1,1,2-trichloroethane','ClCC(Cl)Cl'],['1,2-dibromoethane','BrCCBr'],['1,1-dichloroethene','C=C(Cl)Cl'],['trichloroethene','ClC=C(Cl)Cl'],['tetrachloroethene','ClC(Cl)=C(Cl)Cl'],
+   ['tetrafluoroethene','FC(F)=C(F)F'],['hexachloroethane','ClC(Cl)(Cl)C(Cl)(Cl)Cl'],['hexafluoroethane','FC(F)(F)C(F)(F)F'],['halothane','FC(F)(F)C(Cl)Br'],['3-chloroprop-1-ene','C=CCCl'],['3-bromoprop-1-ene','C=CCBr'],['1,2-dichloropropane','CC(Cl)CCl'],
+   ['1,3-dichloropropane','ClCCCCl'],['1,2,3-trichloropropane','ClCC(Cl)CCl'],['2-chloro-2-methylpropane','CC(C)(C)Cl'],['2-bromo-2-methylpropane','CC(C)(C)Br'],['1-chloro-2-methylpropane','CC(C)CCl'],['chlorocyclohexane','ClC1CCCCC1'],
+   ['bromocyclohexane','BrC1CCCCC1'],['fluorobenzene','Fc1ccccc1'],['iodobenzene','Ic1ccccc1'],['2-chloroethanol','OCCCl'],['epichlorohydrin','ClCC1CO1'],['chloroacetone','CC(=O)CCl'],['trichloroacetaldehyde','ClC(Cl)(Cl)C=O'],['phosgene','ClC(Cl)=O'],
+   ['perfluorohexane','FC(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F'],['sevoflurane','FCOC(C(F)(F)F)C(F)(F)F'],['isoflurane','FC(F)OC(Cl)C(F)(F)F'],['enflurane','FC(F)OC(F)(F)C(F)Cl']].forEach(([n, sm], i)=>libAdd('halogen', n, sm, pri + 100 + i));
+  /* salts that really exist, with the charges balanced */
+  pri = 2950;
+  const CAT = {Li:['lithium','[Li+]',1], Na:['sodium','[Na+]',1], K:['potassium','[K+]',1], Rb:['rubidium','[Rb+]',1], Cs:['caesium','[Cs+]',1], NH4:['ammonium','[NH4+]',1],
+    Mg:['magnesium','[Mg+2]',2], Ca:['calcium','[Ca+2]',2], Sr:['strontium','[Sr+2]',2], Ba:['barium','[Ba+2]',2], Zn:['zinc','[Zn+2]',2], Fe2:['iron(II)','[Fe+2]',2], Cu2:['copper(II)','[Cu+2]',2], Pb:['lead(II)','[Pb+2]',2],
+    Ag:['silver','[Ag+]',1], Al:['aluminium','[Al+3]',3], Fe3:['iron(III)','[Fe+3]',3], Ni:['nickel(II)','[Ni+2]',2], Co:['cobalt(II)','[Co+2]',2], Mn:['manganese(II)','[Mn+2]',2], Cr:['chromium(III)','[Cr+3]',3],
+    Sn:['tin(II)','[Sn+2]',2], Cu1:['copper(I)','[Cu+]',1], Hg:['mercury(II)','[Hg+2]',2], Cd:['cadmium','[Cd+2]',2]};
+  const AN = {F:['fluoride','[F-]',1,'F'], Cl:['chloride','[Cl-]',1,'Cl'], Br:['bromide','[Br-]',1,'Br'], I:['iodide','[I-]',1,'I'], OH:['hydroxide','[OH-]',1,'OH'], NO3:['nitrate','[O-][N+](=O)[O-]',1,'NO3'],
+    SO4:['sulfate','[O-]S(=O)(=O)[O-]',2,'SO4'], CO3:['carbonate','[O-]C(=O)[O-]',2,'CO3'], PO4:['phosphate','[O-]P(=O)([O-])[O-]',3,'PO4'], O:['oxide','[O-2]',2,'O'], S:['sulfide','[S-2]',2,'S'], OAc:['ethanoate','CC(=O)[O-]',1,'CH3COO'],
+    NO2:['nitrite','[O-]N=O',1,'NO2'], SO3:['sulfite','[O-]S(=O)[O-]',2,'SO3'], HCO3:['hydrogencarbonate','OC(=O)[O-]',1,'HCO3'], HSO4:['hydrogensulfate','OS(=O)(=O)[O-]',1,'HSO4'], HPO4:['hydrogenphosphate','OP(=O)([O-])[O-]',2,'HPO4'],
+    H2PO4:['dihydrogenphosphate','OP(=O)(O)[O-]',1,'H2PO4'], ClO4:['perchlorate','[O-]Cl(=O)(=O)=O',1,'ClO4'], ClO3:['chlorate','[O-]Cl(=O)=O',1,'ClO3'], ClO:['hypochlorite','[O-]Cl',1,'ClO'], MnO4:['permanganate','[O-][Mn](=O)(=O)=O',1,'MnO4'],
+    CrO4:['chromate','[O-][Cr](=O)(=O)[O-]',2,'CrO4'], Cr2O7:['dichromate','[O-][Cr](=O)(=O)O[Cr](=O)(=O)[O-]',2,'Cr2O7'], C2O4:['oxalate','[O-]C(=O)C(=O)[O-]',2,'C2O4'], SCN:['thiocyanate','[S-]C#N',1,'SCN'], CN:['cyanide','[C-]#N',1,'CN'],
+    HCOO:['methanoate','[O-]C=O',1,'HCOO'], BrO3:['bromate','[O-]Br(=O)=O',1,'BrO3'], IO3:['iodate','[O-]I(=O)=O',1,'IO3'], S2O3:['thiosulfate','[O-]S(=O)(=S)[O-]',2,'S2O3'], PhCOO:['benzoate','[O-]C(=O)c1ccccc1',1,'C6H5COO']};
+  /* which cations each anion forms a known compound with */
+  const G1 = ['Li','Na','K','Rb','Cs'], G1N = G1.concat(['NH4']);
+  const REAL = {
+    F:['Ni','Co','Mn','Cr','Sn','Hg','Cd'], Cl:['Ni','Co','Mn','Cr','Sn','Cu1','Hg','Cd'], Br:['Ni','Co','Mn','Cr','Sn','Cu1','Hg','Cd'], I:['Ni','Co','Mn','Cr','Sn','Cu1','Hg','Cd'],
+    OH:['Ni','Co','Mn','Cr','Cd'], NO3:['Ni','Co','Mn','Cr','Hg','Cd'], SO4:['Ni','Co','Mn','Cr','Sn','Hg','Cd'], CO3:['Ni','Co','Mn','Cd'], PO4:['Cr','Ni','Co','Mn'], O:['Ni','Co','Mn','Cr','Sn','Cu1','Hg','Cd'],
+    S:['Ni','Co','Mn','Sn','Cu1','Hg','Cd'], OAc:['Ni','Co','Mn','Cr','Cd','Hg'],
+    NO2:G1N.concat(['Mg','Ca','Ba','Ag']), SO3:G1N.concat(['Mg','Ca','Sr','Ba','Zn','Pb','Ag']), HCO3:['Na','K','Rb','Cs','NH4'], HSO4:G1N, HPO4:['Na','K','NH4','Mg','Ca','Sr','Ba'], H2PO4:G1N.concat(['Mg','Ca']),
+    ClO4:G1N.concat(['Mg','Ca','Sr','Ba','Zn','Cu2','Pb','Ag','Al','Fe2','Fe3','Ni','Co']), ClO3:G1N.filter(c=>c !== 'NH4').concat(['Mg','Ca','Sr','Ba','Zn','Pb','Ag']), ClO:['Li','Na','K','Ca'],
+    MnO4:G1N.concat(['Mg','Ca','Ba','Zn','Ag']), CrO4:G1N.concat(['Mg','Ca','Sr','Ba','Zn','Pb','Ag','Cu2']), Cr2O7:G1N.concat(['Ag']), C2O4:G1N.concat(['Mg','Ca','Sr','Ba','Zn','Fe2','Cu2','Pb','Ag','Ni','Co','Mn','Fe3']),
+    SCN:G1N.concat(['Ca','Ba','Zn','Pb','Ag','Fe3','Hg','Cu1']), CN:['Li','Na','K','Rb','Cs','Ca','Ba','Zn','Ag','Cu1','Hg','Ni','Pb'], HCOO:G1N.concat(['Mg','Ca','Sr','Ba','Zn','Cu2','Pb','Ni','Co','Mn','Al']),
+    BrO3:G1N.filter(c=>c !== 'NH4').concat(['Mg','Ba','Ag','Pb']), IO3:G1N.concat(['Mg','Ca','Sr','Ba','Zn','Ag','Pb','Cu2']), S2O3:['Li','Na','K','NH4','Ca','Ba','Mg','Pb'], PhCOO:G1N.concat(['Mg','Ca','Zn','Cu2','Ag'])
+  };
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  let k = 0;
+  Object.entries(REAL).forEach(([ak, cats])=>cats.forEach(ck=>{
+    const [cn, csm, cq] = CAT[ck], [anm, asm, aq, afs] = AN[ak];
+    const nm = cn+' '+anm, L = cq*aq/gcd(cq, aq), nc = L/cq, na = L/aq;
+    const csym = ck.replace(/\d$/, ''), poly = /[A-Z].*[A-Z]|\d/.test(afs);
+    const grp = (s, n, isPoly) => n === 1 ? s : (isPoly ? '('+s+')'+n : s+n);
+    const cf = ck === 'NH4' ? grp('NH4', nc, true) : csym + (nc > 1 ? nc : ''), af = grp(afs, na, poly);
+    libAdd('salt', nm, Array(nc).fill(csm).concat(Array(na).fill(asm)).join('.'), pri + (k++), cf + af);
+  }));
+})();
+
 /* written out by hand: [name, SMILES, molecular formula it must build to] */
 const LIB_HAND = {
   drug:[['morphine','CN1CCC23C4C1CC5=C2C(=C(C=C5)O)OC3C(C=C4)O','C17H19NO3'],['codeine','CN1CCC23C4C1CC5=C2C(=C(C=C5)OC)OC3C(C=C4)O','C18H21NO3'],['naloxone','C=CCN1CCC23C4C(=O)CCC2(C1CC5=C3C(=C(C=C5)O)O4)O','C19H21NO4'],
@@ -20592,8 +20786,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 129;
+const VERSION = 130;
 const CHANGELOG = [
+  [130, 'The molecule library passes two thousand: 2083 compounds, every one shown. New are longer and branched chains (to 2,2,3,3-tetramethylbutane, dienes, cycloalkenes, adamantane and cubane), more alcohols, ketones, aldehydes and ethers, thirty more esters and the fruity branched ones (isopentyl ethanoate, the banana), branched, unsaturated and halogenated acids, acid chlorides and anhydrides, amines from primary to tertiary, the heterocycles (pyrrolidine to pteridine, quinoline, carbazole, acridine, purine), substituted pyridines and naphthalenes, over two hundred more two-group benzenes named the IUPAC way, the big ring systems (fluorene, chrysene, perylene, coronene, benzo[a]pyrene), refrigerants and anaesthetics, and nearly three hundred more salts, each one a compound that really exists (permanganates, chromates and dichromates, oxalates, thiocyanates, cyanides, perchlorates, nitrites, sulfites, hydrogen phosphates, and the salts of nickel, cobalt, manganese, chromium, tin, copper(I), mercury and cadmium). Every entry is checked to build on the bench and to draw, every salt\u2019s formula is checked against its structure, and the ring systems against their known formulas. The structure drawings are made as you scroll to them, so the sheet still opens at once.'],
   [129, 'The molecule library shows every compound the bench knows: 1073, where it used to stop at 1000 (the extra 73 are mostly salts, now 171, and a few ions). The All view lists every one of them under its family heading instead of the first eleven and a "show all" button, and the cards off screen are left undrawn until you scroll to them, so it still opens in a moment. Every one of the 1073 builds on the bench and has its structure drawing.'],
   [128, 'Ionic compounds and precipitates, rebuilt. Polyatomic ions are now real ionic partners: a metal ion makes ionic contacts with the charged oxygens of sulfate, carbonate, hydroxide, phosphate, chromate and nitrate, so salts like calcium carbonate, barium sulfate and sodium nitrate form proper ionic solids (dry calcium carbonate comes out at Ca\u2013O 238 pm against a real 236), and they precipitate from solution. The precipitates are set by real solubility products: about forty of them, each with its Ksp, its solubility in g/L and its true colour (white barium sulfate and chalk, pale blue copper(II) hydroxide, rust-brown iron(III) hydroxide, dirty green iron(II) hydroxide, chrome yellow lead chromate, brick red silver chromate, black sulfides), and they settle to the bottom. Hydroxide swaps onto hydrated metal ions to reach them, as on [Cu(H\u2082O)\u2086]\u00b2\u207a. Dissolving now takes in or gives out each salt\u2019s own heat of solution (potassium chloride +17 kJ/mol, calcium chloride \u221281, sodium hydroxide \u221245: the chemistry of hot and cold packs), and the solution card adds a calorimetry line with the temperature change that much water would show, and a line for each solid with its Ksp. Doubly charged lattices no longer collapse: Mg\u2013O 202 pm against a real 210 (it was 171). Each salt dissolving is written up with its own equation and \u0394H. New reactions: barium sulfate, copper(II) hydroxide, iron(III) hydroxide, chalk from solution, a hot pack and a cold pack; the flat bench now sets out the ions of these scenes too, and the course\u2019s precipitation lesson has the new colours to try.'],
   [127, 'A bigger course and more to learn. Twenty-two new lessons, taking the course to 73 lessons in 13 units: orbitals and electron configurations (with box diagrams, and the configuration on the selected-atom card), light and flame tests (heat sodium and copper ions on the bench until they glow their colours), resonance and formal charge, hybrid orbitals, isomers (build both C\u2084H\u2081\u2080 isomers), percentage composition and empirical formulas, the limiting reactant (watch the ammonia run out), concentration and dilution, Hess\u2019s law, entropy and free energy, Le Chatelier\u2019s principle and the Haber process, weak acids, Ka and buffers, titrations (strong and weak curves), oxidation states, electrochemical cells (copper meeting silver ions), naming organic compounds (build them from their names) and polymers (polymerise ethene). A new Unit 13, Identifying compounds, covers mass spectrometry, infrared and NMR with spectra simulated from real molecules, and ends with an unknown to solve. Some steps open Analysis mode on the compound in question. Nineteen new kinds of practice question (configurations, flame tests, formal charge, hybridisation, isomers, limiting reactants, concentration, empirical formulas, Hess\u2019s law, free energy, Le Chatelier, buffers, titrations, oxidation states, cell voltages, naming, mass spectra, infrared and NMR), each with its working; the unit checks draw on them. Learn mode has four new reactions to watch: a bare proton finding water, ammonia meeting hydrogen chloride, a silver chloride precipitate, and copper meeting silver ions.'],
