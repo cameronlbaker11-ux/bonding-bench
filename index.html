@@ -841,6 +841,10 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .step-card .sc-next{padding:6px 13px;border-radius:8px;background:var(--ink);color:#fff;font-weight:600;font-size:12px;border:0;cursor:pointer}
 .step-card .sc-next:hover{transform:translateY(-1px)}
 .l3-bar .l3-step.on,.cam-btn[data-steptoggle].on{background:#F2B034;color:var(--ink);border-color:#E0A020}
+.l3-bar .l3-mix.on{background:#2A7A78;color:#fff;border-color:#226664}
+.l3-mix-spin{display:inline-block;font-style:normal;animation:l3spin 1.2s linear infinite}
+@keyframes l3spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.l3-mix-spin{animation:none}}
 .g-tip{margin:6px 0 0;font-size:11px;color:var(--muted);line-height:1.5}
 .g-lessons{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 6px}
 .g-lessons button{text-align:left;padding:8px 10px;border-radius:9px;border:1px solid var(--hair);background:var(--surface);cursor:pointer;font:inherit}
@@ -5968,7 +5972,7 @@ function wireCardToggles(host, rerender){
    Press ? for the sheet (or open it from either bench's more menu). */
 const KEYS = [
   ['Both benches', [['1 \u2013 0','the tools: move, bond, break, remove, energy, measure, light, field, neutron, catalyst'],['Space','pause or play'],['\u2318/Ctrl Z','undo'],['N','next step, while stepping through'],['Esc','leave Learn mode, close this'],['?','this sheet']]],
-  ['3D bench', [['Drag','turn the view (on an atom: move it)'],['Scroll','zoom'],['Double-click','look at an atom (empty space: see everything)'],['F','fit everything in view'],['Delete','remove the selected atom'],['Shift-click','add five of an element']]],
+  ['3D bench', [['Drag','turn the view (on an atom: move it)'],['Scroll','zoom'],['Double-click','look at an atom (empty space: see everything)'],['F','fit everything in view'],['M','mix: stir the box without breaking anything'],['Delete','remove the selected atom'],['Shift-click','add five of an element']]],
   ['Flat bench', [['[ and ]','turn the selection'],['+ and \u2212','give or take an electron (selected atom)'],['\u2318/Ctrl C, X, V, D','copy, cut, paste, duplicate'],['\u2318/Ctrl A','select everything'],['Delete','remove the selection']]]
 ];
 function toggleKeys(show){
@@ -17065,7 +17069,8 @@ function l3ImfLabel(list){
 }
 /* how hot an atom actually is right now, from its own motion: in three
    dimensions the mean of (1/2)mv^2 is (3/2)kT */
-const l3Temp = a => l3Mass(a)*(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz)/3*298/22000;
+/* an atom's own temperature, from its motion relative to the liquid round it (which is still, unless Mix is stirring it) */
+const l3Temp = a => { const f = a.flow, x = a.vx - (f ? f.x : 0), y = a.vy - (f ? f.y : 0), z = a.vz - (f ? f.z : 0); return l3Mass(a)*(x*x + y*y + z*z)/3*298/22000; };
 
 /* ---------- the physics ---------- */
 /* Every pair of atoms close enough to feel each other (600 pm, where the pair
@@ -17101,9 +17106,49 @@ function l3Pairs(A, reach){
   }
   return out.subarray(0, k);
 }
+/* ---------- Mix: stirring the 3D box ----------
+   Stirring moves the liquid, and the liquid carries the molecules: so the heat
+   bath, which normally holds every atom to a bath at rest, is set flowing. Each
+   molecule (everything joined by a bond of any kind, so a complex or a lump of
+   salt goes too) is dragged towards the flow's velocity at its centre, the same
+   for all its atoms, so no bond is stretched. Layers of the box swirl opposite
+   ways about an axis that turns every couple of seconds, which folds the
+   contents through each other in all three directions, with a gentle drift
+   towards the middle so molecules keep passing close by one another. The bath
+   still sets the temperature, relative to the moving liquid: stirring adds no
+   heat, so a reaction still needs the energy the temperature gives it. It just
+   brings partners together. */
+function l3MixFlow(dt){
+  const A = L3.atoms, flow = new Map(); if(!A.length) return flow;
+  L3.mixT = (L3.mixT || 0) + dt;
+  const B = L3.box || 540, R = B*1.05, W = 0.6;
+  const par = new Map(A.map(a=>[a.id, a.id])), find = x => { while(par.get(x) !== x){ par.set(x, par.get(par.get(x))); x = par.get(x); } return x; };
+  for(const b of L3.bonds){ if(!par.has(b.a) || !par.has(b.b)) continue; const ra = find(b.a), rb = find(b.b); if(ra !== rb) par.set(ra, rb); }
+  const groups = new Map(); for(const a of A){ const r = find(a.id); if(!groups.has(r)) groups.set(r, []); groups.get(r).push(a); }
+  const phase = Math.floor(L3.mixT/3) % 3;               /* stir about y, then x, then z */
+  const ax = ['y','x','z'][phase], u = ax === 'y' ? ['x','z'] : ax === 'x' ? ['y','z'] : ['x','y'];
+  for(const g of groups.values()){
+    let cx = 0, cy = 0, cz = 0; for(const a of g){ cx += a.x; cy += a.y; cz += a.z; }
+    const c = {x:cx/g.length, y:cy/g.length, z:cz/g.length};
+    const p = c[u[0]], q = c[u[1]], h = c[ax], r = Math.hypot(p, q);
+    /* fastest near the axis, still at the walls, and turning the other way in the top and bottom layers */
+    const w = r < R ? W*(1 - (r/R)*(r/R))*Math.cos(Math.PI*h/R) : 0;
+    const v = {x:-c.x*0.05, y:-c.y*0.05, z:-c.z*0.05};
+    v[u[0]] += -w*q; v[u[1]] += w*p;
+    for(const a of g){ flow.set(a.id, v); a.flow = v; }
+  }
+  return flow;
+}
+function l3MixToggle(on){
+  L3.mix = on == null ? !L3.mix : !!on;
+  say(L3.mix ? 'Mixing: the molecules are stirred round the box whole, so new partners keep meeting. Nothing is broken and no heat is added. Press Mix or M again to stop.' : 'Mixing stopped.', 'bench');
+  l3Build();
+}
 function l3Step(dt){
   const A = L3.atoms;
   if(!A.length || !(dt > 0)) return;
+  const mixFlow = L3.mix ? l3MixFlow(dt) : null;
+  if(!mixFlow && L3.mixed){ for(const a of A) a.flow = null; } L3.mixed = !!mixFlow;
   L3.bv = (L3.bv||0) + 1; L3.idx = null;
   /* the Forces tab: friction and heat flow set the bath's grip, bond stiffness
      the springs, and the three interaction sliders scale their forces */
@@ -17480,11 +17525,12 @@ function l3Step(dt){
       if(L3.drag && L3.drag.atom === a) continue;
       /* a freshly built molecule is held tight to the bath for a moment while
          it folds, so the strain of its rough starting shape is not heat */
-      const gm = (a.cool > 0 ? gamma*10 : gamma)*(mts ? 1.6 : 1);
-      const m = l3Mass(a), sig = Math.sqrt(2*gm*kT/(m*h));
-      a.vx += (a.fx/m - gm*a.vx + sig*gauss())*h;
-      a.vy += (a.fy/m + gy - gm*a.vy + sig*gauss())*h;          /* gravity pulls toward the floor */
-      a.vz += (a.fz/m - gm*a.vz + sig*gauss())*h;
+      /* while mixing, the bath flows (see l3MixFlow) and grips a little harder so the molecules follow it */
+      const fl = mixFlow && mixFlow.get(a.id), gm = (a.cool > 0 ? gamma*10 : fl ? Math.max(gamma, 3) : gamma)*(mts ? 1.6 : 1);
+      const m = l3Mass(a), sig = Math.sqrt(2*gm*kT/(m*h)), ux = fl ? fl.x : 0, uy = fl ? fl.y : 0, uz = fl ? fl.z : 0;
+      a.vx += (a.fx/m - gm*(a.vx - ux) + sig*gauss())*h;
+      a.vy += (a.fy/m + gy - gm*(a.vy - uy) + sig*gauss())*h;          /* gravity pulls toward the floor */
+      a.vz += (a.fz/m - gm*(a.vz - uz) + sig*gauss())*h;
       const v = Math.hypot(a.vx, a.vy, a.vz);
       if(v > 3000){ a.vx *= 3000/v; a.vy *= 3000/v; a.vz *= 3000/v; }
       a.x += a.vx*h; a.y += a.vy*h; a.z += a.vz*h;
@@ -20558,6 +20604,7 @@ function l3Build(){
   bar.innerHTML = '<button type="button" class="l3-exit" data-l3="send2d" title="Carry everything here down to the flat bench">Send to 2D</button>'+
     '<span class="l3-dd"><button type="button" data-l3="menu-disp" class="'+(L3.menu === 'disp' ? 'open' : '')+'" aria-expanded="'+(L3.menu === 'disp')+'">Display ▾</button>'+dispMenu+'</span>'+
     '<button type="button" class="l3-step'+(STEP.on ? ' on' : '')+'" data-steptoggle="1" title="Slow reactions down and stop after each step">'+(STEP.on ? 'Stepping ✓' : 'Step through')+'</button>'+
+    '<button type="button" class="l3-mix'+(L3.mix ? ' on' : '')+'" data-l3="mix" title="Stir the box: whole molecules circulate so new partners meet. Nothing is broken. (M)">'+(L3.mix ? '<i class="l3-mix-spin">⟳</i> Mixing' : 'Mix')+'</button>'+
     '<label class="l3-speed" title="How fast time runs on the 3D bench: 0.1x (slow motion) to 3x. Double-click for 1x.">Speed'+
       '<input type="range" id="l3Speed" min="-1" max="0.477" step="0.01" value="'+Math.log10(L3.speed||1).toFixed(2)+'">'+
       '<b id="l3SpeedVal">'+l3SpeedText()+'</b></label>'+
@@ -20576,6 +20623,7 @@ function l3Build(){
     else if(b.dataset.l3 === 'exit') set3D(false);
     else if(b.dataset.l3 === 'send2d') sendTo2D();
     else if(b.dataset.l3 === 'clear'){ L3.menu = null; l3Clear(); l3Build(); }
+    else if(b.dataset.l3 === 'mix') l3MixToggle();
     else if(b.dataset.l3 === 'q'){ L3.showQ = !L3.showQ; l3Build(); }
     else if(b.dataset.l3 === 'view'){ const ks = Object.keys(L3_VIEWS); L3.view = ks[(ks.indexOf(L3.view||'ball')+1)%ks.length]; l3Build(); }
     else if(b.dataset.l3view){ L3.view = b.dataset.l3view; l3Build(); }
@@ -20677,6 +20725,7 @@ function l3Build(){
   cv3.addEventListener('pointerleave', ()=>{ L3.hover = null; atomTip(null); });
   window.addEventListener('keydown', ev=>{
     if(L3.on && /^[0-9]$/.test(ev.key) && !/INPUT|TEXTAREA/.test((ev.target||{}).tagName||'')){ l3SetTool(L3_TOOLS[(+ev.key+9)%10]); ev.preventDefault(); ev.stopImmediatePropagation(); return; }
+    if(L3.on && (ev.key === 'm' || ev.key === 'M') && !ev.metaKey && !ev.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test((ev.target||{}).tagName||'')){ l3MixToggle(); ev.preventDefault(); return; }
     if(!L3.on || !L3.sel) return;
     if(ev.key === 'Delete' || ev.key === 'Backspace'){
       l3Push();
@@ -21223,8 +21272,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 134;
+const VERSION = 135;
 const CHANGELOG = [
+  [135, 'Mix, on the 3D bench (the Mix button in the top bar, or M). It stirs the box the way a stirrer moves a liquid: the heat bath itself flows, swirling in layers that turn opposite ways about an axis that changes every few seconds, with a gentle drift towards the middle, and every molecule is carried along whole, all its atoms at the same speed, so no bond is stretched or shaken apart. The temperature is measured against the moving liquid, so stirring adds no heat: a reaction still needs what the temperature gives it, but partners meet far more often. In tests, three ethene and three hydrogen bromide molecules spread through a large box all reacted within a minute when mixed, against one without.'],
   [134, 'The electric field can be switched off again. On the 3D bench every press with the field tool started a drag, so the click that its tip promised would clear the field never arrived: now a click without dragging switches it off, and so does choosing the field tool again (or pressing 8). On the flat bench a click without a drag switches it off too, the Off button still works, and Clear now resets the field along with everything else.'],
   [133, 'Medicines and natural products: 365, up from 123, and 107 molecules of life, up from 82 (11,201 compounds in all). New medicines include the statins (simvastatin, atorvastatin, rosuvastatin), blood-pressure and heart drugs (lisinopril, metoprolol, valsartan, nifedipine, amiodarone, apixaban), diabetes drugs (sitagliptin, dapagliflozin, pioglitazone), antidepressants and antipsychotics (paroxetine, venlafaxine, bupropion, olanzapine, aripiprazole), anticonvulsants, the opioids and their antidote naltrexone, antibiotics (tetracycline, cefalexin, chloramphenicol, linezolid, clavulanic acid), antivirals (zidovudine, lamivudine, efavirenz, favipiravir), antifungals, antimalarials, cancer drugs (methotrexate, imatinib, temozolomide, bortezomib) and the anaesthetics propofol and desflurane. Natural products: alkaloids (strychnine, papaverine, LSD, DMT, harmine, huperzine A), cannabidiol, flavonoids (EGCG, kaempferol, genistein), lycopene, plant hormones (abscisic acid, indole-3-acetic acid, zeatin), terpenes, aflatoxin, camptothecin and podophyllotoxin. Molecules of life: anandamide, prostaglandin E2, spermine, cortisone, DHEA, cholic acid, inosine and more. Every one is checked against its molecular formula.'],
   [132, 'The molecule library passes ten thousand: 10,935 compounds. Whole families are now generated and named by the IUPAC rules (lowest locants, then alphabetical order, prefixes cited alphabetically, brackets inside parentheses), rather than listed by hand: benzene with two or three substituents (1-bromo-4-chlorobenzene, 4-bromo-2-chloro-1-methylbenzene); phenol, aniline, benzoic acid, benzaldehyde, benzonitrile, benzamide, benzenesulfonic acid, methyl benzoate, benzoyl chloride, benzyl alcohol, acetophenone, phenylacetic acid, benzylamine and phenyl acetate, each with one or two more substituents (2,4-dichlorophenol, methyl 4-nitrobenzoate, [4-(trifluoromethyl)phenyl]methanol); substituted pyridines, thiophenes, furans and naphthalenes; halogenated methanes and chains, halo alcohols and halo acids; every position of the straight-chain alcohols, ketones, amines and thiols; 480 esters; N-substituted amides and amines; and ethers. Each one builds in 3D and draws in the library. Behind it: the structure fingerprint the library uses to drop repeats now refines until it stops changing (it had taken heptadecan-8-ol and -9-ol for the same molecule) and treats a benzene ring the same wherever its double bonds are drawn, which also found two repeats among the old entries. The library is laid out the first time you open it rather than at start-up, so the page loads faster than before even with five times the compounds, and a formula typed into Build looks itself up in an index instead of parsing the whole library.'],
