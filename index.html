@@ -11818,11 +11818,34 @@ const LIB_ORG = {'formaldehyde':'oxygen', 'methanol':'oxygen', 'ethane':'hydroca
 let LIB_ALL = null;
 /* the same fingerprint for a hand-drawn library card */
 function specKey(m){
-  const syms = m.atoms.map(a=>a[0]), chg = m.atoms.map(a=>a[3]||0), n = syms.length, nb = Array.from({length:n}, ()=>[]);
-  (m.bonds||[]).forEach(b=>{ nb[b[0]].push([b[1], b[2]||1]); nb[b[1]].push([b[0], b[2]||1]); });
-  let lab = syms.map((s, i)=>s + (chg[i] || ''));
-  const h = t => { let x = 5381; for(let i=0;i<t.length;i++) x = ((x << 5) + x + t.charCodeAt(i)) | 0; return (x >>> 0).toString(36); };
-  for(let it=0; it<4; it++) lab = lab.map((l, i)=>h(l + '|' + nb[i].map(([j, o])=>o + lab[j]).sort().join(',')));
+  return graphKey(m.atoms.map(a=>a[0]), m.atoms.map(a=>a[3]||0), (m.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1})));
+}
+/* A structure's fingerprint: each atom's label refined from its neighbours'
+   (Weisfeiler-Lehman) until the labels stop splitting further, so the 8- and
+   9-positions of a long chain come out different. The double bonds of an
+   aromatic ring count the same wherever they are drawn: a ring bond between two
+   atoms that each have a double bond within the ring is labelled 'a', which is
+   true of every Kekule structure of benzene, pyridine or naphthalene alike. */
+function graphKey(syms, chg, bl){
+  const n = syms.length, nb = Array.from({length:n}, ()=>[]);
+  bl.forEach((b, i)=>{ nb[b.a].push([b.b, i]); nb[b.b].push([b.a, i]); });
+  /* bridges (bonds in no ring), by Tarjan's low-link */
+  const disc = new Array(n).fill(-1), low = new Array(n).fill(0), bridge = new Set(); let t = 0;
+  for(let r=0;r<n;r++){ if(disc[r] >= 0) continue;
+    const st = [[r, -1, 0]]; disc[r] = low[r] = t++;
+    while(st.length){ const top = st[st.length-1], [v, pe] = top;
+      if(top[2] < nb[v].length){ const [w, ei] = nb[v][top[2]++]; if(ei === pe) continue;
+        if(disc[w] < 0){ disc[w] = low[w] = t++; st.push([w, ei, 0]); } else low[v] = Math.min(low[v], disc[w]); }
+      else { st.pop(); if(st.length){ const u = st[st.length-1][0]; low[u] = Math.min(low[u], low[v]); if(low[v] > disc[u]) bridge.add(pe); } } } }
+  const ringDbl = new Array(n).fill(false);
+  bl.forEach((b, i)=>{ if(b.o === 2 && !bridge.has(i)){ ringDbl[b.a] = true; ringDbl[b.b] = true; } });
+  const bo = bl.map((b, i)=>!bridge.has(i) && ringDbl[b.a] && ringDbl[b.b] && (b.o === 1 || b.o === 2 || b.o === 1.5) ? 'a' : String(b.o));
+  const h = x => { let y = 5381; for(let i=0;i<x.length;i++) y = ((y << 5) + y + x.charCodeAt(i)) | 0; return (y >>> 0).toString(36); };
+  let lab = syms.map((s, i)=>s + (chg[i] || '')), classes = new Set(lab).size;
+  for(let it=0; it<Math.max(4, n); it++){
+    lab = lab.map((l, i)=>h(l + '|' + nb[i].map(([j, ei])=>bo[ei] + lab[j]).sort().join(',')));
+    const c = new Set(lab).size; if(it >= 3 && c === classes) break; classes = c;
+  }
   return n + ':' + lab.slice().sort().join('');
 }
 function libEntries(){
@@ -12085,7 +12108,9 @@ function buildTours(){
     TOURS[k].steps.length+' steps</span></button>').join('');
   el('tours').querySelectorAll('button').forEach(b=>{ b.onclick=()=>startTour(b.dataset.k); });
 }
-const openLib  = () => { el('library').hidden=false; const q = el('libSearch'); if(q){ if(q.value){ q.value = ''; q.dispatchEvent(new Event('input')); } setTimeout(()=>q.focus(), 0); } };
+/* the library is laid out the first time it opens: with ten thousand entries it is not worth doing at start-up */
+let LIB_BUILT = false;
+const openLib  = () => { if(!LIB_BUILT){ LIB_BUILT = true; buildLibrary(); } el('library').hidden=false; const q = el('libSearch'); if(q){ if(q.value){ q.value = ''; q.dispatchEvent(new Event('input')); } setTimeout(()=>q.focus(), 0); } };
 const closeLib = () => { el('library').hidden=true; };
 
 function drawIR(){
@@ -18117,6 +18142,170 @@ const libAdd = (cat, name, sm, pri, f, expect) => {
     libAdd('salt', nm, Array(nc).fill(csm).concat(Array(na).fill(asm)).join('.'), pri + (k++), cf + af);
   }));
 })();
+/* ---------- the library grows to ten thousand ----------
+   Whole families, each named by IUPAC's rules rather than listed by hand: benzene
+   with two or three substituents, the common benzene parents (phenol, aniline,
+   benzoic acid...) with one or two more, substituted pyridines, thiophenes and
+   furans, halogenated chains, more alcohols, ketones, amines and thiols, and the
+   esters, amides, amines and ethers that pair one chain with another. The rules:
+   number for the lowest set of locants; on a tie, the substituent first in
+   alphabetical order gets the lower number; cite prefixes alphabetically,
+   ignoring di-, tri- and tert-. A compound the library already has under another
+   name keeps that name (the library drops the later copy of any structure). */
+(function(){
+  let pri = 5000;
+  const P = ['meth','eth','prop','but','pent','hex','hept','oct','non','dec','undec','dodec','tridec','tetradec','pentadec','hexadec','heptadec','octadec','nonadec','icos'];
+  const C = n => 'C'.repeat(Math.max(0, n));
+  const add = (cat, n, sm) => libAdd(cat, n, sm, pri++);
+  /* substituents cited only as prefixes: name, SMILES as a branch */
+  const SUB = {F:['fluoro','F'], Cl:['chloro','Cl'], Br:['bromo','Br'], I:['iodo','I'], NO2:['nitro','[N+](=O)[O-]'],
+    Me:['methyl','C'], Et:['ethyl','CC'], Pr:['propyl','CCC'], iPr:['propan-2-yl','C(C)C'], Bu:['butyl','CCCC'], tBu:['tert-butyl','C(C)(C)C'],
+    OMe:['methoxy','OC'], OEt:['ethoxy','OCC'], CF3:['trifluoromethyl','C(F)(F)F'], Vi:['ethenyl','C=C'], Ey:['ethynyl','C#C'], SMe:['methylsulfanyl','SC']};
+  const ALL = Object.keys(SUB), FEW = ['F','Cl','Br','I','NO2','Me','OMe','CF3'], HAL = ['F','Cl','Br','I'];
+  const alpha = k => SUB[k][0].replace(/^(tert|sec)-/, '');
+  const COMPOUND = {CF3:1, SMe:1, iPr:1}, PAREN = {CF3:1, SMe:1, iPr:1}, DI = {iPr:1};
+  const MULT = ['', '', 'di', 'tri', 'tetra'], MULTB = ['', '', 'bis', 'tris', 'tetrakis'];
+  /* prefixes with locants: [[locant, key]...] -> "2,4-dichloro-1-methyl" */
+  function prefixStr(loc, noLoc){
+    const by = {}; loc.forEach(([l, k])=>(by[k] = by[k] || []).push(l));
+    return Object.keys(by).sort((a, b)=>alpha(a) < alpha(b) ? -1 : 1).map(k=>{
+      const ls = by[k].sort((x, y)=>x - y), m = ls.length, nm = SUB[k][0];
+      const word = m === 1 ? (PAREN[k] ? '('+nm+')' : nm) : COMPOUND[k] ? (DI[k] ? MULT[m] : MULTB[m])+'('+nm+')' : /-/.test(nm) ? MULT[m]+'-'+nm : MULT[m]+nm;
+      return (noLoc ? '' : ls.join(',')+'-')+word; }).join('-');
+  }
+  /* the alphabetical tie-break: locants read off in the order the prefixes are cited */
+  const citeOrder = loc => { const by = {}; loc.forEach(([l, k])=>(by[k] = by[k] || []).push(l));
+    return Object.keys(by).sort((a, b)=>alpha(a) < alpha(b) ? -1 : 1).flatMap(k=>by[k].sort((x, y)=>x - y)); };
+  const lexLess = (a, b) => { for(let i=0;i<Math.min(a.length, b.length);i++) if(a[i] !== b[i]) return a[i] < b[i]; return a.length < b.length; };
+  /* best numbering of a ring of size N: subs is {pos:key}; fixed = position that must be 1 (or null) */
+  function ringNumber(N, subs, fixed){
+    let best = null;
+    const starts = fixed == null ? [...Array(N).keys()] : [fixed];
+    for(const s of starts) for(const d of [1, -1]){
+      const loc = Object.keys(subs).map(p=>[((+p - s)*d % N + N) % N + 1, subs[p]]);
+      const set = loc.map(x=>x[0]).sort((a, b)=>a - b), cite = citeOrder(loc);
+      if(!best || lexLess(set, best.set) || (set.join() === best.set.join() && lexLess(cite, best.cite))) best = {loc, set, cite};
+    }
+    return best.loc;
+  }
+  const br = s => s ? '('+s+')' : '';
+  /* a six-membered aromatic ring, atom 0 first; subs {pos:key}, extra {pos:smiles} */
+  function ring6(first, subs, extra){
+    let s = ''; for(let i=0;i<6;i++){ const g = extra && extra[i] != null ? extra[i] : subs[i] ? SUB[subs[i]][1] : '';
+      const a = i === 0 ? first : 'c'; s += a + (i === 0 ? '1' : i === 5 ? '1' : '') + br(g); }
+    return s;
+  }
+  function ring5(first, subs){
+    let s = ''; for(let i=0;i<5;i++){ const g = subs[i] ? SUB[subs[i]][1] : ''; s += (i === 0 ? first : 'c') + (i === 0 || i === 4 ? '1' : '') + br(g); }
+    return s;
+  }
+  const catOf = keys => keys.every(k=>HAL.includes(k)) ? 'halogen' : keys.includes('NO2') ? 'nitrogen' : 'aromatic';
+  /* 1. benzene with two substituents (any of 17), and three (of 8) */
+  const benz = subs => {
+    const ks = Object.values(subs);
+    const loc = ringNumber(6, subs, null);
+    const name = prefixStr(loc, ks.length === 1)+'benzene';
+    add(catOf(ks), name, ring6('c', subs));
+  };
+  ALL.forEach(k=>benz({0:k}));
+  for(let i=0;i<ALL.length;i++) for(let j=i;j<ALL.length;j++) for(const p of [1, 2, 3]) benz({0:ALL[i], [p]:ALL[j]});
+  for(const pat of [[0, 1, 2], [0, 1, 3], [0, 2, 4]]) for(const a of FEW) for(const b of FEW) for(const c of FEW) benz({[pat[0]]:a, [pat[1]]:b, [pat[2]]:c});
+  /* 2. the benzene parents, each with one more substituent (of 17) or two (of 8) */
+  /* a substituted phenyl inside a name: (4-chlorophenyl), or [2-(trifluoromethyl)phenyl] when it already holds brackets */
+  const enc = s => /\(/.test(s) ? '['+s+'phenyl]' : '('+s+'phenyl)';
+  const PARENTS = [
+    ['O', 'phenol', 'oxygen', s=>s+'phenol'], ['N', 'aniline', 'nitrogen', s=>s+'aniline'], ['C(=O)O', 'benzoic acid', 'acid', s=>s+'benzoic acid'],
+    ['C=O', 'benzaldehyde', 'oxygen', s=>s+'benzaldehyde'], ['C#N', 'benzonitrile', 'nitrogen', s=>s+'benzonitrile'], ['C(N)=O', 'benzamide', 'nitrogen', s=>s+'benzamide'],
+    ['S(=O)(=O)O', 'benzenesulfonic acid', 'acid', s=>s+'benzenesulfonic acid'], ['C(=O)OC', 'methyl benzoate', 'acid', s=>'methyl '+s+'benzoate'],
+    ['C(=O)Cl', 'benzoyl chloride', 'acid', s=>s+'benzoyl chloride'], ['CO', 'phenylmethanol', 'oxygen', s=>enc(s)+'methanol'],
+    ['C(C)=O', 'acetophenone', 'oxygen', s=>'1-'+enc(s)+'ethan-1-one'], ['CC(=O)O', 'phenylacetic acid', 'acid', s=>'2-'+enc(s)+'acetic acid'],
+    ['CN', 'benzylamine', 'nitrogen', s=>enc(s)+'methanamine'], ['OC(C)=O', 'phenyl acetate', 'acid', s=>s+'phenyl acetate']];
+  const parent = (P0, subs) => { const loc = ringNumber(6, subs, 0); add(P0[2], P0[3](prefixStr(loc)), ring6('c', subs, {0:P0[0]})); };
+  for(const P0 of PARENTS){
+    for(const k of ALL) for(const p of [1, 2, 3]) parent(P0, {[p]:k});
+    for(const [p, q] of [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4]]) for(const a of FEW) for(const b of FEW) parent(P0, {[p]:a, [q]:b});
+  }
+  /* 3. pyridines (N is 1), thiophenes, furans and naphthalenes */
+  const pyr = subs => { const loc = ringNumber(6, subs, 0); add('nitrogen', prefixStr(loc)+'pyridine', ring6('n', subs)); };
+  for(const k of ALL) for(const p of [1, 2, 3]) pyr({[p]:k});
+  for(const [p, q] of [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4]]) for(const a of FEW) for(const b of FEW) pyr({[p]:a, [q]:b});
+  for(const [het, nm] of [['s', 'thiophene'], ['o', 'furan']]){
+    const f5 = subs => { const loc = ringNumber(5, subs, 0); add(het === 's' ? 'nitrogen' : 'aromatic', prefixStr(loc)+nm, ring5(het, subs)); };
+    for(const k of ALL) for(const p of [1, 2]) f5({[p]:k});
+    for(const [p, q] of [[1, 2], [1, 3], [1, 4], [2, 3]]) for(const a of FEW) for(const b of FEW) f5({[p]:a, [q]:b});
+  }
+  for(const k of ALL){ add('aromatic', prefixStr([[1, k]])+'naphthalene', 'c1('+SUB[k][1]+')cccc2ccccc12'); add('aromatic', prefixStr([[2, k]])+'naphthalene', 'c1('+SUB[k][1]+')ccc2ccccc2c1'); }
+  /* 4. halogenated chains: up to four halogens on methane, two on longer chains */
+  const multi = (n, list) => { const subs = {}; list.forEach(([p, k])=>(subs[p] = subs[p] || []).push(k)); return subs; };
+  const haloName = (n, list, parentName, fixedOne) => {
+    let best = null;
+    for(const d of fixedOne ? [1] : [1, -1]){
+      const loc = list.map(([p, k])=>[d === 1 ? p : n + 1 - p, k]);
+      const set = loc.map(x=>x[0]).sort((a, b)=>a - b), cite = citeOrder(loc);
+      if(!best || lexLess(set, best.set) || (set.join() === best.set.join() && lexLess(cite, best.cite))) best = {loc, set, cite};
+    }
+    const noLoc = n === 1 || (n === 2 && !fixedOne && list.length === 1);
+    return prefixStr(best.loc, noLoc)+parentName;
+  };
+  const chainSmL = (n, list, head, tail) => { const subs = multi(n, list); let s = head || ''; for(let i=1;i<=n;i++) s += 'C'+(subs[i] || []).map(k=>br(SUB[k][1])).join(''); return s + (tail || ''); };
+  /* methane: every mix of up to four halogens */
+  const combos = (arr, m, from = 0) => m === 0 ? [[]] : arr.slice(from).flatMap((x, i)=>combos(arr, m - 1, from + i).map(r=>[x].concat(r)));
+  for(let m=1;m<=4;m++) combos(HAL, m).forEach(cs=>add('halogen', haloName(1, cs.map(k=>[1, k]), 'methane'), chainSmL(1, cs.map(k=>[1, k]))));
+  for(let n=2;n<=8;n++){
+    const ane = P[n-1]+'ane';
+    for(const k of HAL) for(let p=1;p<=Math.ceil(n/2);p++) add('halogen', haloName(n, [[p, k]], ane), chainSmL(n, [[p, k]]));
+    if(n <= 6) for(let i=0;i<HAL.length;i++) for(let j=i;j<HAL.length;j++) for(let p=1;p<=n;p++) for(let q=p;q<=n;q++){
+      if(p === q && (p > 1 && p < n) && false) continue;
+      const list = [[p, HAL[i]], [q, HAL[j]]];
+      add('halogen', haloName(n, list, ane), chainSmL(n, list));
+      if(HAL[i] !== HAL[j] && p !== q){ const l2 = [[p, HAL[j]], [q, HAL[i]]]; add('halogen', haloName(n, l2, ane), chainSmL(n, l2)); }
+    }
+  }
+  /* halogenated alcohols and acids: the OH or COOH carbon is 1 */
+  for(let n=2;n<=6;n++) for(const k of HAL) for(let p=2;p<=n;p++){
+    add('halogen', haloName(n, [[p, k]], P[n-1]+'an-1-ol', true), chainSmL(n, [[p, k]], 'O'));
+    add('acid', haloName(n, [[p, k]], n === 2 ? 'acetic acid' : P[n-1]+'anoic acid', true), 'OC(=O)'+chainSmL(n - 1, [[p - 1, k]]));
+  }
+  /* 5. every position on the straight chains */
+  for(let n=3;n<=20;n++) for(let p=1;p<=Math.ceil(n/2);p++){
+    add('oxygen', P[n-1]+'an-'+p+'-ol', C(p-1)+'C(O)'+C(n-p));
+    if(p > 1) add('oxygen', P[n-1]+'an-'+p+'-one', C(p-1)+'C(=O)'+C(n-p));
+    if(n <= 14) add('nitrogen', P[n-1]+'an-'+p+'-amine', C(p-1)+'C(N)'+C(n-p));
+    if(n <= 12) add('nitrogen', P[n-1]+'ane-'+p+'-thiol', C(p-1)+'C(S)'+C(n-p));
+  }
+  for(let n=2;n<=20;n++){ add('nitrogen', P[n-1]+'anenitrile', C(n-1)+'C#N'); add('oxygen', P[n-1]+'anal', C(n-1)+'C=O'); add('acid', P[n-1]+'anoic acid', C(n-1)+'C(=O)O'); }
+  for(let n=4;n<=12;n++){ add('acid', '2-methyl'+P[n-1]+'anoic acid', C(n-2)+'C(C)C(=O)O'); if(n >= 5) add('acid', '3-methyl'+P[n-1]+'anoic acid', C(n-3)+'C(C)CC(=O)O'); add('oxygen', '2-methyl'+P[n-1]+'an-1-ol', C(n-2)+'C(C)CO'); if(n >= 5) add('oxygen', '3-methyl'+P[n-1]+'an-1-ol', C(n-3)+'C(C)CCO'); }
+  for(let n=2;n<=12;n++){ add('oxygen', P[n-1]+'ane-1,'+n+'-diol', 'O'+C(n)+'O'); if(n >= 3) add('acid', P[n-1]+'anedioic acid', 'OC(=O)'+C(n-2)+'C(=O)O'); add('nitrogen', P[n-1]+'ane-1,'+n+'-diamine', 'N'+C(n)+'N'); }
+  /* 6. esters: sixteen alcohols with twenty acids */
+  const ALK = [['methyl','C'],['ethyl','CC'],['propyl','CCC'],['butyl','CCCC'],['pentyl','CCCCC'],['hexyl','CCCCCC'],['heptyl','CCCCCCC'],['octyl','CCCCCCCC'],['nonyl','CCCCCCCCC'],['decyl','CCCCCCCCCC'],
+    ['propan-2-yl','C(C)C'],['2-methylpropyl','CC(C)C'],['butan-2-yl','C(C)CC'],['tert-butyl','C(C)(C)C'],['3-methylbutyl','CCC(C)C'],['benzyl','Cc1ccccc1'],['phenyl','c1ccccc1'],['ethenyl','C=C'],['prop-2-en-1-yl','CC=C'],['cyclohexyl','C1CCCCC1']];
+  const ACY = [['formate','C(=O)'],['acetate','C(C)=O'],['propanoate','C(=O)CC'],['butanoate','C(=O)CCC'],['pentanoate','C(=O)CCCC'],['hexanoate','C(=O)CCCCC'],['heptanoate','C(=O)CCCCCC'],['octanoate','C(=O)CCCCCCC'],
+    ['nonanoate','C(=O)CCCCCCCC'],['decanoate','C(=O)CCCCCCCCC'],['dodecanoate','C(=O)CCCCCCCCCCC'],['tetradecanoate','C(=O)CCCCCCCCCCCCC'],['hexadecanoate','C(=O)CCCCCCCCCCCCCCC'],['octadecanoate','C(=O)CCCCCCCCCCCCCCCCC'],
+    ['benzoate','C(=O)c1ccccc1'],['2-methylpropanoate','C(=O)C(C)C'],['3-methylbutanoate','C(=O)CC(C)C'],['prop-2-enoate','C(=O)C=C'],['2-methylprop-2-enoate','C(=O)C(C)=C'],['2-chloroacetate','C(=O)CCl'],
+    ['2-phenylacetate','C(=O)Cc1ccccc1'],['but-2-enoate','C(=O)C=CC'],['2-hydroxypropanoate','C(=O)C(C)O'],['cyclohexanecarboxylate','C(=O)C1CCCCC1']];
+  for(const [an, as] of ALK) for(const [cn, cs] of ACY) add('acid', an+' '+cn, cs.replace(/^C\(=O\)/, 'O=C(O'+as+')').replace(/^C\(C\)=O$/, 'CC(=O)O'+as));
+  /* 7. amides, amines and ethers that join two chains */
+  const RN = [['methyl','C'],['ethyl','CC'],['propyl','CCC'],['butyl','CCCC'],['phenyl','c1ccccc1'],['propan-2-yl','C(C)C'],['benzyl','Cc1ccccc1'],['cyclohexyl','C1CCCCC1']];
+  const AMI = [['formamide','C=O',''],['acetamide','CC(=O)',''],['propanamide','CCC(=O)',''],['butanamide','CCCC(=O)',''],['pentanamide','CCCCC(=O)',''],['hexanamide','CCCCCC(=O)',''],['benzamide','c1ccc(cc1)C(=O)',''],['2-methylpropanamide','CC(C)C(=O)','']];
+  for(const [am, head] of AMI){
+    const h = am === 'formamide' ? 'O=C' : head;
+    for(const [r, rs] of RN) add('nitrogen', 'N-'+(/-/.test(r) ? '('+r+')' : r)+am, h+'N'+rs);
+    for(const [r, rs] of RN.slice(0, 4)) add('nitrogen', 'N,N-di'+r+am, h+'N('+rs+')'+rs);
+    add('nitrogen', 'N-ethyl-N-methyl'+am, h+'N(C)CC');
+  }
+  /* the longer chain is the parent: N-substituents no longer than it, and none on a ring (that would be named from the ring) */
+  const RA = [['methyl','C',1],['ethyl','CC',2],['propyl','CCC',3],['butyl','CCCC',4],['(propan-2-yl)','C(C)C',3]];
+  for(let n=1;n<=8;n++){ const amine = n === 1 ? 'methanamine' : P[n-1]+'an-1-amine', ch = C(n);
+    for(const [r, rs, L] of RA) if(L <= n) add('nitrogen', 'N-'+r+amine, ch+'N'+rs);
+    for(const [r, rs, L] of RA.slice(0, 4)) if(L <= n) add('nitrogen', 'N,N-di'+r+amine, ch+'N('+rs+')'+rs);
+    if(n >= 2) add('nitrogen', 'N-ethyl-N-methyl'+amine, ch+'N(C)CC');
+  }
+  const OXY = [['methoxy','C',1],['ethoxy','CC',2],['propoxy','CCC',3],['butoxy','CCCC',4],['pentyloxy','CCCCC',5],['(propan-2-yl)oxy','C(C)C',3],['tert-butoxy','C(C)(C)C',4]];
+  for(let n=2;n<=10;n++) for(const [o, os, L] of OXY) for(let p=1;p<=Math.ceil(n/2);p++){
+    if(L > n || (L === n && p > 1)) continue;
+    const nm = (n === 2 ? '' : p+'-')+(/^\(/.test(o) && n > 2 ? '['+o+']' : o)+P[n-1]+'ane'; add('oxygen', nm, C(p-1)+'C(O'+os+')'+C(n-p));
+  }
+})();
 
 /* written out by hand: [name, SMILES, molecular formula it must build to] */
 const LIB_HAND = {
@@ -18183,6 +18372,14 @@ Object.keys(L3_ALIAS).forEach(k=>{ if(L3_ALIAS[k] === k || !L3_LIB[L3_ALIAS[k]])
    not matter, so "pentan-2-ol", "Pentan 2 ol" and "IRON(III) SULFATE" all work */
 let LIB_NORM = null;
 const libNormKey = t => String(t).toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+/* library compounds by molecular formula, worked out once: with ten thousand
+   entries a formula typed into Build must not parse them all every time */
+let LIB_BYF = null;
+function libByFormula(f){
+  if(!LIB_BYF){ LIB_BYF = new Map(); Object.keys(L3_LIB).forEach(k=>{ let x; try{ x = benchFormula(l3SmilesCounts(L3_LIB[k])); }catch(e){ return; } if(!LIB_BYF.has(x)) LIB_BYF.set(x, []); LIB_BYF.get(x).push(k); }); }
+  return LIB_BYF.get(f) || [];
+}
+const libIsomerList = hits => hits.length <= 4 ? hits.join(' or ') : hits.slice(0, 3).join(', ')+' or '+(hits.length - 3)+' other isomers';
 function libLookup(key){
   if(L3_ALIAS[key]) return L3_ALIAS[key];
   if(L3_LIB[key]) return key;
@@ -18242,12 +18439,7 @@ function ionTyped(str){
 }
 function smilesKey(sm){
   let g; try{ g = l3SmilesGraph(sm); }catch(e){ return null; }
-  const n = g.syms.length, nb = Array.from({length:n}, ()=>[]);
-  g.bl.forEach(b=>{ nb[b.a].push([b.b, b.o]); nb[b.b].push([b.a, b.o]); });
-  let lab = g.syms.map((s, i)=>s + (g.chg[i] || ''));
-  const h = t => { let x = 5381; for(let i=0;i<t.length;i++) x = ((x << 5) + x + t.charCodeAt(i)) | 0; return (x >>> 0).toString(36); };
-  for(let it=0; it<4; it++) lab = lab.map((l, i)=>h(l + '|' + nb[i].map(([j, o])=>o + lab[j]).sort().join(',')));
-  return n + ':' + lab.slice().sort().join('');
+  return graphKey(g.syms, g.chg, g.bl);
 }
 /* SMILES to atoms and bonds: atoms (C, [nH], [Na+]), bonds (- = # :), branches in
    brackets, ring closures by digit, and lowercase aromatic rings, which are given
@@ -18645,11 +18837,10 @@ function l3BuildAny(str){
   if(counts.D || counts.T) return l3BuildFormula(str);
   /* a formula that belongs to a compound in the library builds that compound */
   const f = benchFormula(counts);
-  const hit = Object.keys(L3_LIB).find(k=>{ try{ return benchFormula(l3SmilesCounts(L3_LIB[k])) === f; } catch(e){ return false; } });
+  const hits = libByFormula(f), hit = hits[0];
   if(hit){
-    const others = Object.keys(L3_LIB).filter(k=>k !== hit && (()=>{ try{ return benchFormula(l3SmilesCounts(L3_LIB[k])) === f; } catch(e){ return false; } })());
     const made = l3BuildSmiles(L3_LIB[hit], hit);
-    if(others.length) say(f+' could be '+[hit].concat(others).join(' or ')+': built '+hit+'. Type the name for another.','bench');
+    if(hits.length > 1) say(f+' could be '+libIsomerList(hits)+': built '+hit+'. Type the name for another.','bench');
     return made;
   }
   const made = l3BuildFormula(str);
@@ -18671,7 +18862,6 @@ function buildCompound2D(str, ox, oy){
   str = String(str||'').trim(); if(!str) return null;
   const key = str.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
   let graph = null, label = null, note = '';
-  const libOf = k => { try{ return benchFormula(l3SmilesCounts(L3_LIB[k])); } catch(e){ return null; } };
   const ion = ionTyped(str);
   if(ion && ion.err){ say(ion.err,'bench'); return null; }
   const name = ion ? null : libLookup(key), card = ion || name ? null : LIBRARY.find(m=>m.n.toLowerCase() === key);
@@ -18686,11 +18876,11 @@ function buildCompound2D(str, ox, oy){
       /* deuterium and tritium count as hydrogen for the match, then get their nuclei */
       const nD = counts.D || 0, nT = counts.T || 0, c2 = Object.assign({}, counts);
       if(nD || nT){ c2.H = (c2.H||0) + nD + nT; delete c2.D; delete c2.T; }
-      const f = benchFormula(c2), hits = Object.keys(L3_LIB).filter(k=>libOf(k) === f);
+      const f = benchFormula(c2), hits = libByFormula(f);
       if(hits.length){ graph = l3SmilesGraph(L3_LIB[hits[0]]); label = hits[0];
         let d = nD, t = nT; graph.syms.forEach((s2,k)=>{ if(s2 === 'H'){ if(t > 0){ graph.iso[k] = 3; t--; } else if(d > 0){ graph.iso[k] = 2; d--; } } });
         if(nD || nT){ label = null; note = ' Made with '+(nD ? nD+' deuterium' : '')+(nD && nT ? ' and ' : '')+(nT ? nT+' tritium' : '')+' in place of hydrogen.'; }
-        if(hits.length > 1) note += ' '+f+' could be '+hits.join(' or ')+': type the name for another.'; }
+        if(hits.length > 1) note += ' '+f+' could be '+libIsomerList(hits)+': type the name for another.'; }
       else {
         const plan = l3BuildFormula(str, true);
         if(plan){
@@ -20909,8 +21099,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 131;
+const VERSION = 132;
 const CHANGELOG = [
+  [132, 'The molecule library passes ten thousand: 10,935 compounds. Whole families are now generated and named by the IUPAC rules (lowest locants, then alphabetical order, prefixes cited alphabetically, brackets inside parentheses), rather than listed by hand: benzene with two or three substituents (1-bromo-4-chlorobenzene, 4-bromo-2-chloro-1-methylbenzene); phenol, aniline, benzoic acid, benzaldehyde, benzonitrile, benzamide, benzenesulfonic acid, methyl benzoate, benzoyl chloride, benzyl alcohol, acetophenone, phenylacetic acid, benzylamine and phenyl acetate, each with one or two more substituents (2,4-dichlorophenol, methyl 4-nitrobenzoate, [4-(trifluoromethyl)phenyl]methanol); substituted pyridines, thiophenes, furans and naphthalenes; halogenated methanes and chains, halo alcohols and halo acids; every position of the straight-chain alcohols, ketones, amines and thiols; 480 esters; N-substituted amides and amines; and ethers. Each one builds in 3D and draws in the library. Behind it: the structure fingerprint the library uses to drop repeats now refines until it stops changing (it had taken heptadecan-8-ol and -9-ol for the same molecule) and treats a benzene ring the same wherever its double bonds are drawn, which also found two repeats among the old entries. The library is laid out the first time you open it rather than at start-up, so the page loads faster than before even with five times the compounds, and a formula typed into Build looks itself up in an index instead of parsing the whole library.'],
   [131, 'Oxidising acids. Copper still sits in hydrochloric acid untouched (its +0.34 V is beyond what H⁺ can take), but now nitric acid dissolves it: the nitrate takes the electrons itself, the copper goes into solution as Cu²⁺ and brown NO₂ comes off, about four nitric acids used per copper, as in Cu + 4HNO₃ → Cu(NO₃)₂ + 2NO₂ + 2H₂O. Silver and mercury go the same way. Gold and platinum need aqua regia (nitric plus hydrochloric acid: chloride holds their ions and drags their potential down). Tungsten, sealed under its oxide film, needs hydrofluoric plus nitric acid. Three new reactions to try (Copper + nitric acid, Gold in aqua regia, Tungsten in HF + nitric). Analysis mode now says when a metal will not dissolve in an acid and why, and predicts the nitric acid, aqua regia and HF reactions. The reactivity series lesson gains a step on oxidising acids, and Learn explains them. Fixes: nitric acid was being treated as a weak acid (its drawn N⁺–O⁻ was counted as a proton already lost), so nitric acid molecules passed protons back and forth among themselves; oxoacid formulas are written HNO₃ and H₃PO₄, not NHO₃ and PH₃O₄; a sodium nitride quiz no longer offers “NaN”.'],
   [130, 'The molecule library passes two thousand: 2083 compounds, every one shown. New are longer and branched chains (to 2,2,3,3-tetramethylbutane, dienes, cycloalkenes, adamantane and cubane), more alcohols, ketones, aldehydes and ethers, thirty more esters and the fruity branched ones (isopentyl ethanoate, the banana), branched, unsaturated and halogenated acids, acid chlorides and anhydrides, amines from primary to tertiary, the heterocycles (pyrrolidine to pteridine, quinoline, carbazole, acridine, purine), substituted pyridines and naphthalenes, over two hundred more two-group benzenes named the IUPAC way, the big ring systems (fluorene, chrysene, perylene, coronene, benzo[a]pyrene), refrigerants and anaesthetics, and nearly three hundred more salts, each one a compound that really exists (permanganates, chromates and dichromates, oxalates, thiocyanates, cyanides, perchlorates, nitrites, sulfites, hydrogen phosphates, and the salts of nickel, cobalt, manganese, chromium, tin, copper(I), mercury and cadmium). Every entry is checked to build on the bench and to draw, every salt\u2019s formula is checked against its structure, and the ring systems against their known formulas. The structure drawings are made as you scroll to them, so the sheet still opens at once.'],
   [129, 'The molecule library shows every compound the bench knows: 1073, where it used to stop at 1000 (the extra 73 are mostly salts, now 171, and a few ions). The All view lists every one of them under its family heading instead of the first eleven and a "show all" button, and the cards off screen are left undrawn until you scroll to them, so it still opens in a moment. Every one of the 1073 builds on the bench and has its structure drawing.'],
@@ -25052,7 +25243,7 @@ function start(data){
   setInterval(()=>{ dirty=true; }, 500);
 
   buildFullTable(); renderSlots();
-  buildFragments(); buildLibrary(); buildTours(); loadGoals(); renderGoals(); renderVersions(); renderModes();
+  buildFragments(); buildTours(); loadGoals(); renderGoals(); renderVersions(); renderModes();
   el('identify').onclick=identify;
   el('polyBtn').onclick=polymerise;
   el('mechs').innerHTML = Object.keys(MECHANISMS).map(k=>
