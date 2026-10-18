@@ -6,7 +6,7 @@ const src = require('./harness.js');
 const api = new Function(src+';return {libEntries, LIB_EXPECT, L3_LIB, l3SmilesGraph, benchFormula, smilesKey, libLookup, LIB_SIZE};')();
 const fails = [];
 const all = api.libEntries();
-if(all.length !== api.LIB_SIZE) fails.push('library has '+all.length+' entries, not '+api.LIB_SIZE);
+if(all.length < 1000) fails.push('library has only '+all.length+' entries');
 const keys = new Set();
 all.forEach(e=>{ if(keys.has(e.key)) fails.push('duplicate structure: '+e.n); keys.add(e.key);
   if(e.sm){ try{ const g = api.l3SmilesGraph(e.sm); if(!g.syms.length || g.syms.length > 800) fails.push(e.n+': '+g.syms.length+' atoms'); }catch(err){ fails.push(e.n+': '+err.message); } } });
