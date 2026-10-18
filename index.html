@@ -4281,6 +4281,8 @@ cv.addEventListener('pointermove', ev=>{
     link.plan = t&&from ? bondPlan(from,t) : null;
   }
   if(fieldDrag){
+    if(Math.hypot(p.x-fieldDrag.x, p.y-fieldDrag.y) < 6 && !fieldDrag.moved) return;
+    fieldDrag.moved = true;
     field.x=clamp((p.x-fieldDrag.x)/220,-2.5,2.5);
     field.y=clamp((p.y-fieldDrag.y)/220,-2.5,2.5);
   }
@@ -4364,8 +4366,11 @@ function endPointer(ev){
     link=null;
   }
   if(fieldDrag){
-    fieldDrag=null; renderToolBar();
-    if(fieldMag()) say('Field applied \u2014 ions drift along it, dipoles swing into line.','field');
+    const fieldDrag0 = fieldDrag; fieldDrag=null;
+    /* a click without a real drag switches the field off */
+    if(!fieldDrag0.moved){ const was = field.x || field.y; field.x = 0; field.y = 0; if(was) say('Field removed.','field'); }
+    else say('Field applied \u2014 ions drift along it, dipoles swing into line. Click without dragging to switch it off.','field');
+    renderToolBar();
   }
 }
 cv.addEventListener('pointerup', endPointer);
@@ -11605,6 +11610,7 @@ function clearBench(){
   atoms.forEach(a=>{ if(!a.dying) a.dying=0.0001; });
   bonds.length=0; flyers.length=0; hbonds.length=0; photons.length=0;
   selection.clear(); selectedId=null; enthalpy=0; lastDH=0; measures.length=0;
+  field.x = 0; field.y = 0; if(tool === 'field') renderToolBar();
   resetReactions();
   dirty=true;
 }
@@ -20421,7 +20427,7 @@ function l3PanelMode(on){
 const L3_TOOLS = ['move','bond','break','remove','spark','measure','photon','field','neutron','catalyst'];
 const L3_TIPS = {move:'Move atoms, turn the view', bond:'Force a bond: click two atoms', break:'Break a bond: click it',
   remove:'Remove an atom', spark:'Add energy where you click', measure:'Measure: two atoms for a distance, three for an angle',
-  photon:'Shine a light: one photon at the lamp\u2019s wavelength', field:'Electric field: drag its direction, click to clear',
+  photon:'Shine a light: one photon at the lamp\u2019s wavelength', field:'Electric field: drag its direction; click, or press 8 again, to switch it off',
   neutron:'Fire a neutron at an atom', catalyst:'Catalyst patch: click to place, click it again to lift'};
 function l3BuildTools(){
   const wrap = el('l3tools'); if(!wrap) return;
@@ -20440,6 +20446,8 @@ function l3BuildTools(){
   };
 }
 function l3SetTool(k){
+  /* choosing the field tool again while a field is on switches it off */
+  if(k === 'field' && L3.tool === 'field' && L3.field){ L3.field = null; say('Field off.','field'); }
   L3.tool = k; L3.pend = null; if(k !== 'measure') L3.measure = [];
   l3Canvas().style.cursor = k==='move' ? 'grab' : 'crosshair';
   l3BuildTools(); L3.dirty = true;
@@ -20635,7 +20643,7 @@ function l3Build(){
     if(L3.drag.fieldFrom){
       const fx0 = sx - L3.drag.fieldFrom.x, fy0 = sy - L3.drag.fieldFrom.y, len = Math.hypot(fx0, fy0);
       if(len > 12){ const m = l3Unproject(fx0/len, fy0/len, 1); const n2 = Math.hypot(m.x, m.y, m.z)||1, E = Math.min(len, 260)*120;
-        L3.field = {x:m.x/n2*E, y:m.y/n2*E, z:m.z/n2*E, len}; }
+        L3.field = {x:m.x/n2*E, y:m.y/n2*E, z:m.z/n2*E, len}; L3.drag.aimed = true; }
       return;
     }
     if(L3.drag.tool && L3.tool !== 'move' && L3.tool !== 'measure'){ L3.yaw += dx*0.008; L3.pitch = clamp(L3.pitch + dy*0.008, -1.45, 1.45); return; }
@@ -20647,7 +20655,8 @@ function l3Build(){
       L3.yaw += dx*0.008; L3.pitch = clamp(L3.pitch + dy*0.008, -1.45, 1.45);
     }
   });
-  const up = ()=>{ if(L3.drag && L3.drag.fieldFrom && !L3.field) say('Field off.','field'); else if(L3.drag && L3.drag.fieldFrom && L3.field) say('Field on along your drag.','field'); L3.drag = null; };
+  /* a drag aims the field; a click without one switches it off, as the tool's tip says */
+  const up = ()=>{ if(L3.drag && L3.drag.fieldFrom){ if(!L3.drag.aimed){ const was = !!L3.field; L3.field = null; L3.dirty = true; say(was ? 'Field off.' : 'Drag across the box to switch on a field.','field'); } else say('Field on along your drag. Click anywhere to switch it off.','field'); } L3.drag = null; };
   cv3.addEventListener('pointerup', up); cv3.addEventListener('pointercancel', up);
   /* never so close that the front of the box reaches the camera */
   cv3.addEventListener('wheel', ev=>{ ev.preventDefault(); L3.camAnim = null; L3.dist = clamp(L3.dist*(ev.deltaY>0 ? 1.08 : 0.93), l3MinDist(L3.target), 6000); }, {passive:false});
@@ -21214,8 +21223,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 133;
+const VERSION = 134;
 const CHANGELOG = [
+  [134, 'The electric field can be switched off again. On the 3D bench every press with the field tool started a drag, so the click that its tip promised would clear the field never arrived: now a click without dragging switches it off, and so does choosing the field tool again (or pressing 8). On the flat bench a click without a drag switches it off too, the Off button still works, and Clear now resets the field along with everything else.'],
   [133, 'Medicines and natural products: 365, up from 123, and 107 molecules of life, up from 82 (11,201 compounds in all). New medicines include the statins (simvastatin, atorvastatin, rosuvastatin), blood-pressure and heart drugs (lisinopril, metoprolol, valsartan, nifedipine, amiodarone, apixaban), diabetes drugs (sitagliptin, dapagliflozin, pioglitazone), antidepressants and antipsychotics (paroxetine, venlafaxine, bupropion, olanzapine, aripiprazole), anticonvulsants, the opioids and their antidote naltrexone, antibiotics (tetracycline, cefalexin, chloramphenicol, linezolid, clavulanic acid), antivirals (zidovudine, lamivudine, efavirenz, favipiravir), antifungals, antimalarials, cancer drugs (methotrexate, imatinib, temozolomide, bortezomib) and the anaesthetics propofol and desflurane. Natural products: alkaloids (strychnine, papaverine, LSD, DMT, harmine, huperzine A), cannabidiol, flavonoids (EGCG, kaempferol, genistein), lycopene, plant hormones (abscisic acid, indole-3-acetic acid, zeatin), terpenes, aflatoxin, camptothecin and podophyllotoxin. Molecules of life: anandamide, prostaglandin E2, spermine, cortisone, DHEA, cholic acid, inosine and more. Every one is checked against its molecular formula.'],
   [132, 'The molecule library passes ten thousand: 10,935 compounds. Whole families are now generated and named by the IUPAC rules (lowest locants, then alphabetical order, prefixes cited alphabetically, brackets inside parentheses), rather than listed by hand: benzene with two or three substituents (1-bromo-4-chlorobenzene, 4-bromo-2-chloro-1-methylbenzene); phenol, aniline, benzoic acid, benzaldehyde, benzonitrile, benzamide, benzenesulfonic acid, methyl benzoate, benzoyl chloride, benzyl alcohol, acetophenone, phenylacetic acid, benzylamine and phenyl acetate, each with one or two more substituents (2,4-dichlorophenol, methyl 4-nitrobenzoate, [4-(trifluoromethyl)phenyl]methanol); substituted pyridines, thiophenes, furans and naphthalenes; halogenated methanes and chains, halo alcohols and halo acids; every position of the straight-chain alcohols, ketones, amines and thiols; 480 esters; N-substituted amides and amines; and ethers. Each one builds in 3D and draws in the library. Behind it: the structure fingerprint the library uses to drop repeats now refines until it stops changing (it had taken heptadecan-8-ol and -9-ol for the same molecule) and treats a benzene ring the same wherever its double bonds are drawn, which also found two repeats among the old entries. The library is laid out the first time you open it rather than at start-up, so the page loads faster than before even with five times the compounds, and a formula typed into Build looks itself up in an index instead of parsing the whole library.'],
   [131, 'Oxidising acids. Copper still sits in hydrochloric acid untouched (its +0.34 V is beyond what H⁺ can take), but now nitric acid dissolves it: the nitrate takes the electrons itself, the copper goes into solution as Cu²⁺ and brown NO₂ comes off, about four nitric acids used per copper, as in Cu + 4HNO₃ → Cu(NO₃)₂ + 2NO₂ + 2H₂O. Silver and mercury go the same way. Gold and platinum need aqua regia (nitric plus hydrochloric acid: chloride holds their ions and drags their potential down). Tungsten, sealed under its oxide film, needs hydrofluoric plus nitric acid. Three new reactions to try (Copper + nitric acid, Gold in aqua regia, Tungsten in HF + nitric). Analysis mode now says when a metal will not dissolve in an acid and why, and predicts the nitric acid, aqua regia and HF reactions. The reactivity series lesson gains a step on oxidising acids, and Learn explains them. Fixes: nitric acid was being treated as a weak acid (its drawn N⁺–O⁻ was counted as a proton already lost), so nitric acid molecules passed protons back and forth among themselves; oxoacid formulas are written HNO₃ and H₃PO₄, not NHO₃ and PH₃O₄; a sodium nitride quiz no longer offers “NaN”.'],
