@@ -5569,10 +5569,11 @@ const CONCEPTS = {
   metalacid:{cat:'redox', g:'H₂', ev:1, name:'Metals and acids', alias:'reactivity series hydrogen gas fizz dissolve',
     one:'A metal below hydrogen in potential gives electrons to H⁺, and hydrogen gas bubbles off.',
     what:['Hydrogen is the zero of the potential scale. Any metal with a negative E° (magnesium, zinc, iron) can reduce H⁺ to H₂, dissolving as it goes. Metals above it (copper, silver, gold) cannot, which is why copper sits in acid untouched.',
-          'The more negative the potential, the faster the fizz: magnesium outpaces zinc, and zinc outpaces iron.'],
+          'The more negative the potential, the faster the fizz: magnesium outpaces zinc, and zinc outpaces iron.',
+          'Copper does dissolve in <b>nitric acid</b>, an oxidising acid: its nitrate takes the electrons itself (up to +0.96 V), giving brown NO₂ instead of hydrogen. Gold and platinum need <b>aqua regia</b> (nitric + hydrochloric acid), where chloride holds the ions and lowers their potential. Tungsten hides under an oxide film that only hydrofluoric acid can break, so it dissolves in an HF and nitric acid mix.'],
     sim:'A metal atom next to an acidic hydrogen (on H₃O⁺, HCl, HBr or HI) transfers an electron. The hydrogen is freed as an atom and pairs up with another to make H₂.',
-    look:'Try Magnesium + acid, then Zinc + acid, then Copper + acid.',
-    nums:[['Mg','−2.37 V'],['Zn','−0.76 V'],['Fe','−0.44 V'],['Cu','+0.34 V (no reaction)']],
+    look:'Try Magnesium + acid, then Zinc + acid, then Copper + acid. Then Copper + nitric acid, Gold in aqua regia and Tungsten in HF + nitric.',
+    nums:[['Mg','−2.37 V'],['Zn','−0.76 V'],['Fe','−0.44 V'],['Cu','+0.34 V (no reaction with H⁺)'],['NO₃⁻ → NO₂','+0.80 V (dissolves Cu, Ag)'],['Au','+1.50 V (aqua regia only)']],
     eq:'Zn + 2H⁺ → Zn²⁺ + H₂',
     tr:{scene:'znacid'}, rel:['redox','acidbase']},
   metalwater:{cat:'redox', g:'Na', ev:1, name:'Reactive metals and water', alias:'alkali metal sodium potassium water hydroxide oxide burn',
@@ -6345,7 +6346,8 @@ const SKILLS = {
     const g = (a, b) => b ? g(b, a % b) : a, L = p*n/g(p, n), nc = L/p, na = L/n;
     const f = (x, y) => subPlain(c + (x > 1 ? x : '') + an + (y > 1 ? y : ''));
     return qMake('formula', qCap(cn)+' forms '+c+chargeSup(p)+' ions and '+ael+' forms '+an+chargeSup(-n)+' ions. What is the formula of '+cn+' '+aname+'?',
-      f(nc, na), [f(1, 1), f(na, nc), f(n, p), f(nc + 1, na), f(nc, na + 1), f(nc + 1, na + 1)],
+      /* sodium nitride's guesses NaN and NaN₃ read as a glitch, not a wrong answer (and NaN₃ is sodium azide) */
+      f(nc, na), [f(1, 1), f(na, nc), f(n, p), f(nc + 1, na), f(nc, na + 1), f(nc + 1, na + 1)].filter(x=>!/^NaN(?![a-z])/.test(x)),
       'The charges must cancel: '+nc+' × (+'+p+') and '+na+' × (−'+n+') both make '+L+', so '+f(nc, na)+'.');
   }},
   valence:{name:'How many bonds', g(){
@@ -7751,12 +7753,18 @@ const CU4 = [
   {t:'quiz', skills:['oxstate','oxstate','redox']}]},
 {k:'series', u:11, title:'The reactivity series', recap:['Electrons flow from the lower electrode potential to the higher.'],
  terms:[['reactivity series','metals listed from most to least reactive'],['displacement','a more reactive metal pushing a less reactive one out of its compound']],
- sum:['The reactivity series ranks metals: potassium at the top, gold at the bottom.','Metals above hydrogen fizz in acid; those below do not.','A more reactive metal displaces a less reactive one from its solution.'], steps:[
+ sum:['The reactivity series ranks metals: potassium at the top, gold at the bottom.','Metals above hydrogen fizz in acid; those below do not.','A more reactive metal displaces a less reactive one from its solution.','Oxidising acids go further: nitric acid dissolves copper and silver, aqua regia dissolves gold.'], steps:[
   {t:'read', h:'Ranking the metals', fig:'series', p:['Line the metals up by electrode potential and you get the <b>reactivity series</b>. At the top, potassium and sodium react even with water. In the middle, magnesium and zinc fizz in acid. Below hydrogen, copper, silver and gold ignore acid altogether, which is why gold stays shiny for thousands of years.',
     'A more reactive metal will push a less reactive one out of solution: <b>displacement</b>. Drop zinc into copper sulfate and copper comes out; drop copper into zinc sulfate and nothing happens.']},
   {t:'do', h:'Who fizzes in acid?', setup:()=>crsSetup.clear(520), p:'Set out each metal with acid and compare.', scenes:['znacid','cuacid'], nudge:true, show:['rx'], tasks:[
     {t:'Zinc + acid: zinc (−0.76 V) is below hydrogen, so it reacts', hint:'Press Zinc + acid and give it a push.', check:()=>crsIon('Zn')},
     {t:'Copper + acid: copper (+0.34 V) stays put', hint:'Press Copper + acid and watch for fifteen seconds.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Cu' && !a.ion) && crsElapsed() > 15}]},
+  {t:'read', h:'Acids that dissolve copper anyway', p:['An ordinary acid such as hydrochloric or dilute sulfuric acid has only one thing that can take electrons: its H⁺, at 0 V. Copper (+0.34 V) holds its electrons more tightly than that, so it sits in the acid untouched however long you wait.',
+    '<b>Nitric acid</b> is different. It is an <b>oxidising acid</b>: its nitrate takes the electrons itself (NO₃⁻ → NO₂ at +0.80 V), so copper dissolves, the solution turns blue-green and brown nitrogen dioxide fumes off: Cu + 4HNO₃ → Cu(NO₃)₂ + 2NO₂ + 2H₂O. Silver and mercury go the same way.',
+    'Gold (+1.50 V) is beyond even nitrate. <b>Aqua regia</b>, nitric acid mixed with hydrochloric, dissolves it: chloride grabs each gold ion as AuCl₄⁻, which drags gold’s potential down within reach. Tungsten is a different case again: a tight skin of oxide protects it from every single acid, and only hydrofluoric acid (which takes the oxide apart) mixed with nitric acid eats it.']},
+  {t:'do', h:'Copper meets nitric acid', setup:()=>crsSetup.clear(520), p:'Now give copper an acid that can take its electrons.', scenes:['cunitric','aquaregia','wacid'], nudge:true, show:['rx'], tasks:[
+    {t:'Copper + nitric acid: copper goes into solution as Cu²⁺', hint:'Press Copper + nitric acid and give it a few seconds.', check:()=>crsIon('Cu', 2)},
+    {t:'Spot the brown gas: NO₂, a nitrogen with just two oxygens', hint:'Each electron copper loses turns one nitric acid into nitrogen dioxide.', check:()=>L3.atoms.some(a=>crsSym(a) === 'N' && l3Bonds(a).filter(b=>b.type === 'covalent').length === 2 && l3Bonds(a).every(b=>b.type !== 'covalent' || crsSym(l3Find(l3Other(b, a.id))) === 'O'))}]},
   {t:'quiz', skills:['redox','redox']}]},
 {k:'cells', u:11, title:'Electrochemical cells', recap:['Electrons flow from the metal with the lower E° to the ions of the higher.'],
  terms:[['electrochemical cell','two half-cells joined by a wire and a salt bridge, turning a redox reaction into electricity'],['anode','the electrode where oxidation happens (negative in a battery)'],['cathode','the electrode where reduction happens (positive in a battery)'],['salt bridge','a tube of salt solution joining the two halves, letting ions move to keep each side neutral'],['E°cell','the cell’s standard voltage: E°(cathode) − E°(anode)']],
@@ -9133,6 +9141,31 @@ function anaCombRx(c, f){
   X.forEach(s=>P.push([c[s]*k, anaSp({H:1, [s]:1}, 0)]));
   return anaRx([[k, anaSp(c, 0, '', f)], [Math.round(o2*k), anaSp({O:2}, 0)]], P);
 }
+/* metals that the H+ of an ordinary acid cannot touch, and the acids that do dissolve them */
+const anaIsHNO3 = J => !!(J && J.c && J.c.H === 1 && J.c.N === 1 && J.c.O === 3 && !J.q && Object.keys(J.c).length === 3);
+function anaOxAcid(I, s, info, out){
+  const N = info.find(anaIsHNO3), cap = L3_OXCAP[s]; if(!N || !cap) return false;
+  const hcl = info.find(J=>J.hx && J.A.some(a=>anaSym(a) === 'Cl')), hf = info.find(J=>J.c && J.c.H === 1 && J.c.F === 1 && Object.keys(J.c).length === 2 && !J.q);
+  const Mat = anaSp({[s]:1}, 0), HN = anaSp({H:1, N:1, O:3}, 0, '', 'HNO₃'), H2O = anaSp({H:2, O:1}, 0), NO = anaSp({N:1, O:1}, 0), NO2 = anaSp({N:1, O:2}, 0), E = L3_EPOT[s];
+  if(s === 'Au' || s === 'Pt'){
+    if(!hcl){ out.push({kind:'redox', verdict:'no', title:anaCap(I.name)+' does not dissolve in nitric acid alone', eq:'',
+      why:'E°('+s+(s === 'Au' ? '³⁺' : '²⁺')+'/'+s+') = +'+E+' V, beyond the reach of nitrate (+0.96 V at best), let alone H⁺ (0 V). This is why gold stays bright for thousands of years. Add hydrochloric acid to make aqua regia: chloride grabs the ions as they form and that drags the potential down far enough.'}); return true; }
+    const rx = s === 'Au' ? anaRx([[1, Mat], [1, HN], [4, anaSp({H:1, Cl:1}, 0)]], [[1, anaSp({H:1, Au:1, Cl:4}, 0, 'aq', 'HAuCl₄')], [1, NO], [2, H2O]])
+      : anaRx([[3, Mat], [4, HN], [18, anaSp({H:1, Cl:1}, 0)]], [[3, anaSp({H:2, Pt:1, Cl:6}, 0, 'aq', 'H₂PtCl₆')], [4, NO], [8, H2O]]);
+    out.push({kind:'redox', verdict:'yes', title:anaCap(I.name)+' dissolves in aqua regia', eq:anaRxStr(rx), rx,
+      why:'Neither acid alone touches '+I.name+' (E° = +'+E+' V). Together they do: chloride holds the ions as they form ('+(s === 'Au' ? 'AuCl₄⁻' : 'PtCl₆²⁻')+'), which lowers the potential to about +'+(s === 'Au' ? '1.00' : '0.76')+' V, and the mixture also makes chlorine and nitrosyl chloride, stronger oxidisers than nitrate. “Aqua regia”, royal water, because it dissolves gold. Nitric oxide comes off and turns brown (NO₂) in air.'}); return true; }
+  if(s === 'W'){
+    if(!hf){ out.push({kind:'redox', verdict:'no', title:'Tungsten does not dissolve in nitric acid', eq:'',
+      why:'Tungsten is sealed under a thin, tight film of WO₃. Nitric acid, sulfuric acid, hydrochloric acid, even aqua regia barely touch it. Add hydrofluoric acid: fluoride grips tungsten so strongly that it takes the oxide film apart, and then nitric acid can dissolve the metal underneath.'}); return true; }
+    const rx = anaRx([[1, Mat], [2, HN], [8, anaSp({H:1, F:1}, 0)]], [[1, anaSp({H:2, W:1, F:8}, 0, 'aq', 'H₂WF₈')], [2, NO], [4, H2O]]);
+    out.push({kind:'redox', verdict:'yes', title:'Tungsten dissolves in hydrofluoric and nitric acids', eq:anaRxStr(rx), rx,
+      why:'Fluoride strips the protective WO₃ film (it binds tungsten more tightly than oxide does) and nitrate takes the electrons, six per atom, so tungsten goes all the way to W(VI) as a fluoride complex. This is the mix used to etch tungsten in chip-making. Hydrofluoric acid is one of the most dangerous acids to handle: it passes through skin and attacks bone.'}); return true; }
+  if(E == null || E >= 0.96) return false;
+  const m = cap, rx = anaRx([[1, Mat], [2*m, HN]], [[1, anaSp({[s]:1, N:m, O:3*m}, 0, 'aq', m > 1 ? s+'(NO₃)'+subPlain(String(m)) : s+'NO₃')], [m, NO2], [m, H2O]]);
+  out.push({kind:'redox', verdict:'yes', title:anaCap(I.name)+' dissolves in nitric acid', eq:anaRxStr(rx), rx, dH:-m*96.485*(0.80 - E), dHnote:'ΔG° = −nFE°, nitrate to NO₂ at +0.80 V',
+    why:(E > 0 ? 'E°('+s+chargeSup(m)+'/'+s+') = +'+E+' V is above hydrogen, so the H⁺ of an ordinary acid cannot take its electrons: '+I.name+' sits in hydrochloric acid untouched. ' : '')+'Nitric acid is an oxidising acid: the nitrate itself takes the electrons (NO₃⁻ + 2H⁺ + e⁻ → NO₂ + H₂O, +0.80 V), so E°cell = '+anaFmt(0.80 - E, 2)+' V. '+anaCap(I.name)+' dissolves as its nitrate'+(s === 'Cu' ? ' (a blue-green solution)' : '')+' and brown nitrogen dioxide fumes off. Dilute acid gives colourless NO instead, which browns in air.'});
+  return true;
+}
 function anaPredict(){
   l3MarkSites();
   const L = ANA.list, out = [];
@@ -9179,6 +9212,8 @@ function anaPredict(){
   /* acids and bases: the proton goes to whichever lone pair holds it more tightly */
   let bestAB = null;
   pairs.forEach(([X, Y])=>{ if(!X.acid || !Y.base || X.acid.pk > 30 || (X.pseudo && Y.pseudo)) return; const d = Y.base.pk - X.acid.pk;
+    /* two strong acids side by side do not protonate each other in any way worth showing */
+    if(X.acid.pk < 0 && Y.acid && Y.acid.pk < 0 && !X.acid.bare) return;
     /* a long-odds proton transfer is worth showing only with water, where it sets the pH (ammonia in water) */
     if(d > ((X.water || Y.water) ? -8 : -3) && (!bestAB || d > bestAB.d)) bestAB = {X, Y, d}; });
   if(bestAB){ const {X, Y, d} = bestAB;
@@ -9210,10 +9245,15 @@ function anaPredict(){
   /* metals: with acids, water, alcohols, other metals' ions, halogens and oxygen */
   const M2 = info.filter(I=>I.metal);
   M2.forEach(I=>{ const s = anaSym(I.metal), E = E0[s], m = anaMetalQ(s), Mion = anaSp({[s]:1}, m), Mat = anaSp({[s]:1}, 0);
+    const oxd = anaOxAcid(I, s, info, out), Ex = E != null ? E : L3_EPOT[s];
     info.concat(ANA.water && !info.some(x=>x.water) ? [W] : []).forEach(J=>{ if(J === I) return;
-      if(J.acid && J.acid.pk < 5 && !J.water && E != null && E < 0){
+      if(J.acid && J.acid.pk < 5 && !J.water && !oxd && !anaIsHNO3(J) && (s === 'W' || Ex != null && Ex > 0) && !out.some(o=>o.title.startsWith(anaCap(I.name)+' does not'))){
+        out.push({kind:'redox', verdict:'no', title:anaCap(I.name)+' does not dissolve in '+J.name, eq:'',
+          why:s === 'W' ? 'Tungsten is sealed under a thin, tight film of WO₃ that '+J.name+' cannot get through; it also resists nitric acid and even aqua regia. Only a mix with hydrofluoric acid (fluoride takes the film apart) plus nitric acid dissolves it.'
+            : 'An ordinary acid can only offer H⁺ to take electrons, at 0 V. E°('+s+chargeSup(m)+'/'+s+') = +'+Ex+' V is above that, so '+I.name+' holds its electrons more tightly than hydrogen would: E°cell = '+anaFmt(-Ex, 2)+' V, ΔG° > 0, nothing happens. '+((s === 'Au' || s === 'Pt') ? 'Even nitric acid cannot dissolve it alone; aqua regia (nitric + hydrochloric) can.' : 'Try nitric acid: its nitrate takes the electrons itself, up to +0.96 V.')}); }
+      else if(J.acid && J.acid.pk < 5 && !J.water && E != null && E < 0 && !(oxd && anaIsHNO3(J))){
         const rx = anaRx([[2, Mat], [2*m, anaSp({H:1}, 1)]], [[2, Mion], [m, anaSp({H:2}, 0)]]);
-        out.push({kind:'redox', verdict:'yes', title:I.name+' dissolves in '+J.name, eq:anaRxStr(rx), rx, dH:-m*96.485*(-E), dHnote:'ΔG° = −nFE°',
+        out.push({kind:'redox', verdict:'yes', title:anaCap(I.name)+' dissolves in '+J.name, eq:anaRxStr(rx), rx, dH:-m*96.485*(-E), dHnote:'ΔG° = −nFE°',
           cell:{an:s, anQ:m, ca:'H', caQ:1, Ea:E, Ec:0, n:m, caLabel:'2H⁺/H₂'},
           why:'E°('+s+chargeSup(m)+'/'+s+') = '+E+' V is below hydrogen’s 0 V, so the metal hands electrons to H⁺: E°cell = '+anaFmt(-E, 2)+' V and ΔG° = −nFE° = '+anaFmt(-m*96.485*(-E))+' kJ/mol. Hydrogen fizzes off.'}); }
       else if(J.water && E != null && E < -2.3){
@@ -9492,7 +9532,7 @@ function anaLineChart(series, keys, getY, opts){
 const ANA_EXAMPLES = [
   ['One compound', [['caffeine'], ['aspirin'], ['ethanol'], ['benzene'], ['glucose'], ['oxygen'], ['acetic acid'], ['ammonium']]],
   ['Compare', [['ethanol', 'dimethyl ether'], ['butane', 'isobutane'], ['water', 'hydrogen sulfide'], ['benzene', 'cyclohexane'], ['acetic acid', 'ethanol', 'phenol']]],
-  ['React', [['hydrogen chloride', 'ammonia'], ['acetic acid', 'sodium hydroxide'], ['silver ion', 'chloride'], ['ethene', 'hydrogen bromide'], ['boron trifluoride', 'ammonia'], ['zinc', 'copper(II) ion'], ['methane', 'oxygen']]]
+  ['React', [['hydrogen chloride', 'ammonia'], ['acetic acid', 'sodium hydroxide'], ['silver ion', 'chloride'], ['ethene', 'hydrogen bromide'], ['boron trifluoride', 'ammonia'], ['zinc', 'copper(II) ion'], ['methane', 'oxygen'], ['copper', 'hydrogen chloride'], ['copper', 'nitric acid'], ['gold', 'nitric acid', 'hydrogen chloride']]]
 ];
 const anaSec = (k, title, inner, note) => '<details class="ana-sec" data-sec="'+k+'"'+(ANA.open[k] === false ? '' : ' open')+'><summary>'+title+(note ? '<em>'+note+'</em>' : '')+'</summary><div class="ana-in">'+inner+'</div></details>';
 const anaDL = rows => '<dl class="ana-dl">'+rows.filter(Boolean).map(([k, v])=>'<dt>'+k+'</dt><dd>'+v+'</dd>').join('')+'</dl>';
@@ -12772,7 +12812,7 @@ function acidPKa2D(a){
     const heavy = ns.filter(x=>EL[x.e].sym !== 'H');
     if(!heavy.length) return 15.7;
     const x = heavy[0], xs = EL[x.e].sym, oxo = covBonds(x).some(b=>b.order === 2 && EL[other(b,x).e].sym === 'O');
-    if((xs === 'S' || xs === 'N' || xs === 'Cl' || xs === 'P') && oxo) return oxoPKa(xs, covBonds(x).map(b=>other(b,x)).filter(o=>o && o !== a && EL[o.e].sym === 'O' && (o.charge||0) < 0).length);
+    if((xs === 'S' || xs === 'N' || xs === 'Cl' || xs === 'P') && oxo) return oxoPKa(xs, covBonds(x).map(b=>other(b,x)).filter(o=>o && o !== a && EL[o.e].sym === 'O' && (o.charge||0) < 0).length - Math.max(0, x.charge||0));
     if(xs === 'C' && oxo) return 4.8;
     return 16;
   }
@@ -12800,7 +12840,7 @@ function basePKa2D(b){
       /* matches acidPKa2D, so a proton cannot run downhill in a circle (see l3BasePKa) */
       if(!covBonds(x).some(y=>y.order === 2 && EL[other(y,x).e].sym === 'O')) return 16;
       const xs = EL[x.e].sym; if(xs !== 'P' && xs !== 'S' && xs !== 'N' && xs !== 'Cl') return 4.8;
-      return oxoPKa(xs, covBonds(x).map(y=>other(y,x)).filter(o=>o && o !== b && EL[o.e].sym === 'O' && (o.charge||0) < 0).length); }
+      return oxoPKa(xs, covBonds(x).map(y=>other(y,x)).filter(o=>o && o !== b && EL[o.e].sym === 'O' && (o.charge||0) < 0).length - Math.max(0, x.charge||0)); }
     if(q > 0) return null;
     if(covBonds(b).some(x=>x.order === 2)) return -7;
     return ns.every(x=>EL[x.e].sym === 'H') ? -1.7 : -2;
@@ -14010,6 +14050,8 @@ function benchFormula(c){
   let keys = Object.keys(c);
   if(c.C) keys = ['C'].concat(c.H?['H']:[], keys.filter(s=>s!=='C'&&s!=='H').sort());
   else keys.sort((x,y)=>formulaRank(x)-formulaRank(y) || x.localeCompare(y));
+  /* an oxoacid leads with its acidic hydrogens: HNO3, H3PO4, H3BO3, not NHO3 */
+  if(!c.C && c.H && c.O > 1 && ['N','P','B','As','Si'].some(x=>c[x]) && !Object.keys(c).some(k=>isMetal(BY_SYM[k]))) keys = ['H'].concat(keys.filter(k=>k !== 'H'));
   return keys.map(k=>k+(c[k]>1?c[k]:'')).join('');
 }
 /* IUPAC's element sequence for binary names, the bench's own WRITE_ORDER: the
@@ -16369,6 +16411,70 @@ function l3Redox(dt){
       }
     }
   }
+  l3OxAcid(span);
+}
+/* ---------- oxidising acids ----------
+   An ordinary acid can only take electrons with its H+ (0 V), so copper (+0.34 V)
+   sits in hydrochloric acid untouched. Nitric acid is different: its nitrate takes
+   electrons itself (NO3- to NO2, +0.80 V; to NO, +0.96 V), so it dissolves copper,
+   silver and mercury, giving off brown nitrogen dioxide. It needs acid to do it:
+   each nitrate takes a proton as it is reduced, so a neutral nitrate salt cannot.
+   Gold (+1.50 V) and platinum (+1.18 V) need aqua regia: chloride from hydrochloric
+   acid holds their ions as AuCl4- and PtCl6 2-, which pulls their potentials down to
+   about +1.00 and +0.76 V, within nitrate's reach. Tungsten is sealed under a tight
+   film of WO3 that no single acid gets through; fluoride dissolves the film, so a
+   mix of hydrofluoric and nitric acids eats it. */
+const L3_OXCAP = {Cu:2, Ag:1, Hg:2, Pb:2, Sn:2, Bi:3, Ni:2, Co:2, Zn:2, Fe:3, Cd:2, Pd:2, Au:3, Pt:4, W:6, Mn:2, Mg:2, Al:3, Cr:3};
+function l3OxAcid(span){
+  const A = L3.atoms, T = Math.max(kelvin(), 50);
+  const sym = a => EL[a.e].sym, cov = a => l3Bonds(a).filter(b=>b.type === 'covalent'), nb = a => cov(a).map(b=>l3Find(l3Other(b, a.id))).filter(Boolean);
+  const near = (a, test, r) => A.find(x=>x !== a && Math.abs(x.x - a.x) < r && Math.hypot(x.x - a.x, x.y - a.y, x.z - a.z) < r && test(x));
+  /* a nitrate oxygen: on an N+ that carries three oxygens (nitric acid or nitrate) */
+  const nitroO = x => { if(sym(x) !== 'O') return null; const n = nb(x).find(y=>sym(y) === 'N' && (y.fq||0) === 1); return n && nb(n).filter(y=>sym(y) === 'O').length === 3 ? n : null; };
+  const k = 6*Math.exp(-(35/0.008314)*(1/T - 1/298));              /* about 35 kJ/mol to get going */
+  for(const m of A){
+    const s = sym(m), cap = L3_OXCAP[s]; if(!cap || m.dying) continue;
+    if(!(l3Metal(m) || (m.ion > 0 && m.ion < cap && !m.fq))) continue;
+    let e = L3_EPOT[s], how = 'nitric';
+    if(s === 'Au' || s === 'Pt'){ if(!near(m, x=>sym(x) === 'Cl' && x.ion < 0, 700)) continue; e = s === 'Au' ? 1.00 : 0.76; how = 'aqua'; }
+    if(s === 'W'){ if(!near(m, x=>sym(x) === 'F' && (x.ion < 0 || nb(x).some(y=>sym(y) === 'H')), 700)) continue; e = 0.1; how = 'hf'; }
+    /* nitrate to NO reaches +0.96 V; aqua regia also makes chlorine and nitrosyl chloride (to +1.36 V) */
+    const lim = how === 'aqua' ? 1.36 : 0.96;
+    if(e == null || e >= lim) continue;
+    /* the oxidant must be touching: nitric acid itself, or nitrate with a proton (H3O+) beside it */
+    let ox = null, N = null, h3o = null;
+    for(const x of A){
+      if(Math.abs(x.x - m.x) > 420) continue;
+      const n = nitroO(x); if(!n) continue;
+      if(Math.hypot(x.x - m.x, x.y - m.y, x.z - m.z) > (EL[m.e].rv + 152)*1.05) continue;
+      if(nb(x).some(y=>sym(y) === 'H')){ ox = x; N = n; break; }
+      if((x.fq||0) < 0){ const hy = near(x, y=>sym(y) === 'O' && (y.fq||0) === 1 && nb(y).filter(z=>sym(z) === 'H').length === 3, 520); if(hy){ ox = x; N = n; h3o = hy; break; } }
+    }
+    if(!ox || Math.random() > Math.min(1, k*span)) continue;
+    /* a nitrate takes back a proton first (nitrate + H3O+ -> HNO3 + water) */
+    if(h3o){ const hh = nb(h3o).filter(z=>sym(z) === 'H').sort((p, q)=>Math.hypot(p.x - ox.x, p.y - ox.y, p.z - ox.z) - Math.hypot(q.x - ox.x, q.y - ox.y, q.z - ox.z))[0];
+      const hb = cov(h3o).find(b=>l3Other(b, h3o.id) === hh.id); L3.bonds.splice(L3.bonds.indexOf(hb), 1); L3.bv = (L3.bv||0) + 1; l3SetFq(h3o, (h3o.fq||0) - 1);
+      L3.quiet = (L3.quiet||0) + 1; try{ l3Bond(ox, hh, 1, 'covalent'); }finally{ L3.quiet--; } l3SetFq(ox, (ox.fq||0) + 1);
+      const dd = Math.hypot(hh.x - ox.x, hh.y - ox.y, hh.z - ox.z) || 1; hh.x = ox.x + (hh.x - ox.x)/dd*96; hh.y = ox.y + (hh.y - ox.y)/dd*96; hh.z = ox.z + (hh.z - ox.z)/dd*96; }
+    /* HNO3 + e- -> NO2 + OH-: the electron comes from the metal, the N-OH bond breaks and the OH leaves as hydroxide */
+    const nb0 = cov(ox).find(b=>l3Other(b, ox.id) === N.id); if(!nb0) continue;
+    L3.bonds.splice(L3.bonds.indexOf(nb0), 1); L3.bv = (L3.bv||0) + 1; l3SetFq(ox, (ox.fq||0) - 1);
+    L3.bonds = L3.bonds.filter(b=>!(b.type === 'metallic' && (b.a === m.id || b.b === m.id)));
+    l3SetIon(m, (m.ion||0) + 1); l3Fly('electron', m, N);
+    const d = Math.hypot(N.x - m.x, N.y - m.y, N.z - m.z) || 1; [N].concat(nb(N)).forEach(a=>{ a.vx += (N.x - m.x)/d*90; a.vy += (N.y - m.y)/d*90; a.vz += (N.z - m.z)/d*90; });
+    L3.oxNoted = L3.oxNoted || {};
+    let meta = null;
+    if(!L3.oxNoted[s+how]){ L3.oxNoted[s+how] = true;
+      const nm = EL[m.e].name.toLowerCase(), E = e.toFixed(2);
+      meta = how === 'aqua' ? {c:'redox', title:capFirst(nm)+' dissolves in aqua regia', eq:s === 'Au' ? 'Au + HNO₃ + 4HCl → HAuCl₄ + NO + 2H₂O' : '3Pt + 4HNO₃ + 18HCl → 3H₂PtCl₆ + 4NO + 8H₂O',
+          why:capFirst(nm)+'’s potential (+'+L3_EPOT[s]+' V) is beyond even nitrate’s reach, which is why it stays bright in any single acid. But chloride from the hydrochloric acid grabs its ions as they form ('+(s === 'Au' ? 'AuCl₄⁻' : 'PtCl₆²⁻')+'), and that drags the potential down to about +'+E+' V. The mixture also makes chlorine and nitrosyl chloride (NOCl), which are stronger oxidisers than nitrate alone, so now the electrons can be taken. The name means “royal water”: it dissolves the royal metal, gold.'}
+        : how === 'hf' ? {c:'redox', title:'Tungsten dissolves in hydrofluoric and nitric acids', eq:'W + 2HNO₃ + 8HF → H₂WF₈ + 2NO + 4H₂O',
+          why:'Tungsten is sealed under a thin, tough film of tungsten oxide that stops hydrochloric, sulfuric and nitric acid alike, and even aqua regia barely touches it. Fluoride is small and grips tungsten so strongly that it pulls the oxide film apart; with nitric acid there to take the electrons, the metal goes into solution as a fluoride complex, all the way up to tungsten(VI).'}
+        : {c:'redox', title:capFirst(nm)+' dissolves in nitric acid', eq:s+' + '+(2*cap)+'HNO₃ → '+s+'(NO₃)'+(cap > 1 ? subPlain(String(cap)) : '')+' + '+(cap > 1 ? cap : '')+'NO₂ + '+(cap > 1 ? cap : '')+'H₂O',
+          why:(e > 0 ? capFirst(nm)+' sits above hydrogen (E° = +'+E+' V), so the H⁺ of an ordinary acid cannot take its electrons. ' : '')+'Nitric acid is an oxidising acid: its nitrate takes the electrons itself (NO₃⁻ → NO₂ at +0.80 V, → NO at +0.96 V), using up a proton each time. The metal dissolves as its nitrate, and the gas that comes off is nitrogen dioxide, the brown fumes you see over copper in concentrated nitric acid.'};
+    }
+    l3Note(-96.5*(lim - e), s+' oxidised by nitrate', m, N, meta);
+  }
 }
 /* ---------- organic reactions between compounds ----------
    Addition across C=C: HCl, HBr or HI add H to one carbon and the halogen to the
@@ -16521,11 +16627,11 @@ function l3AcidPKa(h, a){
   const s = EL[a.e].sym, fq = a.fq || 0, ns = l3Bonds(a).filter(b=>b.type==='covalent').map(b=>l3Find(l3Other(b, a.id))).filter(Boolean);
   if(s === 'I') return -10; if(s === 'Br') return -9; if(s === 'Cl') return -7; if(s === 'F') return 3.2;
   if(s === 'O'){
-    if(fq > 0) return ns.every(x=>EL[x.e].sym === 'H') ? -1.7 : -2;             /* H3O+, a protonated alcohol (as l3BasePKa) */
+    if(fq > 0) return ns.every(x=>EL[x.e].sym === 'H') ? -1.7 : ns.some(l3OxoCentre) ? -9 : -2;   /* H3O+, a protonated oxoacid, a protonated alcohol (as l3BasePKa) */
     const heavy = ns.filter(x=>EL[x.e].sym !== 'H');
     if(!heavy.length) return 15.7;                                              /* water */
     const x = heavy[0], xs = EL[x.e].sym, xoxo = l3Bonds(x).some(b=>b.order === 2 && EL[l3Find(l3Other(b, x.id)).e].sym === 'O');
-    if((xs === 'S' || xs === 'N' || xs === 'Cl' || xs === 'P') && xoxo) return oxoPKa(xs, l3Bonds(x).filter(b=>b.type === 'covalent').map(b=>l3Find(l3Other(b, x.id))).filter(o=>o && o !== a && EL[o.e].sym === 'O' && ((o.fq||0) + (o.ion||0)) < 0).length);   /* sulfuric, nitric, phosphoric */
+    if((xs === 'S' || xs === 'N' || xs === 'Cl' || xs === 'P') && xoxo) return oxoPKa(xs, oxoNegK(x, a), x);   /* sulfuric, nitric, phosphoric */
     if(xs === 'C' && xoxo) return 4.8;                                          /* a carboxylic acid */
     if(xs === 'C' && l3Bonds(x).some(b=>b.arom)) return 10;                    /* a phenol */
     return 16;                                                                  /* an alcohol */
@@ -16539,7 +16645,20 @@ function l3AcidPKa(h, a){
    HPO4 2- 12.4. k is how many of the centre's other oxygens are already
    negative. The base side counts the same way, so the two always agree. */
 const OXO_PKA = {S:[-3, 2.0], N:[-1.4], Cl:[-7], P:[2.1, 7.2, 12.4]};
-function oxoPKa(xs, k){ const t = OXO_PKA[xs] || [-3]; return t[Math.min(k, t.length-1)] + (k >= t.length ? 5*(k - t.length + 1) : 0); }
+function oxoPKa(xs, k, x){
+  /* nitrous acid, O=N-OH, has only two oxygens on its nitrogen and is a weak acid */
+  const t = xs === 'N' && x && l3Bonds(x).filter(b=>b.type === 'covalent' && EL[l3Find(l3Other(b, x.id)).e].sym === 'O').length === 2 ? [3.3] : OXO_PKA[xs] || [-3];
+  /* below zero: protonating an acid that is still whole (H2NO3+), a far stronger acid again */
+  if(k < 0) return t[0] - 8;
+  return t[Math.min(k, t.length-1)] + (k >= t.length ? 5*(k - t.length + 1) : 0); }
+/* how many of the centre's other oxygens have already lost their proton. A drawing
+   with charge separation (nitric acid as HO-N+(=O)-O-) has an O- that only balances
+   the N+, so the centre's own positive charge cancels that many. */
+const l3OxoCentre = x => ['S','N','P','Cl'].includes(EL[x.e].sym) && l3Bonds(x).some(b=>b.order === 2 && EL[l3Find(l3Other(b, x.id)).e].sym === 'O');
+function oxoNegK(x, self){
+  const neg = l3Bonds(x).filter(y=>y.type === 'covalent').map(y=>l3Find(l3Other(y, x.id))).filter(o=>o && o !== self && EL[o.e].sym === 'O' && ((o.fq||0) + (o.ion||0)) < 0).length;
+  return neg - Math.max(0, x.fq||0);
+}
 /* how firmly a base holds a proton, as the pKa of the acid it becomes */
 function l3BasePKa(b){
   const s = EL[b.e].sym, fq = (b.fq||0) + (b.ion||0);
@@ -16562,10 +16681,11 @@ function l3BasePKa(b){
       if(l3Bonds(x).some(y=>y.order === 2 && EL[l3Find(l3Other(y, x.id)).e].sym === 'O')){ const xs = EL[x.e].sym;
         if(xs !== 'P' && xs !== 'S' && xs !== 'N' && xs !== 'Cl') return 4.8;
         /* the acid it would become has one fewer negative oxygen than it has now */
-        return oxoPKa(xs, l3Bonds(x).filter(y=>y.type === 'covalent').map(y=>l3Find(l3Other(y, x.id))).filter(o=>o && o !== b && EL[o.e].sym === 'O' && ((o.fq||0) + (o.ion||0)) < 0).length); }
+        return oxoPKa(xs, oxoNegK(x, b), x); }
       return 16; }
     if(fq > 0) return null;
     if(l3Bonds(b).some(x=>x.order === 2)) return -7;                           /* a carbonyl oxygen: barely basic */
+    if(ns.some(l3OxoCentre)) return -9;                                         /* the OH of an oxoacid: its lone pairs are drawn into the S=O or N=O */
     return ns.every(x=>EL[x.e].sym === 'H') ? -1.7 : -2;                        /* water, an alcohol */
   }
   if(s === 'S' && fq < 0) return 10;
@@ -18457,7 +18577,10 @@ const SCENES = [
   {k:'zncu',    label:'Zinc + copper ions',       note:'zinc dissolves, copper comes out',  mols:[['[Zn]',3],['[Cu+]',3],['water',6]], box:540},
   {k:'znacid',  label:'Zinc + acid',              note:'fizzes, freeing hydrogen',          mols:[['[Zn]',3],['HCl',4],['water',4]], box:540},
   {k:'mgacid',  label:'Magnesium + acid',         note:'fizzes faster than zinc',           mols:[['[Mg]',3],['HCl',4],['water',4]], box:540},
-  {k:'cuacid',  label:'Copper + acid',            note:'nothing: copper is below hydrogen', mols:[['[Cu]',3],['HCl',4],['water',4]], box:540},
+  {k:'cuacid',  label:'Copper + acid',            note:'nothing: copper (+0.34 V) holds its electrons more tightly than H\u207a can take them', mols:[['[Cu]',3],['HCl',4],['water',4]], box:540},
+  {k:'cunitric',label:'Copper + nitric acid',     note:'nitrate takes the electrons H\u207a cannot: copper dissolves and NO\u2082 comes off', mols:[['[Cu]',2],['nitric acid',9],['water',3]], box:500},
+  {k:'aquaregia',label:'Gold in aqua regia',      note:'nitric acid alone cannot touch gold; with hydrochloric acid it can', mols:[['[Au]',2],['nitric acid',4],['HCl',6],['water',3]], box:470},
+  {k:'wacid',   label:'Tungsten in HF + nitric',  note:'fluoride breaks tungsten\u2019s oxide film so nitric acid can dissolve it', mols:[['[W]',2],['nitric acid',8],['hydrogen fluoride',8],['water',2]], box:470},
   {k:'agcu',    label:'Copper + silver ions',     note:'silver comes out on copper',        mols:[['[Cu]',3],['[Ag+]',3],['water',6]], box:540},
   {k:'hbr',     label:'Ethene + HBr',             note:'bromoethane (warm)',                mols:[['C=C',3],['HBr',3]], box:460, temp:25},
   {k:'markov',  label:'Propene + HBr',            note:'Markovnikov: 2-bromopropane (warm)', mols:[['CC=C',3],['HBr',3]], box:460, temp:25},
@@ -19866,7 +19989,7 @@ function renderPanel3D(){
 const SCENE_GROUPS = [
   ['Acids and bases', ['nh3hcl','hclaq','h2so4aq','neutral','acetam','acetaq']],
   ['Lewis acids and metal ions', ['bf3','cuaq']],
-  ['Metals and redox', ['naw','kw','mgw','nacl2','zncu','znacid','mgacid','cuacid','agcu']],
+  ['Metals and redox', ['naw','kw','mgw','nacl2','zncu','znacid','mgacid','cuacid','cunitric','aquaregia','wacid','agcu']],
   ['Organic', ['hbr','markov','br2','ester','hydro']],
   ['Solutions', ['saltaq','agcl','pbi2','baso4','cuoh2','feoh3','caco3','hotpack','coldpack','d2o','caff']]
 ];
@@ -20786,8 +20909,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 130;
+const VERSION = 131;
 const CHANGELOG = [
+  [131, 'Oxidising acids. Copper still sits in hydrochloric acid untouched (its +0.34 V is beyond what H⁺ can take), but now nitric acid dissolves it: the nitrate takes the electrons itself, the copper goes into solution as Cu²⁺ and brown NO₂ comes off, about four nitric acids used per copper, as in Cu + 4HNO₃ → Cu(NO₃)₂ + 2NO₂ + 2H₂O. Silver and mercury go the same way. Gold and platinum need aqua regia (nitric plus hydrochloric acid: chloride holds their ions and drags their potential down). Tungsten, sealed under its oxide film, needs hydrofluoric plus nitric acid. Three new reactions to try (Copper + nitric acid, Gold in aqua regia, Tungsten in HF + nitric). Analysis mode now says when a metal will not dissolve in an acid and why, and predicts the nitric acid, aqua regia and HF reactions. The reactivity series lesson gains a step on oxidising acids, and Learn explains them. Fixes: nitric acid was being treated as a weak acid (its drawn N⁺–O⁻ was counted as a proton already lost), so nitric acid molecules passed protons back and forth among themselves; oxoacid formulas are written HNO₃ and H₃PO₄, not NHO₃ and PH₃O₄; a sodium nitride quiz no longer offers “NaN”.'],
   [130, 'The molecule library passes two thousand: 2083 compounds, every one shown. New are longer and branched chains (to 2,2,3,3-tetramethylbutane, dienes, cycloalkenes, adamantane and cubane), more alcohols, ketones, aldehydes and ethers, thirty more esters and the fruity branched ones (isopentyl ethanoate, the banana), branched, unsaturated and halogenated acids, acid chlorides and anhydrides, amines from primary to tertiary, the heterocycles (pyrrolidine to pteridine, quinoline, carbazole, acridine, purine), substituted pyridines and naphthalenes, over two hundred more two-group benzenes named the IUPAC way, the big ring systems (fluorene, chrysene, perylene, coronene, benzo[a]pyrene), refrigerants and anaesthetics, and nearly three hundred more salts, each one a compound that really exists (permanganates, chromates and dichromates, oxalates, thiocyanates, cyanides, perchlorates, nitrites, sulfites, hydrogen phosphates, and the salts of nickel, cobalt, manganese, chromium, tin, copper(I), mercury and cadmium). Every entry is checked to build on the bench and to draw, every salt\u2019s formula is checked against its structure, and the ring systems against their known formulas. The structure drawings are made as you scroll to them, so the sheet still opens at once.'],
   [129, 'The molecule library shows every compound the bench knows: 1073, where it used to stop at 1000 (the extra 73 are mostly salts, now 171, and a few ions). The All view lists every one of them under its family heading instead of the first eleven and a "show all" button, and the cards off screen are left undrawn until you scroll to them, so it still opens in a moment. Every one of the 1073 builds on the bench and has its structure drawing.'],
   [128, 'Ionic compounds and precipitates, rebuilt. Polyatomic ions are now real ionic partners: a metal ion makes ionic contacts with the charged oxygens of sulfate, carbonate, hydroxide, phosphate, chromate and nitrate, so salts like calcium carbonate, barium sulfate and sodium nitrate form proper ionic solids (dry calcium carbonate comes out at Ca\u2013O 238 pm against a real 236), and they precipitate from solution. The precipitates are set by real solubility products: about forty of them, each with its Ksp, its solubility in g/L and its true colour (white barium sulfate and chalk, pale blue copper(II) hydroxide, rust-brown iron(III) hydroxide, dirty green iron(II) hydroxide, chrome yellow lead chromate, brick red silver chromate, black sulfides), and they settle to the bottom. Hydroxide swaps onto hydrated metal ions to reach them, as on [Cu(H\u2082O)\u2086]\u00b2\u207a. Dissolving now takes in or gives out each salt\u2019s own heat of solution (potassium chloride +17 kJ/mol, calcium chloride \u221281, sodium hydroxide \u221245: the chemistry of hot and cold packs), and the solution card adds a calorimetry line with the temperature change that much water would show, and a line for each solid with its Ksp. Doubly charged lattices no longer collapse: Mg\u2013O 202 pm against a real 210 (it was 171). Each salt dissolving is written up with its own equation and \u0394H. New reactions: barium sulfate, copper(II) hydroxide, iron(III) hydroxide, chalk from solution, a hot pack and a cold pack; the flat bench now sets out the ions of these scenes too, and the course\u2019s precipitation lesson has the new colours to try.'],

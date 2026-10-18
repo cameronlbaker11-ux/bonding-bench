@@ -1,7 +1,7 @@
 /* The course: every step of every lesson renders, every unit has lessons, and the
    newer hands-on tasks can be completed by a scripted student. Run: node tests/course.js */
 const src = require('./harness.js');
-const api = new Function(src+`;return {COURSE, CRS_UNITS, CRS, crsEnter, courseHTML, crsInfoHTML, L3, l3Step, l3BuildAny, setSlider, crsK, crsNudge, CFIG, crsFig, CRS_ACTS, genQuestion, SKILLS, kelvin, crsSetup, l3Polymerise, l3FitView:()=>{}};`)();
+const api = new Function(src+`;return {COURSE, CRS_UNITS, CRS, crsEnter, courseHTML, crsInfoHTML, L3, l3Step, l3BuildAny, setSlider, crsK, crsNudge, CFIG, crsFig, CRS_ACTS, genQuestion, SKILLS, kelvin, crsSetup, l3Polymerise, l3Scene, l3FitView:()=>{}};`)();
 api.L3.on = true;
 const fail = [];
 api.CRS.on = true;
@@ -38,6 +38,7 @@ doStep('resonance', null, st=>{ api.l3BuildAny('nitrate'); api.l3BuildAny('benze
 doStep('hybrid', null, st=>{ ['ethane','ethene','ethyne'].forEach(n=>api.l3BuildAny(n)); }, 5);
 doStep('isomers', null, st=>{ api.l3BuildAny('butane'); api.l3BuildAny('isobutane'); }, 5);
 doStep('limiting', null, st=>{}, 60);
+doStep('series', 'Copper meets nitric acid', st=>{ api.l3Scene('cunitric'); }, 30);
 doStep('entropy', null, st=>{ api.setSlider('temp', api.crsK(700)); }, 15);
 doStep('cells', null, st=>{}, 60);
 doStep('naming', null, st=>{ ['propan-2-ol','butanone','propanoic acid'].forEach(n=>api.l3BuildAny(n)); }, 5);

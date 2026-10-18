@@ -17,5 +17,12 @@ R = one('benzene'); chk('benzene: one H environment', R.nmr.length === 1 && R.c1
 R = one('butan-2-ol'); chk('butan-2-ol: one stereocentre', R.id.stereo.length === 1);
 const pred = (a, b, kind) => { api.ANA.list = []; api.ANA.rep = {}; api.ANA.run = null; api.ANA.tab = 'rx'; api.anaAdd(a); api.anaAdd(b); api.anaReactionHTML(); chk(a+' + '+b+' predicts '+kind, api.ANA.pred.some(p=>p.kind === kind)); };
 pred('hydrogen chloride', 'ammonia', 'acid–base'); pred('silver ion', 'chloride', 'precipitation'); pred('ethene', 'hydrogen bromide', 'addition'); pred('zinc', 'copper(II) ion', 'redox'); pred('boron trifluoride', 'ammonia', 'Lewis');
+/* metals in acids: copper sits above hydrogen, so only an oxidising acid takes it */
+const verdict = (names, title, v) => { api.ANA.list = []; api.ANA.rep = {}; api.ANA.run = null; api.ANA.tab = 'rx'; names.forEach(n=>api.anaAdd(n)); api.anaReactionHTML();
+  chk(names.join(' + ')+': '+title+' ('+v+')', api.ANA.pred.some(p=>p.title.includes(title) && p.verdict === v)); };
+verdict(['copper', 'hydrogen chloride'], 'does not dissolve', 'no'); verdict(['copper', 'nitric acid'], 'dissolves in nitric acid', 'yes');
+verdict(['gold', 'nitric acid'], 'does not dissolve', 'no'); verdict(['gold', 'nitric acid', 'hydrogen chloride'], 'aqua regia', 'yes');
+verdict(['tungsten', 'nitric acid'], 'does not dissolve', 'no'); verdict(['tungsten', 'nitric acid', 'hydrogen fluoride'], 'hydrofluoric and nitric', 'yes');
+verdict(['magnesium', 'hydrogen chloride'], 'dissolves in hydrogen chloride', 'yes');
 console.log(fail.length ? 'FAIL\n'+fail.join('\n') : 'analysis ok');
 process.exit(fail.length ? 1 : 0);
