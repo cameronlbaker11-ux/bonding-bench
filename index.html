@@ -1166,6 +1166,11 @@ body.analysing #tourCard,body.analysing #hint,body.analysing #toolbar,body.analy
 .crs-scenes{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px}
 .crs-scenes button{padding:6px 10px;border-radius:8px;border:1px solid var(--hair);background:var(--surface);font:inherit;font-size:11.5px;cursor:pointer;color:var(--ink)}
 .crs-scenes button:hover{background:var(--sunk)}
+.crs-mols{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px}.crs-mols > div{text-align:center}.crs-mols span{display:block;font-size:11px;color:var(--ink-2);margin-top:2px}
+.crs-molpic{background:var(--paper);border-radius:8px}.crs-molpic svg{display:block;width:100%;height:auto}.crs-molpic.wide{margin-top:6px}
+.crs-figcap{display:block;font-size:10.5px;color:var(--muted);margin:4px 2px 2px;line-height:1.45}
+.crs-poly{display:flex;align-items:center;gap:4px}.crs-poly > div{flex:1;min-width:0}.crs-poly .ch{flex:2.6}.crs-poly svg{display:block;width:100%;height:auto}.crs-poly b{font-size:18px;color:var(--muted)}
+.crs-acts{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
 .crs-figwrap{margin:6px -4px 10px;padding:8px 6px 4px;background:#fff;border:1px solid var(--hair);border-radius:10px}
 .crs-fig{display:block;width:100%;height:auto;font-family:inherit}
 .crs-key{margin:8px 0 6px;padding:9px 11px;border-radius:9px;background:rgba(42,122,120,.08);border-left:3px solid #2A7A78;font-size:12.5px;line-height:1.55;color:var(--ink-2)}
@@ -6143,6 +6148,10 @@ function stepRing(g, x, y, r, now){
 const LEARN_TOPICS = [
   {k:'acid',   c:'acidbase',   title:'An acid meets water',            mols:[['HCl',1],['water',5]],                       box:360, temp:12, expect:[['acidbase','HCl gives its proton to a water molecule, making H₃O⁺ and Cl⁻']]},
   {k:'neut',   c:'neutral',    title:'Neutralisation',                 mols:[['[Na+].[OH-]',1],['HCl',1],['water',2]],      box:290, temp:14, expect:[['neutral','Hydroxide takes a proton, from HCl or from H\u2083O\u207a, and becomes water']]},
+  {k:'proton', c:'acidbase',   title:'A bare proton finds water',      mols:[['[H+]',1],['water',4]],                       box:280, temp:10, expect:[['acidbase','The proton lands on a water molecule\u2019s lone pair: hydronium, H\u2083O\u207a']]},
+  {k:'smoke',  c:'acidbase',   title:'Ammonia meets hydrogen chloride', mols:[['ammonia',1],['HCl',1]],                     box:260, temp:12, expect:[['acidbase','HCl\u2019s proton jumps to ammonia\u2019s lone pair: NH\u2084\u207a and Cl\u207b, the white smoke of ammonium chloride']]},
+  {k:'precip', c:'precip',     title:'A precipitate forms',            mols:[['[Ag+]',2],['[Cl-]',2],['water',3]],          box:280, temp:12, expect:[['precip','A silver ion and a chloride ion lock together: solid silver chloride']]},
+  {k:'agcu',   c:'redox',      title:'Copper and silver ions',         mols:[['[Cu]',1],['[Ag+]',2],['water',3]],           box:300, temp:12, expect:[['redox','Copper gives an electron to a silver ion, and silver metal comes out']], flat:false},
   {k:'lewis',  c:'lewis',      title:'A Lewis adduct',                 mols:[['FB(F)F',1],['ammonia',1]],                   box:300, temp:8,  expect:[['lewis','Ammonia shares its lone pair with boron’s empty orbital']]},
   {k:'coord',  c:'coord',      title:'Water gathers round a metal ion', mols:[['[Cu+]',1],['water',6]],                      box:330, temp:10, expect:[['coord','A water molecule bonds to the copper ion'],['coord','A second one joins'],['coord','And a third']]},
   {k:'salt',   c:'ionization', title:'Sodium burns in chlorine',       mols:[['[Na]',2],['ClCl',2]],                        box:320, temp:14, expect:[[['redox','ionization'],'A sodium atom hands its electron to chlorine'],[['redox','ionization'],'The second sodium does the same']], flat:false},
@@ -6165,6 +6174,18 @@ const LEARN_TOPICS = [
 /* A guess before each topic, and two questions after it. Each is
    {q, opts, a (the index of the right option), why}. */
 const LEARN_QA = {
+  proton:{predict:{q:'A bare proton (H\u207a) is set loose among water molecules. What happens to it?', opts:['It lands on a water molecule, making H\u2083O\u207a','It floats about on its own','It splits a water molecule into H\u2082 and O'], a:0, why:'A proton has no electrons at all: the first lone pair it meets takes it. Water\u2019s oxygen has two.'},
+    quiz:[{q:'Why do chemists treat H\u207a(aq) and H\u2083O\u207a as the same thing?', opts:['A free proton never lasts in water: it is always on a water molecule','H\u207a is heavier than H\u2083O\u207a','They are different but react the same way by chance'], a:0, why:'In water the proton is always carried by a water molecule (or a cluster of them).'},
+          {q:'Which atom of water takes the proton?', opts:['The oxygen, with a lone pair','A hydrogen','Neither: the proton bonds to the middle of the O\u2013H bond'], a:0, why:'Only the oxygen has lone pairs to give.'}]},
+  smoke:{predict:{q:'Ammonia gas meets hydrogen chloride gas. What forms?', opts:['Ammonium chloride, NH\u2084\u207a Cl\u207b','Nitrogen and chlorine','Ammonia hydrochloride gas that stays invisible'], a:0, why:'HCl gives its proton to ammonia\u2019s lone pair; the ions make a white solid, seen as smoke where the gases meet.'},
+    quiz:[{q:'What does ammonia use to take the proton?', opts:['The lone pair on its nitrogen','One of its hydrogens','Its empty orbital'], a:0, why:'A base takes a proton with a lone pair.'},
+          {q:'Why does the proton move from Cl to N?', opts:['N holds it far more tightly (pKa 9.2 for NH\u2084\u207a against \u22127 for HCl)','N is heavier','Cl repels hydrogen'], a:0, why:'A proton ends up wherever it is held most tightly: the higher pKa.'}]},
+  precip:{predict:{q:'Silver ions and chloride ions meet in water. What happens?', opts:['They lock together as a white solid, silver chloride','Nothing: both stay dissolved','They make chlorine gas and silver metal'], a:0, why:'Silver chloride\u2019s ions hold each other more tightly than water can pull them apart: it is insoluble.'},
+    quiz:[{q:'What is a precipitate?', opts:['A solid that forms when two solutions are mixed','A gas given off by a reaction','A substance that dissolves very well'], a:0, why:'An insoluble product comes out of solution as a solid.'},
+          {q:'Which of these is the test for chloride ions?', opts:['Add silver nitrate: a white precipitate','Add water: it fizzes','Hold it in a flame: it turns green'], a:0, why:'Ag\u207a + Cl\u207b \u2192 AgCl(s), white; bromide gives cream AgBr, iodide yellow AgI.'}]},
+  agcu:{predict:{q:'A copper atom sits among silver ions. What happens?', opts:['Copper gives electrons to silver ions: silver metal forms','Silver gives electrons to copper','Nothing: both are unreactive metals'], a:0, why:'Silver\u2019s electrode potential (+0.80 V) is higher than copper\u2019s (+0.34 V), so electrons flow from copper to silver ions.'},
+    quiz:[{q:'Which is oxidised?', opts:['Copper','Silver','Water'], a:0, why:'Copper loses electrons (Cu \u2192 Cu\u00b2\u207a): oxidation.'},
+          {q:'What voltage would this make as a cell?', opts:['0.46 V','1.14 V','0.80 V'], a:0, why:'E\u00b0cell = 0.80 \u2212 0.34 = 0.46 V.'}]},
   acid:{predict:{q:'When HCl meets water, where does HCl’s hydrogen end up?', opts:['On a water molecule, making H₃O⁺','It stays on the chlorine','It flies off as H₂ gas'], a:0, why:'HCl lets its proton go at pKa −7; water would hold it at pKa −1.7, far more tightly, so the proton moves to water.'},
     quiz:[{q:'What is left of the HCl after it gives up its proton?', opts:['A chloride ion, Cl⁻','A chlorine atom','A chlorine molecule, Cl₂'], a:0, why:'The chlorine keeps both electrons of the old bond, so it is left with a negative charge.'},
           {q:'Why does the proton move to water?', opts:['Water’s conjugate acid holds it more tightly (pKa −1.7 against −7)','Water is heavier than HCl','Chlorine repels hydrogen'], a:0, why:'A proton ends up wherever it is held most tightly: the higher pKa.'}]},
@@ -6452,7 +6473,7 @@ const SKILLS = {
 /* which skills each Learn topic exercises, for practising after it */
 const TOPIC_SKILLS = {acidbase:['pka'], neutral:['pka','enthalpy'], lewis:['valence','shape'], coord:['shape','valence'], ionization:['ioncharge','formula','bondtype'],
   redox:['redox'], metalacid:['redox'], metalwater:['redox','ioncharge'], addition:['enthalpy','valence'], markov:['valence','polarity'], ester:['moles','enthalpy'],
-  hydrolysis:['moles','enthalpy'], hbond:['hbond','imf'], metallic:['bondtype','imf'], electrolysis:['redox','ioncharge']};
+  hydrolysis:['moles','enthalpy'], hbond:['hbond','imf'], metallic:['bondtype','imf'], electrolysis:['redox','ioncharge'], precip:['precip','ioncharge']};
 let learnSkill = {};
 try{ learnSkill = JSON.parse(localStorage.getItem('bondingbench.learnskill')||'{}') || {}; }catch(e){ learnSkill = {}; }
 function skillNote(k, right){
@@ -6466,7 +6487,7 @@ let qSeq = 0;
 function genQuestion(k){ for(let i=0;i<5;i++){ const q = SKILLS[k].g(); if(q && q.opts.length >= 2){ q.id = 'q'+(qSeq++); return q; } } return null; }
 
 /* the order to take the topics in if you are starting out */
-const LEARN_PATH = ['salt','hbond','melt','acid','neut','lewis','coord','zncu','mgacid','naw','elec','br2','markov','ester','hydro'];
+const LEARN_PATH = ['salt','hbond','melt','acid','proton','smoke','neut','lewis','coord','precip','zncu','agcu','mgacid','naw','elec','br2','markov','ester','hydro'];
 /* Practice: endless fresh questions, leaning toward the skills you get wrong */
 function practiceStart(skills, label){
   STEP.hold = false; STEP.cur = null; LEARN.topic = null; LEARN.exam = null; LEARN.perm = {};
@@ -6964,7 +6985,8 @@ const CRS_UNITS = [
   {t:'Energy, rates and equilibrium', g:'⇌', c:'#C0503A', blurb:'why reactions go, how fast, and how far'},
   {t:'Solutions, acids and bases', g:'pH', c:'#7A4FB8', blurb:'dissolving, precipitates, acids and pH'},
   {t:'Redox, organic and nuclear', g:'e⁻', c:'#2A7A78', blurb:'electron transfer, carbon chemistry and the nucleus'}
-];
+,
+  {t:'Identifying compounds', g:'◎', c:'#3F8F4E', blurb:'composition, mass spectra, infrared and NMR'}];
 const CU1 = [
 /* =================== unit 1: matter =================== */
 {k:'welcome', u:0, title:'What is chemistry?', terms:[['chemistry','the study of matter: what things are made of, how they behave and how they change'],['matter','anything that has mass and takes up space'],['atom','the tiny particle every substance is built from, about a tenth of a nanometre across'],['model','a simplified picture that helps us explain and predict what we cannot see directly']],
@@ -7087,6 +7109,33 @@ const CU1 = [
     {t:'Select neon: every shell full', hint:'Press Ne, then click it.', check:()=>crsSel('Ne')}],
    after:'Lithium, sodium and potassium each have one lonely outer electron, which is why they behave so alike. Neon’s shells are full, and it reacts with nothing.'},
   {t:'quiz', skills:['shells','shells','shells']}]},
+{k:'orbitals', u:1, title:'Orbitals and electron configurations', recap:['Electrons sit in shells round the nucleus: 2, then 8, then 8 or more.'],
+ terms:[['orbital','a region round the nucleus where an electron is likely to be; each holds at most two electrons'],['subshell','a set of orbitals of one kind in a shell: s (one orbital), p (three), d (five), f (seven)'],['electron configuration','a list of how many electrons are in each subshell, such as 1s² 2s² 2p⁴ for oxygen'],['Hund’s rule','electrons spread out one to an orbital in a subshell before any pair up']],
+ sum:['Shells split into subshells: s holds 2, p holds 6, d holds 10.','They fill in energy order: 1s 2s 2p 3s 3p 4s 3d 4p.','In a subshell, electrons go one per orbital before pairing (Hund’s rule).'], steps:[
+  {t:'read', h:'Inside the shells', fig:{k:'orbitals', z:16}, p:['The shells are not the whole story. Each shell is made of <b>subshells</b>, named s, p, d and f, and each subshell is made of <b>orbitals</b>, regions where an electron is likely to be found. An orbital holds at most two electrons, spinning opposite ways.',
+    'An s subshell has one orbital (2 electrons), p has three (6), d has five (10) and f has seven (14). Shell 1 has only 1s; shell 2 has 2s and 2p (2 + 6 = 8); shell 3 has 3s, 3p and 3d.',
+    'Electrons fill the lowest energy first: 1s, 2s, 2p, 3s, 3p, then <b>4s before 3d</b>, because 4s is slightly lower in energy. Within a subshell they spread out one to an orbital before any pair up: <b>Hund’s rule</b>, like passengers taking empty seats on a bus before sitting next to someone.',
+    'Writing it down: sulfur’s 16 electrons are <b>1s² 2s² 2p⁶ 3s² 3p⁴</b>. The big number is the shell, the letter the subshell, the small raised number how many electrons are in it.'],
+   aside:'The shapes are real: an s orbital is a sphere, a p orbital two lobes either side of the nucleus. Chemists photograph their outlines with scanning tunnelling microscopes.'},
+  {t:'example', h:'A configuration', q:'Write the electron configuration of chlorine, which has 17 electrons.',
+   steps:['Fill in order, keeping count: 1s² (2), 2s² (4), 2p⁶ (10), 3s² (12).','Five electrons are left: they go into 3p, which holds up to six: <b>3p⁵</b>.','So chlorine is <b>1s² 2s² 2p⁶ 3s² 3p⁵</b>: one electron short of a full 3p, which is why it grabs one to make Cl⁻.'], ans:'1s² 2s² 2p⁶ 3s² 3p⁵.', you:{skill:'config'}},
+  {t:'do', h:'Read the configurations', setup:()=>crsSetup.clear(420, 30), p:'Add atoms with the buttons and click each one: the card shows its configuration.', palette:['O','Na','K','Fe','Br'], show:['atom'], tasks:[
+    {t:'Select an oxygen: 1s² 2s² 2p⁴', hint:'Press O, then click the red ball.', check:()=>crsSel('O')},
+    {t:'Select a potassium: its 19th electron went into 4s, not 3d', hint:'Press K and click it.', check:()=>crsSel('K')},
+    {t:'Select an iron: 4s filled, then six in 3d', hint:'Press Fe and click it.', check:()=>crsSel('Fe')}]},
+  {t:'quiz', skills:['config','config','shells']}]},
+{k:'light', u:1, title:'Light, energy levels and flame tests', recap:['Electrons sit in levels of fixed energy.'],
+ terms:[['energy level','one of the fixed energies an electron in an atom can have'],['photon','a single packet of light, with energy set by its colour'],['emission spectrum','the set of colours an element gives out when its electrons fall back down: a fingerprint for that element'],['flame test','holding a compound in a flame and identifying the metal in it by the colour']],
+ sum:['Electrons can only have certain energies: levels.','Heat lifts them up; falling back, they give out light of exactly the energy gap.','Each element’s gaps are different, so each has its own colours: flame tests and spectra.'], steps:[
+  {t:'read', h:'Why things glow in colours', fig:'flames', p:['An electron in an atom can only have certain energies, its <b>energy levels</b>, like the rungs of a ladder with nothing in between. Heat, electricity or light can kick it up a rung. It soon falls back, and the energy it loses comes out as a <b>photon</b> of light.',
+    'The photon’s energy is exactly the gap between the rungs, and energy decides colour: bigger gaps give blue and violet, smaller ones red. Every element has its own set of rungs, so every element gives out its own colours, its <b>emission spectrum</b>.',
+    'That is the <b>flame test</b>. Lithium burns crimson, sodium bright yellow (the colour of old street lamps), potassium lilac, calcium orange-red, barium green and copper blue-green. Fireworks are these same metal salts, packed with an explosive.'],
+   aside:'Helium was found in the Sun before it was found on Earth: in 1868 astronomers saw a yellow line in sunlight that matched no known element, and named it after helios, the Sun.'},
+  {t:'do', h:'A flame test on the bench', setup:()=>{ crsSetup.clear(340, 300); l3BuildAny('sodium chloride'); l3BuildAny('sodium chloride'); }, p:'Sodium chloride. Heat it with the slider: above about 1300 K hot metal ions glow their flame colour.', temp:true, build:true, show:['temp','mols'], tasks:[
+    {t:'Heat the sodium ions until they glow yellow (past about 1500 K)', hint:'Drag the temperature slider well to the right.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Na' && (a.Ts||0) > 1400)},
+    {t:'Build a copper ion (type Cu2+) and heat it: blue-green', hint:'Type Cu2+ in the build box.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Cu' && a.ion > 0 && (a.Ts||0) > 1400)}],
+   after:'Each metal glowed its own colour: its electrons fall back across its own energy gaps.'},
+  {t:'quiz', skills:['flame','flame','config']}]},
 {k:'ptable', u:1, title:'The periodic table', recap:['Electrons fill shells: 2, then 8, then 8. The outer electrons decide behaviour.'],
  terms:[['periodic table','the chart of all the elements in order of atomic number, arranged so that similar elements line up in columns'],['period','a row of the periodic table; its number is how many shells the atoms have'],['group','a column of the periodic table; its elements have the same number of outer electrons and behave alike'],['metal','an element that is shiny, conducts electricity and tends to lose electrons; on the left and in the middle of the table'],['nonmetal','an element that tends to gain or share electrons; on the right of the table'],['noble gas','an element in group 18, with a full outer shell: very unreactive'],['alkali metal','a group 1 metal such as sodium: one outer electron, very reactive'],['halogen','a group 17 element such as chlorine: seven outer electrons, very reactive']],
  sum:['Elements are arranged by atomic number; each row is a new shell.','Each column (group) has the same number of outer electrons, so its elements behave alike.','Metals are on the left, nonmetals on the right, noble gases at the far right.'], steps:[
@@ -7112,7 +7161,7 @@ const CU1 = [
     {t:'Carbon (4) needs 4 more: give it four hydrogens', hint:'C, then four H: methane.', check:()=>crsHas({C:1, H:4})}],
    after:'Each atom took exactly as many hydrogens as it was short of eight.'},
   {t:'quiz', skills:['valence','valence','shells']}]},
-{k:'chk2', u:1, title:'Unit 2 check', steps:[{t:'check', skills:['particles','particles','shells','shells','valence','valence']}]},
+{k:'chk2', u:1, title:'Unit 2 check', steps:[{t:'check', skills:['particles','particles','shells','shells','valence','valence','config']}]},
 /* =================== unit 3: trends =================== */
 {k:'size', u:2, title:'Atomic size', recap:['Each period is a new shell; each group has the same number of outer electrons.'],
  terms:[['atomic radius','how big an atom is: the distance from its nucleus to its outer electrons'],['shielding','inner electrons partly blocking the nucleus’s pull on the outer ones'],['nuclear charge','the total positive charge of the nucleus: its number of protons']],
@@ -7256,6 +7305,20 @@ const CU2 = [
     {t:'A carbon–carbon triple bond (acetylene)', check:()=>crsBondBetween('C','C', b=>b.order === 3)},
     {t:'A carbon–nitrogen triple bond', check:()=>crsBondBetween('C','N', b=>b.order === 3)}]},
   {t:'quiz', skills:['valence','valence']}]},
+{k:'resonance', u:4, title:'Resonance and formal charge', recap:['Atoms can share two or three pairs: double and triple bonds.'],
+ terms:[['formal charge','the charge an atom would have if every bond were shared equally: valence electrons − lone-pair electrons − half the bonding electrons'],['resonance','when one Lewis structure is not enough: the real molecule is a blend of several, with the electrons spread over them'],['delocalised electrons','electrons spread over several atoms instead of belonging to one bond']],
+ sum:['Formal charge = valence electrons − lone-pair electrons − half the bonding electrons.','When several Lewis structures fit, the real molecule is an average of them: resonance.','Delocalised electrons make bonds equal in length and the molecule more stable.'], steps:[
+  {t:'read', h:'Who “owns” the electrons?', p:['In a Lewis structure every atom has its lone pairs and bonds. Count the electrons an atom keeps (all of its lone-pair electrons and half of each bond) and compare with its valence electrons: the difference is its <b>formal charge</b>.',
+    'In the ammonium ion, NH₄⁺, nitrogen has 5 valence electrons but only 4 bonds and no lone pair: 5 − 0 − 8/2 = +1. The + of NH₄⁺ sits on the nitrogen. Formal charges always add up to the overall charge, and the best structure usually has the fewest of them.']},
+  {t:'read', h:'One molecule, several drawings', fig:{k:'mols', list:[['nitrate','nitrate, NO₃⁻'],['ozone','ozone, O₃'],['benzene','benzene, C₆H₆']]}, p:['Try drawing nitrate, NO₃⁻: nitrogen with one double bond and two single bonds to oxygen. But which oxygen gets the double bond? Any of the three. Each drawing is fine, and none is right on its own.',
+    'Measure it and all three N–O bonds are the same length, between a single and a double. The real ion is a blend: the extra electrons are <b>delocalised</b>, spread over all three oxygens. This is <b>resonance</b>. Ozone does the same with two bonds, and benzene with six, which is why its ring is drawn with a circle.',
+    'Spreading electrons out lowers their energy: resonance makes molecules more stable than any single drawing suggests. Benzene is about 150 kJ/mol more stable than three ordinary double bonds would make it.']},
+  {t:'example', h:'Formal charges in nitrate', q:'In one Lewis structure of NO₃⁻, find the formal charge on each atom.',
+   steps:['Nitrogen: 5 valence electrons, no lone pairs, 4 bonds (8 electrons): 5 − 0 − 4 = <b>+1</b>.','The doubly bonded oxygen: 6 − 4 − 2 = <b>0</b>.','Each singly bonded oxygen: 6 − 6 − 1 = <b>−1</b>, twice.','Total: +1 + 0 − 1 − 1 = <b>−1</b>, the charge on the ion.'], ans:'N +1, O= 0, each O− −1; total −1.', you:{skill:'formalq'}},
+  {t:'do', h:'Build them', setup:()=>crsSetup.clear(460, 60), p:'Build nitrate and benzene by name, and read their cards.', build:true, show:['mols'], tasks:[
+    {t:'Build nitrate', hint:'Type nitrate.', check:()=>crsHas({N:1, O:3}, -1)},
+    {t:'Build benzene: watch its ring become aromatic, six equal bonds', hint:'Type benzene.', check:()=>crsHas({C:6, H:6})}]},
+  {t:'quiz', skills:['formalq','formalq','valence']}]},
 {k:'strength', u:4, title:'Bond length and strength', recap:['Double and triple bonds share more electron pairs than single bonds.'],
  terms:[['bond energy','the energy needed to break one mole of a bond, in kJ/mol'],['bond length','the distance between the nuclei of two bonded atoms, in picometres (pm)'],['picometre','a trillionth of a metre (10⁻¹² m); bonds are about 100 to 250 pm long']],
  sum:['Bond length is the distance between bonded nuclei; bond energy is what it takes to break the bond.','Single, double, triple: each shorter and stronger than the last.','Small atoms make short, strong bonds.'], steps:[
@@ -7299,6 +7362,18 @@ const CU2 = [
     {t:'Phosphorus pentachloride, PCl₅', check:()=>crsHas({P:1, Cl:5})},
     {t:'Xenon tetrafluoride, XeF₄: a noble gas that bonds', check:()=>crsHas({Xe:1, F:4})}]},
   {t:'quiz', skills:['shape','shape','shape']}]},
+{k:'hybrid', u:5, title:'Hybrid orbitals', recap:['Electron pairs push apart: two pairs make 180°, three 120°, four 109.5°.','Shells are made of s and p orbitals.'],
+ terms:[['hybrid orbital','an orbital made by mixing an atom’s s and p orbitals, pointing in one direction to make a bond'],['sp³','four hybrids from one s and three p orbitals, 109.5° apart'],['sp²','three hybrids, 120° apart, with one p orbital left over for a π bond'],['sp','two hybrids, 180° apart, with two p orbitals left for two π bonds'],['π bond','the second (and third) bond of a double (or triple) bond, made by p orbitals overlapping side by side']],
+ sum:['Atoms mix s and p orbitals into hybrids that point where the bonds go.','4 regions: sp³, 109.5°. 3 regions: sp², 120°. 2 regions: sp, 180°.','Leftover p orbitals make the π bonds of double and triple bonds.'], steps:[
+  {t:'read', h:'Mixing orbitals', fig:{k:'mols', list:[['ethane','ethane: each C sp³'],['ethene','ethene: each C sp²'],['ethyne','ethyne: each C sp']]}, p:['Carbon’s outer electrons are in one 2s and three 2p orbitals, which point in different ways. Yet methane’s four C–H bonds are identical, 109.5° apart. The answer: carbon mixes its s and three p orbitals into four new, identical <b>hybrid orbitals</b>, called <b>sp³</b>, each pointing to a corner of a tetrahedron.',
+    'In ethene each carbon bonds to only three atoms. It mixes one s and two p orbitals into three <b>sp²</b> hybrids, flat and 120° apart, and keeps one p orbital. The two carbons’ spare p orbitals overlap side by side above and below the plane: that is the second bond of C=C, a <b>π bond</b>. It is why a double bond cannot twist.',
+    'In ethyne, H–C≡C–H, each carbon mixes one s and one p into two <b>sp</b> hybrids, 180° apart, a straight line, and keeps two p orbitals for two π bonds: the triple bond.',
+    'The rule of thumb: count the regions of electrons round the atom (bonded atoms plus lone pairs). Four is sp³, three is sp², two is sp. So the oxygen in water, with two bonds and two lone pairs, is sp³ too.']},
+  {t:'do', h:'Three carbons, three hybrids', setup:()=>crsSetup.clear(460, 40), p:'Build ethane, ethene and ethyne; each card names the hybridisation and shape.', build:true, show:['mols'], tasks:[
+    {t:'Ethane (C₂H₆): sp³, tetrahedral', hint:'Type ethane.', check:()=>crsHas({C:2, H:6})},
+    {t:'Ethene (C₂H₄): sp², flat', hint:'Type ethene.', check:()=>crsHas({C:2, H:4})},
+    {t:'Ethyne (C₂H₂): sp, straight', hint:'Type ethyne.', check:()=>crsHas({C:2, H:2})}]},
+  {t:'quiz', skills:['hybrid','hybrid','shape']}]},
 {k:'polarbonds', u:5, title:'Polar bonds', recap:['Electronegativity is an atom’s pull on shared electrons; fluorine pulls hardest.'],
  terms:[['polar bond','a covalent bond in which the electrons are shared unequally, giving δ+ and δ− ends'],['partial charge','a small charge (δ+ or δ−) on an atom from unequal sharing, less than a whole ion’s'],['non-polar bond','a covalent bond with the electrons shared equally (or nearly)']],
  sum:['Unequal sharing makes a polar bond: δ− on the more electronegative atom, δ+ on the other.','Electronegativity difference under 0.4: non-polar; 0.4 to 1.7: polar; over 1.7 (metal and nonmetal): ionic.','Ionic and covalent are two ends of one scale.'], steps:[
@@ -7323,7 +7398,20 @@ const CU2 = [
     {t:'Carbon tetrachloride, CCl₄: symmetric, so non-polar', hint:'Type CCl4.', check:()=>crsHas({C:1, Cl:4})},
     {t:'Chloroform, CHCl₃: one bond different, so polar', hint:'Type CHCl3.', check:()=>crsHas({C:1, H:1, Cl:3})}]},
   {t:'quiz', skills:['polarity','polarity','polarity']}]},
-{k:'chk6', u:5, title:'Unit 6 check', steps:[{t:'check', skills:['shape','shape','polarity','polarity','bondtype','valence']}]}
+{k:'isomers', u:5, title:'Isomers', recap:['A molecule’s shape decides how it behaves.'],
+ terms:[['isomers','compounds with the same molecular formula but their atoms arranged differently'],['structural isomers','isomers whose atoms are joined in a different order'],['cis/trans isomers','isomers that differ in which side of a rigid C=C bond groups sit on'],['chiral','having a mirror image that cannot be laid on top of it, like a hand'],['enantiomers','a pair of chiral molecules that are mirror images of each other']],
+ sum:['Isomers have the same formula and a different arrangement.','Structural isomers are joined differently; their properties can be very different.','Stereoisomers have the same connections but a different 3D arrangement: cis/trans and mirror-image (chiral) forms.'], steps:[
+  {t:'read', h:'Same atoms, different molecules', fig:{k:'mols', list:[['butane','butane'],['isobutane','2-methylpropane'],['ethanol','ethanol'],['dimethyl ether','methoxymethane']]}, p:['C₄H₁₀ can be drawn two ways: four carbons in a row (butane) or three with one branching off the middle (2-methylpropane). Same formula, different molecules: <b>isomers</b>. Butane boils at −1 °C, its branched isomer at −12 °C.',
+    'Sometimes the difference is dramatic. C₂H₆O is ethanol, a liquid that mixes with water and hydrogen bonds; it is also methoxymethane, an ether that boils at −24 °C. Joined differently, they even belong to different families. These are <b>structural isomers</b>.']},
+  {t:'read', h:'Isomers in 3D', p:['A C=C double bond cannot twist (its π bond would break). So in but-2-ene the two CH₃ groups can be on the same side (<b>cis</b>) or opposite sides (<b>trans</b>): two different compounds, with different boiling points.',
+    'A carbon with four different groups attached is <b>chiral</b>: it has a mirror image that cannot be laid over it, just as your left hand will not fit a right glove. The two forms, <b>enantiomers</b>, have identical boiling points but can smell, taste or act as drugs completely differently. One form of limonene smells of oranges; its mirror image smells of pine.'],
+   aside:'Your body is chiral too: its enzymes are built from one hand of amino acid, so they often accept only one hand of a drug. Many medicines are now made as a single enantiomer for that reason.'},
+  {t:'do', h:'Build both C₄H₁₀ isomers', setup:()=>crsSetup.clear(480, 40), p:'Build butane, then its branched isomer.', build:true, show:['mols'], tasks:[
+    {t:'Build butane, four carbons in a row', hint:'Type butane.', check:()=>l3Molecules().some(g=>crsSame(countsOf(g), {C:4, H:10}) && g.every(a=>crsSym(a) !== 'C' || l3Bonds(a).filter(b=>crsSym(l3Find(l3Other(b, a.id))) === 'C').length <= 2))},
+    {t:'Build its branched isomer, 2-methylpropane', hint:'Type isobutane or 2-methylpropane.', check:()=>l3Molecules().some(g=>crsSame(countsOf(g), {C:4, H:10}) && g.some(a=>crsSym(a) === 'C' && l3Bonds(a).filter(b=>crsSym(l3Find(l3Other(b, a.id))) === 'C').length === 3))}],
+   after:'Same formula, C₄H₁₀, two different molecules: compare their shapes on the cards.'},
+  {t:'quiz', skills:['isomer','isomer','polarity']}]},
+{k:'chk6', u:5, title:'Unit 6 check', steps:[{t:'check', skills:['shape','shape','polarity','polarity','bondtype','valence','hybrid','isomer']}]}
 ];
 
 const CU3 = [
@@ -7406,6 +7494,14 @@ const CU3 = [
     {t:'Carbon dioxide: 44 g/mol', hint:'Type CO2.', check:()=>crsHas({C:1, O:2})},
     {t:'Caffeine: work it out from C₈H₁₀N₄O₂, then check', hint:'Type caffeine. (8 × 12 + 10 + 4 × 14 + 2 × 16 = 194)', check:()=>crsHas({C:8, H:10, N:4, O:2})}]},
   {t:'quiz', skills:['moles','moles','moles']}]},
+{k:'empirical', u:7, title:'Percentage composition and empirical formulas', recap:['A mole of anything weighs its formula mass in grams.'],
+ terms:[['percentage composition','the share of a compound’s mass that comes from each element'],['empirical formula','the simplest whole-number ratio of atoms in a compound'],['molecular formula','the actual number of each atom in one molecule: a whole-number multiple of the empirical formula']],
+ sum:['% by mass = (mass of the element in one formula ÷ formula mass) × 100.','To find an empirical formula: grams → moles → divide by the smallest → whole numbers.','Molecular formula = empirical formula × (molar mass ÷ empirical formula mass).'], steps:[
+  {t:'read', h:'What is it made of?', p:['Burn an unknown compound and weigh the carbon dioxide and water that come off, and you can work out how much carbon, hydrogen and oxygen it held: its <b>percentage composition</b>. Water is 11.2% hydrogen and 88.8% oxygen by mass, because 16 of its 18 g/mol is oxygen.',
+    'From percentages you can work back to the <b>empirical formula</b>, the simplest ratio of atoms. Glucose (C₆H₁₂O₆), ethanoic acid (C₂H₄O₂) and methanal (CH₂O) all have the same empirical formula, CH₂O. To tell them apart you need the molar mass too, which a mass spectrum gives (unit 13).']},
+  {t:'example', h:'From percentages to a formula', q:'A compound is 40.0% carbon, 6.7% hydrogen and 53.3% oxygen by mass, and its molar mass is 180 g/mol. Find its empirical and molecular formulas.',
+   steps:['Take 100 g: 40.0 g C, 6.7 g H, 53.3 g O.','Moles: C 40.0 ÷ 12.0 = 3.33; H 6.7 ÷ 1.0 = 6.7; O 53.3 ÷ 16.0 = 3.33.','Divide by the smallest (3.33): C 1, H 2, O 1. Empirical formula <b>CH₂O</b>, which weighs 30 g/mol.','180 ÷ 30 = 6, so the molecule is six of these units: <b>C₆H₁₂O₆</b>, glucose.'], ans:'CH₂O; C₆H₁₂O₆.', you:{skill:'empirical'}},
+  {t:'quiz', skills:['empirical','empirical','moles']}]},
 {k:'reacting', u:7, title:'Reacting masses', recap:['moles = mass ÷ molar mass.','A balanced equation gives the ratio in which substances react.'],
  terms:[['stoichiometry','working out the amounts of substances that react and form, using a balanced equation'],['mole ratio','the ratio of moles in a balanced equation, read from its coefficients']],
  sum:['A balanced equation gives the mole ratio of everything in it.','To find a mass: grams → moles → use the ratio → moles → grams.','This is how factories, kitchens and pharmacies know how much to use.'], steps:[
@@ -7414,7 +7510,29 @@ const CU3 = [
   {t:'example', h:'How much water?', q:'2H₂ + O₂ → 2H₂O. What mass of water forms from 4 g of hydrogen? (H = 1, O = 16)',
    steps:['Hydrogen, H₂, is 2 g/mol: 4 g ÷ 2 = <b>2 mol</b> of H₂.','The equation: 2 H₂ make 2 H₂O, a 1 : 1 ratio, so <b>2 mol</b> of water.','Water is 18 g/mol: 2 × 18 = <b>36 g</b>.'], ans:'36 g of water.', you:{skill:'stoich'}},
   {t:'quiz', skills:['stoich','stoich','moles']}]},
-{k:'chk8', u:7, title:'Unit 8 check', steps:[{t:'check', skills:['atoms','atoms','balance','balance','moles','stoich']}]},
+{k:'limiting', u:7, title:'Limiting reactant and yield', recap:['Moles let you count particles by weighing.','A balanced equation gives the ratio in which substances react.'],
+ terms:[['limiting reactant','the reactant that runs out first, which decides how much product can form'],['excess reactant','a reactant left over when the limiting one is used up'],['theoretical yield','the most product the limiting reactant could possibly make'],['percentage yield','actual yield ÷ theoretical yield × 100']],
+ sum:['Divide each reactant’s moles by its coefficient: the smallest is the limiting reactant.','The limiting reactant sets the theoretical yield.','Percentage yield = actual ÷ theoretical × 100: real reactions lose some.'], steps:[
+  {t:'read', h:'Running out', p:['A recipe for sandwiches needs two slices of bread per slice of cheese. With 10 slices of bread and 3 of cheese you can make only 3 sandwiches: the cheese runs out first. In chemistry the cheese is the <b>limiting reactant</b>, and the leftover bread is in <b>excess</b>.',
+    'To find which runs out, divide each reactant’s moles by its coefficient in the balanced equation. For 2H₂ + O₂ → 2H₂O with 3 mol H₂ and 2 mol O₂: H₂ gives 3 ÷ 2 = 1.5, O₂ gives 2 ÷ 1 = 2. Hydrogen is smaller, so it limits, and 3 mol of water form.',
+    'That is the <b>theoretical yield</b>. Real reactions give less: some reacts the wrong way, some is lost on the glassware. <b>Percentage yield</b> = actual ÷ theoretical × 100; industry works hard to push it up.']},
+  {t:'example', h:'Which runs out?', q:'5.0 g of hydrogen reacts with 32 g of oxygen. How much water can form?',
+   steps:['Moles: H₂ 5.0 ÷ 2.0 = 2.5 mol; O₂ 32 ÷ 32 = 1.0 mol.','2H₂ + O₂ → 2H₂O: H₂ 2.5 ÷ 2 = 1.25; O₂ 1.0 ÷ 1 = 1.0. Oxygen is <b>limiting</b>.','Water = 2 × 1.0 = 2.0 mol = 2.0 × 18 = <b>36 g</b>, and 0.5 mol (1.0 g) of hydrogen is left over.'], ans:'36 g of water; oxygen limits.', you:{skill:'limiting'}},
+  {t:'do', h:'See it run out', setup:()=>crsSetup.molecules([['HCl',3],['ammonia',1]], 340, 298), slow:false, nudge:true, p:'Three HCl and one ammonia: NH₃ + HCl → NH₄Cl, one to one.', show:['mols','rx'], tasks:[
+    {t:'Watch the ammonia get used up', hint:'Give them a push if nothing happens.', check:()=>crsHas({N:1, H:4}, 1) && !crsHas({N:1, H:3})},
+    {t:'See what is left over: HCl, in excess', hint:'Look at the molecule list.', check:()=>crsHas({N:1, H:4}, 1) && crsHow({H:1, Cl:1}) >= 1}],
+   after:'One ammonia could only take one proton: it was the limiting reactant, and the HCl that was left over was in excess.'},
+  {t:'quiz', skills:['limiting','limiting','stoich']}]},
+{k:'concentration', u:7, title:'Concentration and dilution', recap:['Moles = mass ÷ molar mass.'],
+ terms:[['concentration','how much solute is in a given volume of solution, in mol/L (also written mol dm⁻³ or M)'],['solute','the substance dissolved'],['solvent','the liquid it is dissolved in, usually water'],['dilution','adding solvent to lower the concentration; the moles of solute stay the same']],
+ sum:['Concentration (mol/L) = moles ÷ volume in litres.','Remember to change mL to L (÷ 1000).','Diluting keeps the moles the same: c₁V₁ = c₂V₂.'], steps:[
+  {t:'read', h:'How strong is a solution?', p:['A solution’s <b>concentration</b> is the moles of <b>solute</b> in each litre: c = n ÷ V. Dissolve 0.50 mol of salt and make it up to 250 mL (0.250 L) and you have 0.50 ÷ 0.250 = 2.0 mol/L.',
+    'Going the other way, the moles in a sample are n = c × V. That is how you weigh out a solution: 250 mL of 0.20 mol/L sodium chloride needs 0.050 mol, which is 0.050 × 58.4 = 2.92 g.',
+    'Adding water <b>dilutes</b> a solution, but the solute is all still there, so c₁ × V₁ = c₂ × V₂. Ten millilitres of 1.0 mol/L acid made up to 100 mL becomes 0.10 mol/L.']},
+  {t:'example', h:'A dilution', q:'You need 500 mL of 0.10 mol/L hydrochloric acid. How much 2.0 mol/L stock do you take?',
+   steps:['c₁V₁ = c₂V₂, so V₁ = c₂V₂ ÷ c₁.','V₁ = 0.10 × 500 ÷ 2.0 = <b>25 mL</b>.','Take 25 mL of the stock and add water up to 500 mL (always acid into water, never the other way round).'], ans:'25 mL of stock, made up to 500 mL.', you:{skill:'molarity'}},
+  {t:'quiz', skills:['molarity','molarity','moles']}]},
+{k:'chk8', u:7, title:'Unit 8 check', steps:[{t:'check', skills:['atoms','atoms','balance','balance','moles','stoich','limiting','molarity','empirical']}]},
 /* =================== unit 9: gases =================== */
 {k:'pressure', u:8, title:'Gas pressure', recap:['Gas particles are far apart and move fast and freely.','Temperature measures how fast particles move.'],
  terms:[['pressure','the push of a gas on each bit of its container’s walls, from countless particle collisions'],['atmosphere (atm)','a unit of pressure: the air’s pressure at sea level'],['kinetic theory','the idea that gas behaviour comes from tiny particles moving fast and colliding']],
@@ -7472,6 +7590,25 @@ const CU4 = [
   {t:'example', h:'Hydrogen and chlorine', q:'H₂ + Cl₂ → 2HCl. Bond energies: H–H 436, Cl–Cl 243, H–Cl 432 kJ/mol. What is ΔH?',
    steps:['Bonds broken: one H–H and one Cl–Cl: 436 + 243 = <b>679</b> kJ in.','Bonds made: two H–Cl: 2 × 432 = <b>864</b> kJ out.','ΔH = 679 − 864 = <b>−185 kJ/mol</b>.'], ans:'−185 kJ/mol: exothermic, so the mixture can explode in sunlight.', you:{skill:'enthalpy'}},
   {t:'quiz', skills:['enthalpy','enthalpy','enthalpy']}]},
+{k:'hess', u:9, title:'Hess’s law', recap:['ΔH is the heat a reaction gives out (negative) or takes in (positive).'],
+ terms:[['Hess’s law','the enthalpy change of a reaction is the same whatever route it takes, as long as it starts and ends at the same place'],['enthalpy cycle','a diagram showing two routes between the same start and end, used to find an unknown ΔH']],
+ sum:['ΔH depends only on the start and the end, not the route.','Reverse an equation: flip the sign of ΔH. Multiply it: multiply ΔH.','Add equations (and their ΔH values) to make the one you want.'], steps:[
+  {t:'read', h:'The route does not matter', fig:'hess', p:['Climbing a hill, your change in height is the same whether you take the steep path or the zigzag. Energy works the same way: the enthalpy change between a start and an end is fixed, whatever happens in between. This is <b>Hess’s law</b>.',
+    'It lets us find ΔH for reactions we cannot do cleanly. Burning carbon always makes some CO₂, so the ΔH for C + ½O₂ → CO cannot be measured directly. But C → CO₂ (−394 kJ/mol) can go straight there, or through CO: C → CO (unknown) then CO → CO₂ (−283). Both routes must match: unknown + (−283) = −394, so the unknown is <b>−111 kJ/mol</b>.',
+    'Two rules make the sums work: turning an equation round flips the sign of its ΔH, and doubling an equation doubles its ΔH.']},
+  {t:'example', h:'Adding equations', q:'S + O₂ → SO₂, ΔH = −297 kJ/mol; 2SO₂ + O₂ → 2SO₃, ΔH = −198 kJ/mol. Find ΔH for S + 1½O₂ → SO₃.',
+   steps:['We want one SO₃, so halve the second equation: SO₂ + ½O₂ → SO₃, ΔH = −99 kJ/mol.','Add it to the first: S + O₂ + SO₂ + ½O₂ → SO₂ + SO₃. The SO₂ cancels.','ΔH = −297 + (−99) = <b>−396 kJ/mol</b>.'], ans:'−396 kJ/mol.', you:{skill:'hess'}},
+  {t:'quiz', skills:['hess','hess','enthalpy']}]},
+{k:'entropy', u:9, title:'Entropy and free energy', recap:['Exothermic reactions give out heat (ΔH negative).'],
+ terms:[['entropy (S)','a measure of how spread out energy and matter are: how many ways things can be arranged'],['spontaneous','able to happen on its own, without a continuous push (it may still be slow)'],['Gibbs free energy (ΔG)','ΔG = ΔH − TΔS; a reaction is spontaneous when ΔG is negative']],
+ sum:['Entropy measures spreading out: gases more than liquids, liquids more than solids.','ΔG = ΔH − TΔS: spontaneous when ΔG is negative.','Heat helps reactions that increase entropy: that is why ice melts above 0 °C.'], steps:[
+  {t:'read', h:'Why does ice melt?', fig:'gibbs', p:['Melting ice takes heat in (ΔH positive), yet ice melts on its own on a warm day. Energy is not the whole story: things also tend to spread out. A drop of ink spreads through water; a gas fills its container. The measure of spreading is <b>entropy</b>, S.',
+    'Gases have much more entropy than liquids, and liquids more than solids; more particles means more too. Melting and boiling increase entropy (ΔS positive), and so does a reaction that makes more gas molecules than it uses.',
+    'The two tendencies are combined in the <b>Gibbs free energy</b>: <b>ΔG = ΔH − TΔS</b>. When ΔG is negative the change is <b>spontaneous</b>. For melting ice ΔH = +6.0 kJ/mol and ΔS = +22 J/(mol·K): below 273 K ΔG is positive and ice stays frozen; above it, TΔS wins and it melts. The temperature where ΔG = 0 is the melting point.']},
+  {t:'do', h:'Entropy wins when it is hot', setup:()=>crsSetup.water(8, 300, 200), p:'Eight water molecules, cold and huddled by hydrogen bonds (ΔH favours this). Heat them.', temp:true, show:['temp','hb'], tasks:[
+    {t:'Heat past 600 K: the molecules fly apart into a gas', hint:'Drag the slider to the right.', check:()=>kelvin() >= 600 && crsElapsed() > 4}],
+   after:'Pulling the molecules apart costs energy (ΔH positive) but spreads them out hugely (ΔS positive). At high T, the −TΔS term wins and the gas is favoured.'},
+  {t:'quiz', skills:['gibbs','gibbs','states']}]},
 {k:'rates', u:9, title:'Reaction rates', recap:['Particles must meet to react.','Temperature measures how fast particles move.'],
  terms:[['rate of reaction','how fast reactants are used up or products made'],['collision theory','particles react only when they collide with enough energy (and the right way round)'],['concentration','how much of a substance is dissolved in a given volume'],['surface area','how much of a solid is exposed; powders have far more than lumps']],
  sum:['Particles react only when they collide hard enough.','Heat, higher concentration, more surface area and catalysts all make reactions faster.','Each works by making successful collisions more frequent.'], steps:[
@@ -7504,7 +7641,19 @@ const CU4 = [
     {t:'Keep watching until twelve have escaped and twelve come back', hint:'The bars hover around a steady height while the counts keep climbing.', check:()=>CRS.evap && CRS.evap.esc >= 12 && CRS.evap.ret >= 12}],
    after:'The number in the vapour hovered around a steady value while molecules kept escaping and returning: dynamic equilibrium. Nothing seems to change, yet everything is moving.'},
   {t:'quiz', skills:['equil','equil','equil']}]},
-{k:'chk10', u:9, title:'Unit 10 check', steps:[{t:'check', skills:['enthalpy','enthalpy','rates','rates','equil','equil']}]},
+{k:'lechatelier', u:9, title:'Le Chatelier’s principle', recap:['At equilibrium the forward and reverse reactions run at the same rate.'],
+ terms:[['Le Chatelier’s principle','if a change is made to a system at equilibrium, the equilibrium shifts to oppose the change'],['position of equilibrium','how far towards products an equilibrium lies'],['Haber process','the industrial reaction N₂ + 3H₂ ⇌ 2NH₃, making ammonia for fertilisers']],
+ sum:['An equilibrium shifts to oppose any change made to it.','Add a reactant or remove a product: it shifts right. Raise the pressure: it shifts to the side with fewer gas molecules.','Heating favours the endothermic direction. A catalyst does not shift it, only speeds both ways.'], steps:[
+  {t:'read', h:'Pushing back', p:['An equilibrium is a balance, and it fights back. <b>Le Chatelier’s principle</b>: change the conditions and the equilibrium shifts to undo some of the change.',
+    '<b>Concentration</b>: add more reactant and some is used up, making more product; remove product as it forms and more is made. <b>Pressure</b> (for gases): squeeze it and it shifts to the side with fewer gas molecules, which takes up less room. <b>Temperature</b>: heat it and it shifts in the endothermic direction, soaking up the heat; cool it and the exothermic direction wins.',
+    'A <b>catalyst</b> speeds up both directions equally, so equilibrium arrives sooner, but its position does not move.']},
+  {t:'read', h:'Ammonia: the compromise', p:['The Haber process, N₂ + 3H₂ ⇌ 2NH₃, ΔH = −92 kJ/mol, feeds half the world through fertiliser. Four gas molecules become two, so high pressure pushes it right: industry uses about 200 atmospheres.',
+    'The forward reaction is exothermic, so a low temperature would give the most ammonia, but then it would take forever. The compromise is about 450 °C with an iron catalyst: a smaller yield, made fast, with the ammonia removed and the leftover gases sent round again.'],
+   aside:'Fritz Haber won the 1918 Nobel Prize for making ammonia from air. About half of the nitrogen in your body passed through his process.'},
+  {t:'example', h:'Predicting a shift', q:'N₂O₄ (colourless) ⇌ 2NO₂ (brown), ΔH = +57 kJ/mol. What happens if you heat it, and if you squeeze it?',
+   steps:['Heating favours the endothermic direction, which is forward here: <b>more brown NO₂</b>.','Squeezing favours fewer gas molecules: one N₂O₄ against two NO₂, so it shifts <b>left, paler</b>.'], ans:'Heat: browner. Squeeze: paler.', you:{skill:'lechat'}},
+  {t:'quiz', skills:['lechat','lechat','equil']}]},
+{k:'chk10', u:9, title:'Unit 10 check', steps:[{t:'check', skills:['enthalpy','enthalpy','rates','rates','equil','equil','hess','gibbs','lechat']}]},
 /* =================== unit 11: solutions, acids, bases =================== */
 {k:'dissolving', u:10, title:'Dissolving', recap:['Water is polar: δ− oxygen, δ+ hydrogens.','Ionic compounds are lattices of ions.'],
  terms:[['solution','a mixture in which one substance is dissolved evenly in another'],['solute','the substance that dissolves'],['solvent','the substance it dissolves in, usually water'],['hydration','water molecules surrounding a dissolved ion'],['saturated','holding as much solute as it can at that temperature']],
@@ -7547,6 +7696,17 @@ const CU4 = [
     {t:'Acetic acid in water: see how much less it gives up', hint:'Press Acetic acid in water and watch for a while.', check:()=>crsHas({C:2, H:4, O:2}) && crsElapsed() > 15}],
    after:'The strong acid gave its proton straight away; the weak acid mostly kept hold of its own.'},
   {t:'quiz', skills:['phcalc','phcalc','pka']}]},
+{k:'weakacids', u:10, title:'Weak acids, Ka and buffers', recap:['pH = −log₁₀[H⁺].','Weak acids give up only a fraction of their protons.'],
+ terms:[['Ka','the acid dissociation constant: how far a weak acid splits up in water, Ka = [H⁺][A⁻]/[HA]'],['pKa','−log₁₀ Ka: the lower the pKa, the stronger the acid'],['buffer','a mixture of a weak acid and its conjugate base (or a weak base and its conjugate acid) that resists changes in pH'],['conjugate base','what is left of an acid after it gives up a proton']],
+ sum:['Ka measures how far a weak acid splits up; pKa = −log Ka, lower is stronger.','A buffer is a weak acid with its conjugate base: it soaks up added acid or base.','Buffer pH = pKa + log([base]/[acid]).'], steps:[
+  {t:'read', h:'How weak is weak?', p:['A weak acid HA only partly splits up in water: HA ⇌ H⁺ + A⁻. Its equilibrium constant is <b>Ka</b> = [H⁺][A⁻]/[HA]. Acetic acid’s Ka is 1.8 × 10⁻⁵: in 0.1 mol/L vinegar only about 1 molecule in 75 has given up its proton.',
+    'Because Ka values are tiny, chemists use <b>pKa</b> = −log₁₀ Ka. Acetic acid is pKa 4.76; HCl is about −7. Each unit lower is ten times stronger. The bench itself uses these numbers to decide where a proton goes.']},
+  {t:'read', h:'Buffers: pH that holds steady', p:['Mix a weak acid with its <b>conjugate base</b>, say acetic acid with sodium acetate, and you have a <b>buffer</b>. Add a little strong acid and the acetate mops it up (A⁻ + H⁺ → HA); add a little base and the acetic acid neutralises it (HA + OH⁻ → A⁻ + H₂O). The pH barely moves.',
+    'Its pH follows the <b>Henderson–Hasselbalch</b> equation: pH = pKa + log([base]/[acid]). With equal amounts the pH equals the pKa; ten times more base raises it by one.'],
+   aside:'Your blood is buffered at pH 7.4 by carbonic acid and hydrogen carbonate. If it drifts below 7.35 or above 7.45 you become ill; outside 6.8 to 7.8 you would not survive.'},
+  {t:'example', h:'A buffer’s pH', q:'A buffer has 0.20 mol/L acetate and 0.10 mol/L acetic acid (pKa 4.76). What is its pH?',
+   steps:['pH = pKa + log([base]/[acid]).','= 4.76 + log(0.20/0.10) = 4.76 + log 2 = 4.76 + 0.30.','pH = <b>5.06</b>.'], ans:'pH 5.06.', you:{skill:'buffer'}},
+  {t:'quiz', skills:['buffer','buffer','pka']}]},
 {k:'neutralisation', u:10, title:'Neutralisation', recap:['Acids give H⁺; bases take it.'],
  terms:[['neutralisation','an acid and a base reacting to cancel each other out, making water and a salt'],['salt','an ionic compound made when an acid reacts with a base']],
  sum:['Acid + base → salt + water: the H⁺ and OH⁻ make water.','Neutralisation is exothermic: about 57 kJ per mole of water.','It is how antacids settle a stomach and how farmers treat acidic soil.'], steps:[
@@ -7555,7 +7715,17 @@ const CU4 = [
   {t:'do', h:'Neutralise', setup:()=>crsSetup.topic('neut'), slow:true, nudge:true, p:'Sodium hydroxide meets hydrochloric acid in a little water.', show:['meter','rx'], tasks:[
     {t:'Watch the hydroxide become water', hint:'Give them a push if needed.', check:()=>!crsHas({H:1, O:1}, -1) && crsHow({H:2, O:1}) >= 3}]},
   {t:'quiz', skills:['pka','enthalpy','phcalc']}]},
-{k:'chk11', u:10, title:'Unit 11 check', steps:[{t:'check', skills:['precip','precip','pka','phcalc','phcalc','imf']}]},
+{k:'titration', u:10, title:'Titrations', recap:['Acid + base → salt + water.','Concentration = moles ÷ volume.'],
+ terms:[['titration','adding one solution to another from a burette, a drop at a time, until they have exactly reacted'],['burette','a long graduated tube with a tap, for adding a measured volume'],['equivalence point','where exactly enough has been added to react with all of the other'],['indicator','a dye that changes colour near the equivalence point'],['titre','the volume added from the burette']],
+ sum:['Titrations find an unknown concentration by reacting it exactly.','At equivalence, moles of acid and base match the equation’s ratio.','The pH jumps at equivalence; choose an indicator that changes inside the jump.'], steps:[
+  {t:'read', h:'Measuring by reacting', fig:'titr', p:['A <b>titration</b> finds how concentrated a solution is. Put a measured volume of acid in a flask with a few drops of <b>indicator</b>, then run in base from a <b>burette</b> until the colour just changes: the <b>equivalence point</b>. The volume used is the <b>titre</b>.',
+    'Plot pH against base added and you get a titration curve. Near equivalence the pH leaps by several units for a single drop. For a strong acid with a strong base the jump is centred on pH 7.',
+    'With a weak acid the curve starts higher, climbs slowly through a <b>buffer region</b> (half-way there, pH = pKa) and reaches equivalence above 7, because the conjugate base left behind is itself slightly basic. So the indicator must suit the jump: phenolphthalein (8.2 to 10) for a weak acid with a strong base; methyl orange (3.1 to 4.4) for a strong acid with a weak base.']},
+  {t:'example', h:'An unknown acid', q:'25.0 mL of hydrochloric acid needs 20.0 mL of 0.100 mol/L sodium hydroxide. What is the acid’s concentration?',
+   steps:['Moles of NaOH = 0.100 × 0.0200 = 0.00200 mol.','HCl + NaOH → NaCl + H₂O is 1:1, so the flask held 0.00200 mol of HCl.','Concentration = 0.00200 ÷ 0.0250 = <b>0.0800 mol/L</b>.'], ans:'0.0800 mol/L.', you:{skill:'titration'}},
+  {t:'read', h:'See a full titration', p:['Analysis mode can work out the curve for any acid and base you choose, with the equivalence point, the buffer region and the best indicator, from the same pKa values the bench uses.'], acts:[['Titrate acetic acid with sodium hydroxide in Analysis mode','ana:acetic acid+sodium hydroxide']]},
+  {t:'quiz', skills:['titration','titration','phcalc']}]},
+{k:'chk11', u:10, title:'Unit 11 check', steps:[{t:'check', skills:['precip','precip','pka','phcalc','phcalc','imf','buffer','titration']}]},
 /* =================== unit 12: redox, organic, nuclear =================== */
 {k:'redox', u:11, title:'Oxidation and reduction', recap:['Metals tend to lose electrons; nonmetals tend to gain them.'],
  terms:[['oxidation','losing electrons'],['reduction','gaining electrons'],['redox reaction','a reaction in which electrons move from one substance to another: one is oxidised, the other reduced'],['electrode potential (E°)','a measure, in volts, of how strongly a metal’s ions want electrons back']],
@@ -7566,6 +7736,16 @@ const CU4 = [
    predict:{q:'Zinc is −0.76 V, copper +0.34 V. What will happen?', opts:['Zinc dissolves and copper metal comes out','Copper dissolves and zinc comes out','Nothing'], a:0, why:'Electrons flow from the lower potential (zinc) to the higher (copper ions).'},
    tasks:[{t:'Watch zinc hand its electrons to the copper ion', hint:'Give them a push if needed.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Cu' && !a.ion) && crsIon('Zn')}]},
   {t:'quiz', skills:['redox','redox','redox']}]},
+{k:'oxstates', u:11, title:'Oxidation states', recap:['Oxidation is loss of electrons; reduction is gain.'],
+ terms:[['oxidation state','the charge an atom would have if all its bonds were fully ionic; a way of tracking electrons'],['oxidising agent','a substance that takes electrons from another, and is itself reduced'],['reducing agent','a substance that gives electrons to another, and is itself oxidised']],
+ sum:['Oxidation states track electrons, as if every bond were ionic.','Rules: elements 0; O −2 (peroxides −1); H +1 (−1 with metals); F −1; they add up to the overall charge.','An increase in oxidation state is oxidation; a decrease is reduction.'], steps:[
+  {t:'read', h:'Bookkeeping for electrons', p:['In ionic reactions it is easy to see who loses electrons. In covalent molecules electrons are shared, so chemists use a bookkeeping trick: give each bond’s electrons to the more electronegative atom, and see what charge each atom is left with. That is its <b>oxidation state</b>.',
+    'A few rules do most of the work. An element on its own is 0. Oxygen is −2 (−1 in peroxides like H₂O₂). Hydrogen is +1 (−1 in metal hydrides like NaH). Fluorine is always −1. The states add up to the overall charge: in sulfate, SO₄²⁻, four oxygens give −8, so sulfur must be +6.',
+    'Now redox is easy to spot: an atom whose oxidation state goes <b>up</b> is oxidised, one whose state goes <b>down</b> is reduced. In 2Mg + O₂ → 2MgO, magnesium goes 0 → +2 (oxidised) and oxygen 0 → −2 (reduced). Magnesium is the <b>reducing agent</b>, oxygen the <b>oxidising agent</b>.'],
+   aside:'Manganese runs from +2 to +7, and its compounds change colour with it: pink Mn²⁺, brown MnO₂, green MnO₄²⁻, deep purple MnO₄⁻. Permanganate’s purple vanishing is a classic test for reducing agents.'},
+  {t:'example', h:'Permanganate', q:'What is the oxidation state of manganese in the permanganate ion, MnO₄⁻?',
+   steps:['Four oxygens at −2 each: −8.','The ion’s charge is −1, so Mn + (−8) = −1.','Mn = <b>+7</b>, its highest state, which is why permanganate is such a strong oxidising agent.'], ans:'+7.', you:{skill:'oxstate'}},
+  {t:'quiz', skills:['oxstate','oxstate','redox']}]},
 {k:'series', u:11, title:'The reactivity series', recap:['Electrons flow from the lower electrode potential to the higher.'],
  terms:[['reactivity series','metals listed from most to least reactive'],['displacement','a more reactive metal pushing a less reactive one out of its compound']],
  sum:['The reactivity series ranks metals: potassium at the top, gold at the bottom.','Metals above hydrogen fizz in acid; those below do not.','A more reactive metal displaces a less reactive one from its solution.'], steps:[
@@ -7575,6 +7755,19 @@ const CU4 = [
     {t:'Zinc + acid: zinc (−0.76 V) is below hydrogen, so it reacts', hint:'Press Zinc + acid and give it a push.', check:()=>crsIon('Zn')},
     {t:'Copper + acid: copper (+0.34 V) stays put', hint:'Press Copper + acid and watch for fifteen seconds.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Cu' && !a.ion) && crsElapsed() > 15}]},
   {t:'quiz', skills:['redox','redox']}]},
+{k:'cells', u:11, title:'Electrochemical cells', recap:['Electrons flow from the metal with the lower E° to the ions of the higher.'],
+ terms:[['electrochemical cell','two half-cells joined by a wire and a salt bridge, turning a redox reaction into electricity'],['anode','the electrode where oxidation happens (negative in a battery)'],['cathode','the electrode where reduction happens (positive in a battery)'],['salt bridge','a tube of salt solution joining the two halves, letting ions move to keep each side neutral'],['E°cell','the cell’s standard voltage: E°(cathode) − E°(anode)']],
+ sum:['Separate the two halves of a redox reaction and the electrons must travel through a wire: electricity.','Oxidation at the anode, reduction at the cathode; the salt bridge completes the circuit.','E°cell = E°(cathode) − E°(anode); a positive value means the cell works on its own.'], steps:[
+  {t:'read', h:'A redox reaction in two halves', fig:'galv', p:['Drop zinc into copper sulfate and the zinc dissolves while copper coats it: electrons jump straight across. Now put the zinc in one beaker of its own ions and copper in another, and join them with a wire. The electrons still want to go from zinc to copper, but now they must travel through the wire: an electric current. This is an <b>electrochemical cell</b>.',
+    'Oxidation (Zn → Zn²⁺ + 2e⁻) happens at the <b>anode</b>; reduction (Cu²⁺ + 2e⁻ → Cu) at the <b>cathode</b>. A <b>salt bridge</b> lets ions drift between the beakers so neither side builds up charge; without it the current stops at once.',
+    'The voltage comes from the electrode potentials: <b>E°cell = E°(cathode) − E°(anode)</b> = 0.34 − (−0.76) = 1.10 V. The further apart two metals are in the reactivity series, the bigger the voltage. Every battery is this idea, cleverly packaged.']},
+  {t:'example', h:'Which way, how many volts?', q:'A cell is made from magnesium (E° = −2.37 V) and silver (E° = +0.80 V). Which is the anode, and what is E°cell?',
+   steps:['The lower E°, magnesium, gives up electrons: it is the <b>anode</b>.','Silver ions take them at the <b>cathode</b>.','E°cell = 0.80 − (−2.37) = <b>3.17 V</b>.'], ans:'Mg is the anode; 3.17 V.', you:{skill:'cell'}},
+  {t:'do', h:'Copper meets silver ions', setup:()=>crsSetup.topic('agcu'), slow:true, nudge:true, p:'A copper atom and silver ions in water: E°(Ag) = +0.80 V, E°(Cu) = +0.34 V.', show:['rx'], tasks:[
+    {t:'Watch copper give an electron to a silver ion: silver metal comes out', hint:'Give them a push if nothing happens.', check:()=>L3.atoms.some(a=>crsSym(a) === 'Ag' && !a.ion) && crsIon('Cu')}],
+   after:'Silver’s higher potential pulled the electrons over. In a cell, those electrons would have run through a wire at 0.46 V.'},
+  {t:'read', h:'Work out any cell', p:['Analysis mode turns any metal-and-ion pair into a cell, with its half-equations, cell notation, voltage, ΔG, equilibrium constant and how the voltage sags as it runs.'], acts:[['Zinc and copper ions in Analysis mode','ana:zinc+copper(II) ion']]},
+  {t:'quiz', skills:['cell','cell','redox']}]},
 {k:'electrolysis', u:11, title:'Electrolysis', recap:['Ionic compounds conduct when molten, because the ions can move.','Reduction is gaining electrons.'],
  terms:[['electrolysis','splitting a compound by passing electricity through it, molten or dissolved'],['electrode','a conductor that carries current into or out of the liquid'],['anode','the positive electrode, where anions give up electrons (oxidation)'],['cathode','the negative electrode, where cations gain electrons (reduction)']],
  sum:['Electrolysis uses electricity to split a compound into its elements.','Cations go to the cathode (−) and gain electrons; anions go to the anode (+) and lose them.','Aluminium, chlorine and sodium are made this way.'], steps:[
@@ -7598,6 +7791,17 @@ const CU4 = [
     {t:'A molecule of twenty atoms or more', check:()=>l3Molecules().some(g=>g.length >= 20)},
     {t:'An aromatic ring (benzene, aspirin, caffeine…)', check:()=>L3.bonds.some(b=>b.arom)}]},
   {t:'quiz', skills:['valence','moles','atoms']}]},
+{k:'naming', u:11, title:'Naming organic compounds', recap:['Carbon makes chains and rings; functional groups give each family its reactions.'],
+ terms:[['homologous series','a family of compounds with the same functional group, each one CH₂ longer than the last'],['functional group','the group of atoms that gives a family its reactions: C=C, OH, COOH, C=O'],['IUPAC name','the systematic name, built from the chain length, the functional group and its position']],
+ sum:['The stem counts the carbons: meth 1, eth 2, prop 3, but 4, pent 5, hex 6.','The ending names the family: -ane, -ene, -ol, -al, -one, -oic acid.','A number says where the group is, counting from the end nearer to it.'], steps:[
+  {t:'read', h:'A name you can draw', fig:{k:'mols', list:[['propan-1-ol','propan-1-ol'],['propan-2-ol','propan-2-ol'],['butanone','butanone'],['propanoic acid','propanoic acid']]}, p:['There are millions of organic compounds, so their names are built like codes, by the rules of IUPAC. Learn three parts and you can draw most of them.',
+    'The <b>stem</b> counts the carbons in the longest chain: meth- (1), eth- (2), prop- (3), but- (4), pent- (5), hex- (6), hept- (7), oct- (8). The <b>ending</b> names the family: -ane (alkane, single bonds), -ene (a C=C), -ol (an alcohol, OH), -al (an aldehyde, CHO at the end), -one (a ketone, C=O inside the chain), -oic acid (COOH).',
+    'A <b>number</b> says where the group sits, counting from whichever end gives the smaller number. Propan-1-ol has its OH on the end carbon; propan-2-ol (rubbing alcohol) on the middle one. Branches are named as prefixes: 2-methylpropane is a propane chain with a methyl on carbon 2.']},
+  {t:'do', h:'Build from the name', setup:()=>crsSetup.clear(500, 40), p:'Type each name into Build: the bench reads IUPAC names.', build:true, show:['mols'], tasks:[
+    {t:'Build propan-2-ol', hint:'Type propan-2-ol.', check:()=>crsHas({C:3, H:8, O:1})},
+    {t:'Build butanone', hint:'Type butanone.', check:()=>crsHas({C:4, H:8, O:1})},
+    {t:'Build propanoic acid', hint:'Type propanoic acid.', check:()=>crsHas({C:3, H:6, O:2})}]},
+  {t:'quiz', skills:['naming','naming','naming']}]},
 {k:'organicrx', u:11, title:'Organic reactions', recap:['Alkenes have a reactive C=C double bond.'],
  terms:[['addition reaction','a reaction in which a double bond opens and atoms add to each carbon'],['ester','a sweet-smelling compound made from an acid and an alcohol'],['condensation reaction','two molecules joining and giving off a small one, usually water']],
  sum:['Alkenes undergo addition: the double bond opens and each carbon takes a new atom.','Bromine water losing its colour is the test for a C=C.','An acid and an alcohol condense into an ester and water.'], steps:[
@@ -7608,6 +7812,18 @@ const CU4 = [
   {t:'free', h:'Free bench time', p:'Set out another organic reaction.', scenes:['markov','hbr','ester','hydro'], nudge:true, show:['rx'], tries:[
     {t:'Make an ester', check:()=>crsHas({C:4, H:8, O:2})}]},
   {t:'quiz', skills:['valence','enthalpy','balance']}]},
+{k:'polymers', u:11, title:'Polymers', recap:['Alkenes add molecules across their C=C double bond.'],
+ terms:[['polymer','a very long molecule made of many small units joined together'],['monomer','one of the small molecules a polymer is built from'],['addition polymerisation','alkene monomers opening their double bonds and joining end to end'],['condensation polymerisation','monomers joining while giving off a small molecule, usually water, as in nylon, polyester and proteins']],
+ sum:['Polymers are long chains of repeating monomer units.','Alkenes join by addition: the C=C opens and links to the next.','Condensation polymers (nylon, polyester, proteins) join while giving off water.'], steps:[
+  {t:'read', h:'Chains of thousands', fig:'poly', p:['Plastic bags, rope, non-stick pans and your own proteins are <b>polymers</b>: giant molecules made of thousands of small units, <b>monomers</b>, joined in a chain.',
+    'Alkenes join by <b>addition polymerisation</b>: the double bond of each ethene opens and links to the next, making poly(ethene), polythene. Change the monomer and you change the plastic: chloroethene gives PVC, phenylethene gives polystyrene, tetrafluoroethene gives Teflon.',
+    'Other polymers join by <b>condensation</b>, giving off a small molecule each time. Nylon and polyester are made this way, and so are proteins (amino acids joining, losing water) and starch (glucose units).'],
+   aside:'Polythene was discovered by accident in 1933, when a reaction at high pressure left a white waxy solid in the vessel. Within ten years it was insulating the cables of wartime radar.'},
+  {t:'do', h:'Polymerise ethene', setup:()=>crsSetup.molecules([['ethene',6]], 420, 200), p:'Six ethene molecules. Press the button to join them.', acts:[['Polymerise the alkenes','poly']], show:['mols'], tasks:[
+    {t:'Join them into a chain of at least eight carbons', hint:'Press Polymerise the alkenes.', check:()=>l3Molecules().some(g=>(countsOf(g).C||0) >= 8)}],
+   after:'Each double bond opened and became two single bonds, one to each neighbour: a short piece of polythene.'},
+  {t:'quiz', qs:[{q:'What happens to the C=C bond when ethene polymerises?', opts:['It opens, and each carbon bonds to a neighbouring unit','It becomes a triple bond','It is unchanged; the monomers stick by hydrogen bonds'], a:0, why:'In addition polymerisation the π bond breaks and its electrons form new σ bonds to the next monomer.'},
+    {q:'Which polymer is made by condensation, giving off water?', opts:['Nylon','Poly(ethene)','PVC'], a:0, why:'Nylon forms as amide links join its monomers, each releasing a water molecule; the others are addition polymers of alkenes.'}], skills:['naming']}]},
 {k:'nuclear', u:11, title:'Nuclear chemistry', recap:['The nucleus holds protons and neutrons; the number of protons decides the element.'],
  terms:[['radioactive','having an unstable nucleus that breaks down, giving off radiation'],['alpha decay','a nucleus throwing out 2 protons and 2 neutrons (a helium nucleus)'],['beta decay','a neutron in the nucleus turning into a proton, throwing out an electron'],['nuclear fission','a big nucleus splitting into two smaller ones, releasing energy and neutrons'],['chain reaction','a process where each event triggers more, like fission neutrons splitting more nuclei']],
  sum:['Unstable nuclei decay: alpha (lose 2 p + 2 n) or beta (a neutron becomes a proton).','Changing the number of protons changes the element.','Fission splits heavy nuclei, releasing huge energy and neutrons that can start a chain reaction.'], steps:[
@@ -7619,8 +7835,52 @@ const CU4 = [
     {t:'Set off a chain: three fissions', hint:'The neutrons from one split can hit the others.', check:()=>(L3.fissions||0) >= 3}],
    after:'Each split threw out neutrons that split more: a chain reaction, which is what a reactor controls and a bomb does not.'},
   {t:'quiz', skills:['nuclear','nuclear','particles']}]},
-{k:'chk12', u:11, title:'Unit 12 check', steps:[{t:'check', skills:['redox','redox','nuclear','nuclear','valence','balance']}]},
-{k:'lab', u:11, title:'Your own lab', sum:['You have used every idea in the course on the bench.'], steps:[
+{k:'chk12', u:11, title:'Unit 12 check', steps:[{t:'check', skills:['redox','redox','nuclear','nuclear','valence','balance','oxstate','cell','naming']}]},
+/* =================== unit 13: identifying compounds =================== */
+{k:'idintro', u:12, title:'How chemists identify a compound', recap:['A molecular formula says which atoms; a structure says how they are joined.'],
+ terms:[['spectroscopy','measuring how a substance absorbs or gives out energy to learn about its structure'],['mass spectrometry','weighing molecules by turning them into ions'],['infrared (IR) spectroscopy','finding which bonds a molecule has from the infrared light they absorb'],['NMR spectroscopy','finding how the hydrogen (or carbon) atoms are arranged, from how their nuclei respond in a magnetic field']],
+ sum:['Composition gives the empirical formula; mass spectrometry the molar mass.','Infrared shows which bonds, and so which functional groups, are there.','NMR shows how the atoms are connected: together they pin down a structure.'], steps:[
+  {t:'read', h:'Four questions', p:['Faced with an unknown white powder, chemists ask four questions. <b>What is it made of?</b> Combustion analysis gives the percentage of each element and so the empirical formula (unit 8). <b>How heavy is a molecule?</b> A mass spectrometer weighs it, turning the empirical formula into a molecular one.',
+    '<b>Which bonds does it have?</b> Infrared spectroscopy reads them: an O–H, a C=O, a C≡N each absorb their own frequency. <b>How is it put together?</b> NMR spectroscopy maps the hydrogens and carbons and who their neighbours are.',
+    'Each method alone is a clue; together they are a fingerprint. This unit takes each in turn, using spectra simulated from real molecules, and finishes with an unknown to solve.'],
+   aside:'Before spectroscopy, identifying a new natural product could take a lifetime of chemical tests. Morphine was isolated in 1804 but its structure was not worked out until 1925; today it would take an afternoon.'},
+  {t:'read', h:'Everything at once', p:['Analysis mode does all of this for any compound: its structure, every bond, its infrared, NMR, mass and UV spectra, acids and bases and more. Open it on caffeine, then come back here with the Course button.'], acts:[['Analyse caffeine in Analysis mode','ana:caffeine']]},
+  {t:'quiz', qs:[{q:'Which method tells you how heavy a molecule is?', opts:['Mass spectrometry','Infrared spectroscopy','A flame test'], a:0, why:'A mass spectrometer measures the mass of the molecular ion, which gives the molar mass.'},
+    {q:'Which method shows that a molecule has a C=O bond?', opts:['Infrared spectroscopy','Mass spectrometry','Measuring its density'], a:0, why:'C=O absorbs infrared strongly near 1700 cm⁻¹.'},
+    {q:'Which method shows how many different kinds of hydrogen a molecule has?', opts:['NMR spectroscopy','Infrared spectroscopy','Combustion analysis'], a:0, why:'Each hydrogen environment gives its own NMR signal.'}]}]},
+{k:'massspec', u:12, title:'Mass spectrometry', recap:['Most elements come as a mix of isotopes.'],
+ terms:[['molecular ion (M⁺)','the whole molecule with one electron knocked off; its m/z is the molar mass'],['m/z','mass divided by charge; for ions with a charge of 1, simply the mass'],['fragment','a piece of the molecular ion that broke off; the pattern of fragments is a fingerprint'],['base peak','the tallest peak in the spectrum, set to 100%']],
+ sum:['A mass spectrometer ionises molecules and sorts the ions by m/z.','The molecular ion gives the molar mass; Cl gives a 3:1 M/M+2 pair, Br a 1:1 pair.','Fragments show the pieces the molecule breaks into.'], steps:[
+  {t:'read', h:'Weighing molecules', fig:{k:'msspec', name:'ethanol'}, p:['A mass spectrometer knocks an electron off each molecule, making a positive ion, then sorts the ions by how hard they are to deflect: by mass over charge, <b>m/z</b>. The peak with the largest m/z is usually the <b>molecular ion</b>, M⁺, and gives the molar mass: 46 for ethanol, C₂H₆O.',
+    'Many molecular ions fall apart before they reach the detector, and the <b>fragments</b> appear too. They break at their weakest bonds and where the piece left behind is stabilised. Ethanol loses a CH₃ (46 − 15 = 31) to give CH₂OH⁺, its tallest peak, the <b>base peak</b>.']},
+  {t:'read', h:'Isotopes give it away', fig:{k:'msspec', name:'chloroethane'}, p:['Chlorine is 76% chlorine-35 and 24% chlorine-37, so any molecule with one Cl comes in two masses, 2 apart, about 3:1. Chloroethane shows peaks at 64 and 66. Bromine is about half bromine-79 and half bromine-81, so one Br gives two peaks of equal height.',
+    'Even carbon leaves a mark: 1.1% of carbon atoms are carbon-13, so a small M+1 peak sits beside M, taller the more carbons there are.']},
+  {t:'quiz', skills:['massspec','massspec','massspec']}]},
+{k:'infrared', u:12, title:'Infrared spectroscopy', recap:['Bonds are like springs: stiffer bonds vibrate faster.'],
+ terms:[['wavenumber','the frequency of infrared light in cm⁻¹ (waves per centimetre); higher means more energy'],['absorption band','a dip in an infrared spectrum where a bond soaks up light at its own vibration frequency'],['fingerprint region','below about 1500 cm⁻¹, where many overlapping bands make a pattern unique to each compound']],
+ sum:['Each kind of bond absorbs infrared at its own wavenumber.','Key bands: O–H broad 3200–3550 (acids 2500–3300), N–H 3300–3500, C–H 2850–3100, C≡N 2250, C=O 1700–1750.','The fingerprint region below 1500 identifies the compound by matching.'], steps:[
+  {t:'read', h:'Bonds that hum', fig:{k:'irspec', name:'ethanol'}, p:['Bonds vibrate like balls on springs, each at its own frequency, set by how stiff the bond is and how heavy the atoms on its ends. Shine infrared light through a sample and each bond absorbs the frequency it vibrates at, leaving a dip in the spectrum, an <b>absorption band</b>.',
+    'Bonds to hydrogen, the lightest atom, vibrate fastest and absorb at high <b>wavenumbers</b>: C–H just below 3000 cm⁻¹, O–H at 3200–3550. Ethanol’s O–H band is broad and rounded because hydrogen bonding makes every O–H slightly different.']},
+  {t:'read', h:'Spotting functional groups', fig:{k:'irspec', name:'acetone'}, p:['The single most useful band is C=O, a strong, sharp peak at 1700–1750 cm⁻¹: acetone’s is at 1715. A carboxylic acid has both a C=O and a very broad O–H spread over 2500–3300; an ester has a C=O near 1740 but no O–H.',
+    'Below about 1500 cm⁻¹ the <b>fingerprint region</b> is a tangle of bending and C–C, C–O vibrations, different for every compound. Chemists match it against libraries to be sure.']},
+  {t:'quiz', skills:['irspec','irspec','irspec']}]},
+{k:'nmr', u:12, title:'NMR spectroscopy', recap:['Atoms related by symmetry are equivalent.'],
+ terms:[['chemical shift (δ)','where a signal appears, in parts per million (ppm); it shows what a hydrogen is near'],['environment','a set of hydrogens that are equivalent by symmetry: each gives one signal'],['integration','the area of a signal, proportional to how many hydrogens give it'],['n+1 rule','a signal is split into n+1 lines by n hydrogens on the neighbouring carbon(s)']],
+ sum:['Each hydrogen environment gives one signal.','Its shift says what it is near; its area how many H; its splitting how many H next door (n+1).','Together they map out the structure.'], steps:[
+  {t:'read', h:'Hydrogens in a magnet', fig:{k:'nmrspec', name:'ethanol'}, p:['Hydrogen nuclei behave like tiny magnets. In a strong magnetic field they absorb radio waves, and the exact frequency depends on their surroundings: electronegative neighbours pull electron density away and shift the signal to higher <b>δ</b> (ppm). That is the <b>chemical shift</b>.',
+    'Ethanol, CH₃CH₂OH, has three <b>environments</b> (the CH₃, the CH₂ and the OH) and so three signals. Their areas, the <b>integration</b>, are in the ratio 3:2:1, the number of hydrogens in each.',
+    'The signals are also split by hydrogens on the next carbon: <b>n+1 lines</b> for n neighbours. The CH₃, beside a CH₂, is a triplet; the CH₂, beside a CH₃, is a quartet. (The OH usually stays a broad singlet, because its proton keeps swapping.)']},
+  {t:'read', h:'Reading a spectrum', fig:{k:'nmrspec', name:'ethyl acetate'}, p:['Ethyl acetate shows a quartet at about 4.1 ppm (2H: a CH₂ beside an oxygen, split by a CH₃), a singlet near 2.0 (3H: a CH₃ beside the C=O, with no H next door) and a triplet near 1.2 (3H: a CH₃ split by the CH₂).',
+    'Rough shift landmarks: 0.9 to 1.5 alkyl C–H; 2 to 2.5 next to C=O; 3.3 to 4.2 next to oxygen; 5 to 6 on a C=C; 7 to 8 on a benzene ring; 9.5 to 10 an aldehyde; 10 to 12 a carboxylic acid.']},
+  {t:'quiz', skills:['nmrq','nmrq','nmrq']}]},
+{k:'unknown', u:12, title:'Solving an unknown', recap:['Mass spectra give the molar mass, IR the bonds, NMR the connections.'],
+ sum:['Start with the formula: composition and the molecular ion.','IR names the functional groups; NMR fits the pieces together.','Check the answer accounts for every peak.'], steps:[
+  {t:'example', h:'Compound X', q:'Compound X is 54.5% C, 9.1% H and 36.4% O. Its molecular ion is at m/z 88. Its IR spectrum has a strong band at 1740 cm⁻¹ and no broad band above 3000. Its ¹H NMR shows a quartet at 4.1 ppm (2H), a singlet at 2.0 (3H) and a triplet at 1.2 (3H). What is X?',
+   steps:['Empirical formula: C 54.5/12 = 4.54, H 9.1/1 = 9.1, O 36.4/16 = 2.27; divide by 2.27: <b>C₂H₄O</b> (44 g/mol).','m/z 88 = 2 × 44, so the molecular formula is <b>C₄H₈O₂</b>.','IR: C=O at 1740 and no O–H, so not an acid: an <b>ester</b>.','NMR: a CH₂CH₃ group (quartet + triplet) with its CH₂ on an oxygen (4.1 ppm), and a CH₃ next to C=O (singlet at 2.0).','Put together: CH₃–CO–O–CH₂CH₃, <b>ethyl acetate</b> (ethyl ethanoate), the solvent in nail-polish remover.'], ans:'Ethyl acetate, CH₃COOCH₂CH₃.'},
+  {t:'read', h:'Check it', p:['Open ethyl acetate in Analysis mode and compare its simulated spectra with the data above. Then try one of your own: type any compound and look at its spectra before you look at its name.'], acts:[['Ethyl acetate in Analysis mode','ana:ethyl acetate']]},
+  {t:'quiz', skills:['massspec','irspec','nmrq']}]},
+{k:'chk13', u:12, title:'Unit 13 check', steps:[{t:'check', skills:['massspec','massspec','irspec','irspec','nmrq','nmrq']}]},
+{k:'lab', u:12, title:'Your own lab', sum:['You have used every idea in the course on the bench.'], steps:[
   {t:'read', h:'You made it', p:['That is the whole course, from what matter is to splitting the atom: particles and states, atoms and the periodic table, ionic, covalent and metallic bonding, shapes and polarity, forces between molecules, the mole, gases, energy and rates, equilibrium, solutions, acids, redox, carbon chemistry and nuclear change.',
     'Everything you saw on the bench follows the same few rules: atoms seek full outer shells, opposite charges attract, and energy is never created or destroyed. One last free session, with every challenge unlocked. Then take the assessment, or keep practising.']},
   {t:'free', h:'Free bench time: the challenges', setup:()=>crsSetup.clear(460), p:'Everything is unlocked.', palette:['H','C','N','O','F','Na','Mg','Cl','B','Br'], build:true, temp:true, clearBtn:true, tries:EXAM_TASKS.map(x=>({t:x.t, check:x.check}))}]}
@@ -7806,6 +8066,7 @@ function courseHTML(){
     const at = st.figAt == null ? 1 : st.figAt;
     st.p.forEach((x, i)=>{ if(st.fig && i === at) h += crsFig(st.fig); h += '<p class="ld-p">'+glossify(x)+'</p>'; });
     if(st.fig && at >= st.p.length) h += crsFig(st.fig);
+    if(st.acts) h += '<div class="crs-acts">'+st.acts.map(([lab, k])=>'<button type="button" class="ghost-btn" data-c="act" data-k="'+k+'">'+lab+'</button>').join('')+'</div>';
     if(st.key) h += '<div class="crs-key"><b>Key idea</b>'+glossify(st.key)+'</div>';
     if(st.aside) h += '<div class="crs-aside"><b>Did you know?</b>'+st.aside+'</div>';
   }
@@ -7836,6 +8097,7 @@ function courseHTML(){
         (st.tools.includes(L3.tool) ? '<button type="button" class="ghost-btn" data-c="tool" data-k="move">Back to moving atoms</button>' : '')+'</div>';
       const tools = [st.charges ? '<button type="button" class="ghost-btn" data-c="charges">'+(L3.showQ ? 'Hide' : 'Show')+' δ charges</button>' : '',
         st.nudge ? '<button type="button" class="ghost-btn" data-c="nudge">Give them a push</button>' : '',
+        (st.acts||[]).map(([lab, k])=>'<button type="button" class="ghost-btn" data-c="act" data-k="'+k+'">'+lab+'</button>').join(''),
         st.build ? '<button type="button" class="ghost-btn" data-c="lib">Molecule library</button>' : '',
         st.clearBtn ? '<button type="button" class="ghost-btn" data-c="clear">Clear the bench</button>' : '',
         st.setup ? '<button type="button" class="ghost-btn" data-c="reset">Start this again</button>' : '', '<button type="button" class="ghost-btn" data-c="fit">Re-centre</button>'].filter(Boolean);
@@ -7870,6 +8132,7 @@ function crsInfoHTML(st){
         '<div class="ci-row"><b>'+e.name+'</b><span>'+e.sym+'-'+A+(q ? ' · '+e.sym+chargeSup(q) : '')+'</span></div>'+
         '<div class="ci-row"><b>Protons</b><span>'+e.z+'</span></div><div class="ci-row"><b>Neutrons</b><span>'+(A - e.z)+'</span></div>'+
         '<div class="ci-row"><b>Electrons</b><span>'+(e.z - (a.ion||0))+' · shells '+sh.join(', ')+'</span></div></div></div>'+
+        (!a.ion ? '<div class="ci-row"><b>Configuration</b><span>'+configString(e.z)+'</span></div>' : '')+
         '<div class="ci-row"><b>Radius</b><span>'+(a.ion && e.ri ? e.ri+' pm (as an ion)' : e.rc+' pm')+'</span></div>'+
         (ie ? '<div class="ci-row"><b>Ionisation energy</b><span>'+ie+' kJ/mol</span></div>' : '')+
         '<div class="ci-row"><b>Electronegativity</b><span>'+(e.en == null ? 'none (noble gas)' : e.en.toFixed(2))+'</span></div>'+
@@ -7993,6 +8256,7 @@ function wireCourse(){
     else if(k === 'build'){ const bi = el('crsBuild'); if(bi){ build(bi.value); bi.value = ''; } }
     else if(k === 'charges'){ L3.showQ = !L3.showQ; L3.dirty = true; renderCourse(true); }
     else if(k === 'nudge'){ crsNudge(); say('Nudged the molecules closer together.', 'bench', true); }
+    else if(k === 'act'){ const kk = b.dataset.k, at = kk.indexOf(':'), f = CRS_ACTS[at < 0 ? kk : kk.slice(0, at)]; if(f) f(at < 0 ? '' : kk.slice(at + 1)); }
     else if(k === 'clear'){ l3Push(); l3Clear(); CRS.mem = {}; }
     else if(k === 'reset'){ crsEnter(); }
     else if(k === 'scene'){ l3Scene(b.dataset.k); CRS.mem = {}; }
@@ -8066,9 +8330,9 @@ const anaCap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
 function anaFormula(c, q){ const bf = benchFormula(c); return subPlain(bf === 'HO' ? 'OH' : bf) + chargeSup(q||0); }
 
 /* the molecule on the bench, as a graph with everything the report needs */
-function anaMol(entry){
-  const atoms = L3.atoms.filter(a=>!a.dying), byId = new Map(atoms.map(a=>[a.id, a]));
-  const bonds = L3.bonds.filter(b=>byId.has(b.a) && byId.has(b.b));
+function anaMol(entry, A0, B0){
+  const atoms = (A0 || L3.atoms).filter(a=>!a.dying), byId = new Map(atoms.map(a=>[a.id, a]));
+  const bonds = (B0 || L3.bonds).filter(b=>byId.has(b.a) && byId.has(b.b));
   const nb = new Map(atoms.map(a=>[a.id, []]));
   bonds.forEach(b=>{ nb.get(b.a).push({b, o:byId.get(b.b)}); nb.get(b.b).push({b, o:byId.get(b.a)}); });
   const counts = countsOf(atoms), q = atoms.reduce((t, a)=>t + anaQ(a), 0);
@@ -8104,6 +8368,16 @@ function anaMol(entry){
     const dbl = r.filter((id, i)=>{ const nx = r[(i+1) % r.length]; return M.cov(byId.get(id)).some(({b, o})=>o.id === nx && (b.order >= 1.5 || b.arom)); }).length;
     if(ok && (r.length === 6 ? dbl >= 3 : dbl >= 2)) r.forEach(id=>M.arom.add(id)); });
   return M;
+}
+/* a molecule as a graph straight from its SMILES, without the bench: enough for its
+   groups, IR bands, NMR environments and mass spectrum (the course and quizzes use it) */
+function anaGraphMol(sm, lib){
+  const g = l3SmilesGraph(sm), deg = new Array(g.syms.length).fill(0);
+  g.bl.forEach(b=>{ deg[b.a]++; deg[b.b]++; });
+  const atoms = g.syms.map((sy, i)=>({id:i + 1, e:BY_SYM[sy].i, x:0, y:0, z:0}));
+  g.chg.forEach((c, i)=>{ if(c){ if(deg[i]) atoms[i].fq = c; else atoms[i].ion = c; } });
+  const bonds = g.bl.map((b, k)=>({id:100000 + k, a:b.a + 1, b:b.b + 1, order:b.o, type:'covalent', energy:bondEnthalpy(g.syms[b.a], g.syms[b.b], Math.max(1, Math.round(b.o)))}));
+  return anaMol({q:lib || sm, sm, lib:lib || '', label:lib || sm}, atoms, bonds);
 }
 function anaRings(M){
   const rings = [], seen = new Set(), ids = M.heavy.map(a=>a.id);
@@ -9567,6 +9841,283 @@ function wireAna(){
   document.addEventListener('keydown', ev=>{ if(ANA.on && ev.key === 'Escape' && !/INPUT|TEXTAREA/.test((ev.target.tagName||''))){ anaExit(); } });
   setInterval(anaTick, 500);
 }
+
+/* ---------- practice for the newer lessons: orbitals to spectroscopy ----------
+   As before, everything needed to answer is in the question. The spectroscopy
+   questions read real library molecules through the Analysis code. */
+const qGM = {};
+function qGraph(name){
+  if(qGM[name] !== undefined) return qGM[name];
+  const n = libLookup(libNormKey(name)); let M = null;
+  try{ if(n) M = anaGraphMol(L3_LIB[n], n); }catch(e){ M = null; }
+  return (qGM[name] = M);
+}
+const qN = (x, d) => { const p = Math.pow(10, d == null ? 2 : d); return String(Math.round(x*p)/p); };
+const qSgn = v => v > 0 ? '+'+v : v < 0 ? '−'+Math.abs(v) : '0';
+Object.assign(SKILLS, {
+  config:{name:'Electron configurations', g(){
+    const z = qPick([3,4,5,6,7,8,9,11,12,13,14,15,16,17,19,20,26,30,35]), e0 = EL.find(x=>x.z === z), e = {name:e0.name.toLowerCase(), sym:e0.sym};
+    if(Math.random() < 0.55) return qMake('config', 'What is the electron configuration of '+e.name+' ('+e.sym+', '+z+' electrons)?', configString(z), [configString(z-1), configString(z+1), configString(z+2)],
+      'Fill the subshells in energy order, 1s 2s 2p 3s 3p 4s 3d 4p, putting two in each s, six in each p and ten in each d, until all '+z+' are placed: '+configString(z)+'.');
+    const occ = configure(z, z), last = AUFBAU.filter(k=>occ[k]).slice(-1)[0], n = occ[last], cap = {s:2, p:6, d:10, f:14}[last.slice(-1)], orb = cap/2, unp = n <= orb ? n : cap - n;
+    return qMake('config', 'How many unpaired electrons does a '+e.name+' atom have? (Its configuration is '+configString(z)+'.)', String(unp), [String(unp + 1), String(Math.abs(unp - 1)), String(n), String(unp + 2)].filter(v=>v !== String(unp)),
+      'Its last subshell, '+last+', holds '+n+' electron'+(n > 1 ? 's' : '')+' in '+orb+' orbital'+(orb > 1 ? 's' : '')+'. By Hund’s rule they spread out one to an orbital before any pair up, so '+unp+' '+(unp === 1 ? 'is' : 'are')+' unpaired.');
+  }},
+  flame:{name:'Flame tests', g(){
+    const T = [['Li','lithium','crimson red'],['Na','sodium','bright yellow-orange'],['K','potassium','lilac (pale purple)'],['Ca','calcium','orange-red (brick red)'],['Ba','barium','apple green'],['Cu','copper','blue-green']];
+    const [s, n, c] = qPick(T), others = T.filter(x=>x[0] !== s).sort(()=>Math.random() - 0.5);
+    const why = 'Heat lifts the ion’s electrons to higher energy levels. Falling back, they give out light of energies fixed by that element’s levels, so each metal has its own colour: '+n+' gives '+c+'.';
+    if(Math.random() < 0.5) return qMake('flame', 'A salt held in a Bunsen flame turns it '+c+'. Which metal is in it?', n, others.slice(0, 3).map(x=>x[1]), why);
+    return qMake('flame', 'What colour does a '+n+' compound turn a flame?', c, others.slice(0, 3).map(x=>x[2]), why);
+  }},
+  formalq:{name:'Formal charge', g(){
+    const T = [['NH₄⁺','the nitrogen',5,0,8],['H₃O⁺','the oxygen',6,2,6],['OH⁻','the oxygen',6,6,2],['NO₃⁻','the nitrogen',5,0,8],['NO₃⁻','a singly bonded oxygen',6,6,2],['NO₃⁻','the doubly bonded oxygen',6,4,4],
+      ['O₃ (ozone)','the central oxygen',6,2,6],['O₃ (ozone)','the singly bonded end oxygen',6,6,2],['CO (C≡O)','the carbon',4,2,6],['CO (C≡O)','the oxygen',6,2,6],['H₂O','the oxygen',6,4,4],['CH₄','the carbon',4,0,8],['BF₄⁻','the boron',3,0,8],['CN⁻ (C≡N)','the carbon',4,2,6]];
+    const [sp, at, V, L, B] = qPick(T), q = V - L - B/2;
+    return qMake('formalq', 'In '+sp+', what is the formal charge on '+at+'? (It has '+L+' lone-pair electrons and '+B+' electrons in bonds.)', qSgn(q), [qSgn(q + 1), qSgn(q - 1), qSgn(-q), qSgn(q + 2)].filter(v=>v !== qSgn(q)),
+      'Formal charge = valence electrons − lone-pair electrons − half the bonding electrons = '+V+' − '+L+' − '+B+'/2 = '+qSgn(q)+'.');
+  }},
+  hybrid:{name:'Hybridisation', g(){
+    const T = [['carbon','methane, CH₄',4],['carbon','ethene, CH₂=CH₂',3],['carbon','ethyne, HC≡CH',2],['carbon','carbon dioxide, O=C=O',2],['nitrogen','ammonia, NH₃',4],['oxygen','water, H₂O',4],
+      ['boron','boron trifluoride, BF₃',3],['carbon','benzene, C₆H₆',3],['carbonyl carbon','methanal, H₂C=O',3],['nitrogen','hydrogen cyanide, HC≡N',2],['beryllium','beryllium chloride, BeCl₂',2],['carbon','methanol, CH₃OH',4]];
+    const [at, mol, n] = qPick(T), H = {2:'sp', 3:'sp²', 4:'sp³'}, A = {2:'180°', 3:'120°', 4:'109.5°'};
+    return qMake('hybrid', 'What is the hybridisation of the '+at+' in '+mol+'?', H[n], ['sp','sp²','sp³','sp³d'].filter(x=>x !== H[n]),
+      'Count the regions of electrons round it (each bonded atom counts once, even through a double or triple bond, and so does each lone pair): '+n+'. That needs '+n+' hybrid orbitals, '+H[n]+', pointing '+A[n]+' apart.');
+  }},
+  isomer:{name:'Isomers', g(){
+    if(Math.random() < 0.3){ const [f, n] = qPick([['C₄H₁₀',2],['C₅H₁₂',3],['C₆H₁₄',5]]);
+      return qMake('isomer', 'How many different alkanes (structural isomers) have the formula '+f+'?', String(n), [String(n + 1), String(n - 1), String(n + 2), '1'].filter(v=>v !== String(n)),
+        f+' can be drawn as '+n+' different carbon skeletons: one straight chain and '+(n - 1)+' branched one'+(n > 2 ? 's' : '')+'. Same atoms, different arrangement: structural isomers.'); }
+    const P = [['ethanol','dimethyl ether'],['butane','isobutane'],['propan-1-ol','isopropanol'],['acetone','propanal'],['acetic acid','methyl formate'],['pentane','neopentane'],['propene','cyclopropane'],['butanone','butanal']]
+      .map(p=>p.map(n=>libLookup(libNormKey(n)))).filter(p=>p[0] && p[1]);
+    const fo = n => { try{ return benchFormula(l3SmilesCounts(L3_LIB[n])); }catch(e){ return ''; } };
+    const [a, b] = qPick(P), f = fo(a), others = P.flat().filter(n=>fo(n) !== f).sort(()=>Math.random() - 0.5);
+    return qMake('isomer', 'Which of these is an isomer of '+a+' ('+qSub(f)+')?', b, [...new Set(others)].slice(0, 3),
+      b+' has the same formula, '+qSub(f)+', with its atoms joined differently, so it is a structural isomer. The others have different formulas.');
+  }},
+  limiting:{name:'Limiting reactant', g(){
+    const T = [['H₂',2,'O₂',1,'H₂O',2,'2H₂ + O₂ → 2H₂O'],['N₂',1,'H₂',3,'NH₃',2,'N₂ + 3H₂ → 2NH₃'],['Na',2,'Cl₂',1,'NaCl',2,'2Na + Cl₂ → 2NaCl'],
+      ['CH₄',1,'O₂',2,'CO₂',1,'CH₄ + 2O₂ → CO₂ + 2H₂O'],['Mg',1,'HCl',2,'H₂',1,'Mg + 2HCl → MgCl₂ + H₂'],['Al',4,'O₂',3,'Al₂O₃',2,'4Al + 3O₂ → 2Al₂O₃']];
+    const [A, a, B, b, C, c, eq] = qPick(T);
+    let nA, nB; do { nA = qPick([1,2,3,4,5,6]); nB = qPick([1,2,3,4,5,6]); } while(nA/a === nB/b);
+    const xA = nA/a, xB = nB/b, lim = xA < xB ? A : B, x = Math.min(xA, xB), prod = x*c;
+    if(Math.random() < 0.5) return qMake('limiting', nA+' mol of '+A+' and '+nB+' mol of '+B+' react ('+eq+'). Which runs out first?', lim, [lim === A ? B : A, 'Neither: they are in exact proportion', 'Whichever has fewer moles'].filter(v=>v !== lim || true),
+      'Divide each by its coefficient: '+A+' '+nA+'/'+a+' = '+qN(xA)+', '+B+' '+nB+'/'+b+' = '+qN(xB)+'. The smaller, '+lim+', is used up first: it is the limiting reactant.');
+    return qMake('limiting', nA+' mol of '+A+' and '+nB+' mol of '+B+' react ('+eq+'). How many moles of '+C+' can form at most?', qN(prod), [qN(Math.max(xA, xB)*c), qN((nA + nB)*c/(a + b)), qN(prod*2), qN(prod/2)].filter(v=>v !== qN(prod)),
+      lim+' is limiting ('+A+': '+nA+'/'+a+' = '+qN(xA)+', '+B+': '+nB+'/'+b+' = '+qN(xB)+'). So '+qN(x)+' × '+c+' = '+qN(prod)+' mol of '+C+'.');
+  }},
+  molarity:{name:'Concentration', g(){
+    const k = qPick(['c','dil','mass']);
+    if(k === 'c'){ const n = qPick([0.1, 0.25, 0.5, 1]), V = qPick([100, 250, 500, 2000]), c = n/(V/1000);
+      return qMake('molarity', n+' mol of a solute is dissolved to make '+V+' mL of solution. What is its concentration?', qN(c, 3)+' mol/L', [qN(n/V, 4), qN(n*V/1000, 3), qN(c*10, 3)].filter(v=>v+' mol/L' !== qN(c, 3)+' mol/L').map(v=>v+' mol/L'),
+        'Concentration = moles ÷ volume in litres: '+n+' ÷ '+(V/1000)+' L = '+qN(c, 3)+' mol/L.'); }
+    if(k === 'dil'){ const c1 = qPick([0.5, 1, 2]), V1 = qPick([10, 25, 50]), V2 = qPick([100, 250, 500]), c2 = c1*V1/V2;
+      return qMake('molarity', V1+' mL of '+c1+' mol/L acid is diluted with water to '+V2+' mL. What is the new concentration?', qN(c2, 3)+' mol/L', [qN(c1*V2/V1, 3), qN(c1, 3), qN(c1 - c2, 3)].filter(v=>v !== qN(c2, 3)).map(v=>v+' mol/L'),
+        'Diluting does not change the moles, so c₁V₁ = c₂V₂: '+c1+' × '+V1+' = c₂ × '+V2+', c₂ = '+qN(c2, 3)+' mol/L.'); }
+    const [nm, M] = qPick([['sodium chloride (58.4 g/mol)', 58.44], ['glucose (180 g/mol)', 180.16], ['sodium hydroxide (40.0 g/mol)', 40.00]]), V = qPick([100, 250, 500]), c = qPick([0.1, 0.2, 0.5]), m = c*V/1000*M;
+    return qMake('molarity', 'What mass of '+nm+' do you need to make '+V+' mL of a '+c+' mol/L solution?', qN(m, 2)+' g', [qN(c*V*M, 0), qN(c*M, 2), qN(m*2, 2)].filter(v=>v !== qN(m, 2)).map(v=>v+' g'),
+      'Moles = '+c+' mol/L × '+(V/1000)+' L = '+qN(c*V/1000, 3)+' mol; mass = moles × molar mass = '+qN(c*V/1000, 3)+' × '+M+' = '+qN(m, 2)+' g.');
+  }},
+  empirical:{name:'Empirical formulas', g(){
+    const T = [['glucose','C6H12O6'],['acetic acid','C2H4O2'],['benzene','C6H6'],['butane','C4H10'],['hydrogen peroxide','H2O2'],['dinitrogen tetroxide','N2O4'],['ethane','C2H6'],['octane','C8H18'],['ethene','C2H4'],['oxalic acid','C2H2O4']];
+    const [nm, f] = qPick(T), c = qAtoms(f), ks = Object.keys(c), g = ks.map(k=>c[k]).reduce((a, b)=>{ while(b){ [a, b] = [b, a % b]; } return a; }), emp = {}; ks.forEach(k=>emp[k] = c[k]/g);
+    const fs = cc => qSub(benchFormula(cc)), M = ks.reduce((t, k)=>t + c[k]*BY_SYM[k].mass, 0);
+    if(Math.random() < 0.5){ const pct = ks.map(k=>k+' '+qN(100*c[k]*BY_SYM[k].mass/M, 1)+'%').join(', ');
+      const w1 = Object.assign({}, emp); w1[ks[ks.length - 1]] += 1; const w2 = {}; ks.forEach(k=>w2[k] = 1);
+      return qMake('empirical', 'A compound is '+pct+' by mass. What is its empirical formula?', fs(emp), [g > 1 ? fs(c) : fs(Object.fromEntries(ks.map(k=>[k, c[k]*2]))), fs(w1), fs(w2)],
+        'Take 100 g, so each percentage is grams. Divide by each atomic mass to get moles ('+ks.map(k=>k+' '+qN(100*c[k]*BY_SYM[k].mass/M/BY_SYM[k].mass, 2)).join(', ')+'), then divide by the smallest: the simplest whole-number ratio is '+fs(emp)+'.'); }
+    const em = ks.reduce((t, k)=>t + emp[k]*BY_SYM[k].mass, 0);
+    return qMake('empirical', 'A compound has the empirical formula '+fs(emp)+' and a molar mass of '+qN(M, 0)+' g/mol. What is its molecular formula?', fs(c), [fs(emp), fs(Object.fromEntries(ks.map(k=>[k, emp[k]*(g + 1)]))), fs(Object.fromEntries(ks.map(k=>[k, emp[k]*Math.max(1, g - 1)])))].filter(v=>v !== fs(c)).concat([fs(Object.fromEntries(ks.map(k=>[k, emp[k]*2*g])))]),
+      fs(emp)+' weighs '+qN(em, 1)+' g/mol; '+qN(M, 0)+' ÷ '+qN(em, 1)+' = '+g+', so the molecule is '+g+' of these units: '+fs(c)+'.');
+  }},
+  hess:{name:'Hess’s law', g(){
+    const k = qPick(['sum','rev','co']);
+    if(k === 'co') return qMake('hess', 'C + O₂ → CO₂ has ΔH = −394 kJ/mol, and CO + ½O₂ → CO₂ has ΔH = −283 kJ/mol. What is ΔH for C + ½O₂ → CO?', '−111 kJ/mol', ['−677 kJ/mol','+111 kJ/mol','−394 kJ/mol'],
+      'Go C → CO₂ (−394), then back from CO₂ to CO, which reverses the second equation and its sign (+283): −394 + 283 = −111 kJ/mol. The route does not matter, only the start and end.');
+    const x = -qPick([60, 80, 120, 150, 200, 250]), y = qPick([-90, -40, 30, 70, 110]);
+    if(k === 'sum') return qMake('hess', 'A → B has ΔH = '+qSgn(x)+' kJ/mol and B → C has ΔH = '+qSgn(y)+' kJ/mol. What is ΔH for A → C?', qSgn(x + y)+' kJ/mol', [qSgn(x - y), qSgn(y - x), qSgn(-(x + y))].filter(v=>v !== qSgn(x + y)).map(v=>v+' kJ/mol'),
+      'Hess’s law: going A → B → C must take the same energy as going straight there, so the steps add: '+qSgn(x)+' + ('+qSgn(y)+') = '+qSgn(x + y)+' kJ/mol.');
+    return qMake('hess', 'A → 2B has ΔH = '+qSgn(x)+' kJ/mol. What is ΔH for 4B → 2A?', qSgn(-2*x)+' kJ/mol', [qSgn(2*x), qSgn(-x), qSgn(x)].map(v=>v+' kJ/mol'),
+      'Reversing an equation flips the sign of ΔH ('+qSgn(-x)+'), and doubling it doubles ΔH: '+qSgn(-2*x)+' kJ/mol.');
+  }},
+  gibbs:{name:'Free energy', g(){
+    const k = qPick(['calc','sign','cross']);
+    if(k === 'sign'){ const [dH, dS, ans] = qPick([['negative','positive','At every temperature'],['positive','negative','At no temperature'],['negative','negative','Only at low temperatures'],['positive','positive','Only at high temperatures']]);
+      return qMake('gibbs', 'A reaction has ΔH '+dH+' and ΔS '+dS+'. When is it spontaneous?', ans, ['At every temperature','At no temperature','Only at low temperatures','Only at high temperatures'].filter(v=>v !== ans),
+        'ΔG = ΔH − TΔS must be negative. With ΔH '+dH+' and ΔS '+dS+', '+(ans === 'At every temperature' ? 'both terms make ΔG negative.' : ans === 'At no temperature' ? 'both terms make ΔG positive.' : ans === 'Only at low temperatures' ? 'the −TΔS term is positive and grows with T, so ΔG is negative only while T is small.' : 'the −TΔS term is negative and only outweighs the positive ΔH once T is large enough.')); }
+    if(k === 'cross'){ const dH = qPick([20, 40, 60, 90]), dS = qPick([50, 80, 100, 150]), T = dH*1000/dS;
+      return qMake('gibbs', 'A reaction has ΔH = +'+dH+' kJ/mol and ΔS = +'+dS+' J/(mol·K). Above what temperature does it become spontaneous?', qN(T, 0)+' K', [qN(dH/dS, 2), qN(T/10, 0), qN(T + 273, 0)].map(v=>v+' K'),
+        'It turns spontaneous where ΔG = 0, at T = ΔH/ΔS = '+dH+' 000 ÷ '+dS+' = '+qN(T, 0)+' K (ΔH in joules to match ΔS). Above that, −TΔS wins.'); }
+    const dH = qPick([-120, -60, -20, 30, 80]), dS = qPick([-150, -60, 40, 120, 200]), T = qPick([298, 500, 1000]), G = dH - T*dS/1000, s = v => (v < 0 ? '−' : '+')+qN(Math.abs(v), 1)+' kJ/mol';
+    return qMake('gibbs', 'For a reaction, ΔH = '+qSgn(dH)+' kJ/mol and ΔS = '+qSgn(dS)+' J/(mol·K). What is ΔG at '+T+' K, and is it spontaneous?', s(G)+', '+(G < 0 ? 'spontaneous' : 'not spontaneous'),
+      [s(dH - T*dS)+', '+(dH - T*dS < 0 ? 'spontaneous' : 'not spontaneous'), s(dH + T*dS/1000)+', '+(dH + T*dS/1000 < 0 ? 'spontaneous' : 'not spontaneous'), s(G)+', '+(G < 0 ? 'not spontaneous' : 'spontaneous')],
+      'ΔG = ΔH − TΔS = '+qSgn(dH)+' − '+T+' × ('+qSgn(dS)+'/1000) = '+s(G)+'. Negative means spontaneous.');
+  }},
+  lechat:{name:'Le Chatelier', g(){
+    const E = [['N₂ + 3H₂ ⇌ 2NH₃', -92, 4, 2],['N₂O₄ ⇌ 2NO₂', 57, 1, 2],['2SO₂ + O₂ ⇌ 2SO₃', -198, 3, 2],['H₂ + I₂ ⇌ 2HI', -10, 2, 2],['CO + 2H₂ ⇌ CH₃OH', -91, 3, 1]];
+    const [eq, dH, gl, gr] = qPick(E), ch = qPick(['heat','cool','press','addR','removeP','cat']);
+    const R = 'It shifts right, making more products', L = 'It shifts left, making more reactants', N = 'It does not shift';
+    let ans, why;
+    if(ch === 'heat'){ ans = dH > 0 ? R : L; why = 'The forward reaction is '+(dH > 0 ? 'endothermic' : 'exothermic')+' (ΔH '+qSgn(dH)+' kJ/mol). Heating is opposed by soaking up heat, so the '+(dH > 0 ? 'forward' : 'reverse')+' reaction is favoured.'; }
+    else if(ch === 'cool'){ ans = dH > 0 ? L : R; why = 'Cooling is opposed by giving out heat, so the '+(dH < 0 ? 'exothermic forward' : 'exothermic reverse')+' reaction is favoured (ΔH '+qSgn(dH)+' kJ/mol forward).'; }
+    else if(ch === 'press'){ ans = gl === gr ? N : gl > gr ? R : L; why = gl === gr ? 'Both sides have '+gl+' moles of gas, so squeezing it changes neither side’s share.' : 'Raising the pressure is opposed by making fewer gas molecules: the '+(gl > gr ? 'right' : 'left')+' side has fewer ('+Math.min(gl, gr)+' against '+Math.max(gl, gr)+').'; }
+    else if(ch === 'addR'){ ans = R; why = 'Adding a reactant is opposed by using some of it up: the equilibrium moves towards the products.'; }
+    else if(ch === 'removeP'){ ans = R; why = 'Taking product away is opposed by making more of it, which is how industry keeps yields high.'; }
+    else { ans = N; why = 'A catalyst speeds up the forward and reverse reactions equally: equilibrium is reached sooner, but its position does not change.'; }
+    const what = {heat:'the temperature is raised', cool:'the temperature is lowered', press:'the pressure is increased (all gases)', addR:'more of the first reactant is added', removeP:'product is removed as it forms', cat:'a catalyst is added'}[ch];
+    return qMake('lechat', 'For '+eq+' (ΔH = '+qSgn(dH)+' kJ/mol), what happens to the equilibrium when '+what+'?', ans, [R, L, N].filter(v=>v !== ans).concat(['It stops reacting altogether']), why+' (Le Chatelier: a system at equilibrium shifts to oppose a change.)');
+  }},
+  buffer:{name:'Buffers', g(){
+    if(Math.random() < 0.3) return qMake('buffer', 'Which of these mixtures makes a buffer?', 'Acetic acid with sodium acetate', ['Hydrochloric acid with sodium chloride','Sodium hydroxide with sodium chloride','Pure water with sugar'],
+      'A buffer needs a weak acid and its conjugate base (or a weak base and its conjugate acid) in similar amounts: one mops up added OH⁻, the other added H⁺. A strong acid’s conjugate base (Cl⁻) is too weak to take protons back.');
+    const [nm, pKa] = qPick([['acetic acid / acetate', 4.76],['formic acid / formate', 3.75],['ammonium / ammonia', 9.25],['dihydrogen phosphate / hydrogen phosphate', 7.21],['carbonic acid / hydrogen carbonate', 6.35]]);
+    const r = qPick([0.1, 0.5, 1, 2, 10]), pH = pKa + Math.log10(r);
+    return qMake('buffer', 'A '+nm+' buffer has [base]/[acid] = '+r+'. The acid’s pKa is '+pKa+'. What is its pH?', qN(pH, 2), [qN(pKa - Math.log10(r), 2), qN(pKa*r, 2), qN(pKa, 2)].filter(v=>v !== qN(pH, 2)),
+      'Henderson–Hasselbalch: pH = pKa + log([base]/[acid]) = '+pKa+' + log '+r+' = '+qN(pH, 2)+'.'+(r === 1 ? ' With equal amounts the pH is just the pKa.' : ''));
+  }},
+  titration:{name:'Titrations', g(){
+    const k = qPick(['veq','conc','eqpH']);
+    if(k === 'veq'){ const Ca = qPick([0.05, 0.1, 0.2]), Cb = qPick([0.05, 0.1, 0.2]), Va = 25, V = Ca*Va/Cb;
+      return qMake('titration', '25.0 mL of '+Ca+' mol/L HCl is titrated with '+Cb+' mol/L NaOH. What volume of NaOH reaches the equivalence point?', qN(V, 1)+' mL', [qN(Cb*Va/Ca, 1), qN(Va, 1), qN(V*2, 1), qN(V/2, 1), qN(V + 10, 1)].filter(v=>v !== qN(V, 1)).map(v=>v+' mL'),
+        'Moles of acid = '+Ca+' × 0.0250 = '+qN(Ca*0.025, 5)+' mol; HCl and NaOH react 1:1, so that many moles of NaOH are needed: '+qN(Ca*0.025, 5)+' ÷ '+Cb+' = '+qN(V/1000, 4)+' L = '+qN(V, 1)+' mL.'); }
+    if(k === 'conc'){ const Vb = qPick([18.6, 20.0, 22.5, 24.3]), Cb = 0.1, di = Math.random() < 0.35, c = Cb*Vb/25/(di ? 2 : 1);
+      return qMake('titration', '25.0 mL of '+(di ? 'sulfuric acid, H₂SO₄,' : 'hydrochloric acid')+' needs '+Vb+' mL of 0.100 mol/L NaOH to neutralise it. What is the acid’s concentration?', qN(c, 4)+' mol/L', [qN(Cb*Vb/25*(di ? 1 : 2), 4), qN(Cb*25/Vb, 4), qN(Cb, 4)].filter(v=>v !== qN(c, 4)).map(v=>v+' mol/L'),
+        'Moles of NaOH = 0.100 × '+(Vb/1000)+' = '+qN(Cb*Vb/1000, 5)+'. '+(di ? 'Each H₂SO₄ gives two protons, so half as many moles of acid: '+qN(Cb*Vb/2000, 5)+'. ' : 'HCl reacts 1:1. ')+'Concentration = moles ÷ 0.0250 L = '+qN(c, 4)+' mol/L.'); }
+    const [pair, ans, why] = qPick([['acetic acid (weak) with sodium hydroxide (strong)','Above 7','At equivalence only acetate is left, a weak base that takes protons from water, so the solution is basic.'],
+      ['hydrochloric acid (strong) with ammonia (weak)','Below 7','At equivalence only NH₄⁺ is left, a weak acid that gives protons to water, so the solution is acidic.'],
+      ['hydrochloric acid (strong) with sodium hydroxide (strong)','Exactly 7','Only Na⁺, Cl⁻ and water are left: neither ion reacts with water.']]);
+    return qMake('titration', 'Titrating '+pair+': what is the pH at the equivalence point?', ans, ['Above 7','Below 7','Exactly 7'].filter(v=>v !== ans), why);
+  }},
+  oxstate:{name:'Oxidation states', g(){
+    const T = [['MnO₄⁻','Mn',7],['Cr₂O₇²⁻','Cr',6],['SO₄²⁻','S',6],['H₂S','S',-2],['NH₃','N',-3],['NO₃⁻','N',5],['NO₂','N',4],['CO₂','C',4],['CH₄','C',-4],['CO','C',2],
+      ['Fe₂O₃','Fe',3],['H₂O₂','O',-1],['NaH','H',-1],['ClO₄⁻','Cl',7],['ClO⁻','Cl',1],['PO₄³⁻','P',5],['S₈','S',0],['CuO','Cu',2],['OF₂','O',2]];
+    const [sp, el2, ox] = qPick(T);
+    return qMake('oxstate', 'What is the oxidation state of '+el2+' in '+sp+'?', qSgn(ox), [qSgn(ox - 1), qSgn(ox + 1), qSgn(-ox), qSgn(ox - 2)].filter(v=>v !== qSgn(ox)),
+      'Oxygen counts −2 (except in peroxides, −1, and with fluorine), hydrogen +1 (−1 with metals), fluorine −1, an element on its own 0, and they all add up to the overall charge. That leaves '+el2+' at '+qSgn(ox)+' in '+sp+'.');
+  }},
+  cell:{name:'Cell potentials', g(){
+    const M = ['Mg','Al','Zn','Fe','Ni','Sn','Pb','Cu','Ag'];
+    let a, b; do { a = qPick(M); b = qPick(M); } while(a === b);
+    const [an, ca] = E0[a] < E0[b] ? [a, b] : [b, a], E = E0[ca] - E0[an], fe = v => (v < 0 ? '\u2212' : '+')+Math.abs(v).toFixed(2), fv = v => (v < 0 ? '\u2212' : '')+Math.abs(v).toFixed(2);
+    if(Math.random() < 0.6) return qMake('cell', 'A cell joins a '+an+' half-cell (E° = '+fe(E0[an])+' V) to a '+ca+' half-cell (E° = '+fe(E0[ca])+' V). What is its standard voltage?', fv(E)+' V', [fv(Math.abs(E0[an] + E0[ca])), fv(-E), fv(Math.abs(E0[ca])), fv(Math.abs(E0[an]))].filter(v=>v !== fv(E)).map(v=>v+' V'),
+      'E°cell = E°(cathode) − E°(anode). The cathode is the higher one, '+ca+' ('+fe(E0[ca])+' V), where reduction happens; the anode is '+an+' ('+fe(E0[an])+' V): '+fe(E0[ca])+' − ('+fe(E0[an])+') = '+fv(E)+' V.');
+    return qMake('cell', 'In a cell of '+an+' (E° = '+fe(E0[an])+' V) and '+ca+' (E° = '+fe(E0[ca])+' V), which metal is the anode, the electrode that dissolves?', an, [ca, 'Both equally', 'Neither: the salt bridge dissolves'],
+      'The metal with the lower E° gives up electrons more readily, so '+an+' is oxidised and dissolves: it is the anode. Electrons flow from it through the wire to '+ca+'.');
+  }},
+  naming:{name:'Naming organic compounds', g(){
+    const PRE = ['meth','eth','prop','but','pent','hex','hept','oct'];
+    const kind = qPick(['ane','ene','ol','oic','al','one']);
+    let n, pos = 1;
+    if(kind === 'ane') n = qPick([1,2,3,4,5,6,7,8]); else if(kind === 'ene') n = qPick([2,3,4,5,6]); else if(kind === 'one') n = qPick([3,4,5,6]); else n = qPick([1,2,3,4,5,6]);
+    if(kind === 'ene' && n >= 4) pos = qPick([1,2]); if(kind === 'ol' && n >= 3) pos = qPick([1,2]); if(kind === 'one') pos = n >= 5 ? qPick([2,3]) : 2;
+    /* the condensed structure, written out carbon by carbon */
+    const CH2 = k => 'CH₂'.repeat(Math.max(0, k)), M3 = 'CH₃';
+    const cond = kind === 'ane' ? (n === 1 ? 'CH₄' : M3 + CH2(n - 2) + M3)
+      : kind === 'ene' ? (n === 2 ? 'CH₂=CH₂' : pos === 1 ? 'CH₂=CH' + CH2(n - 3) + M3 : M3 + 'CH=CH' + CH2(n - 4) + M3)
+      : kind === 'ol' ? (n === 1 ? 'CH₃OH' : pos === 1 ? M3 + CH2(n - 2) + 'CH₂OH' : M3 + 'CH(OH)' + CH2(n - 3) + M3)
+      : kind === 'oic' ? (n === 1 ? 'HCOOH' : M3 + CH2(n - 2) + 'COOH')
+      : kind === 'al' ? (n === 1 ? 'HCHO' : M3 + CH2(n - 2) + 'CHO')
+      : (pos === 2 ? M3 + 'CO' + CH2(n - 3) + M3 : M3 + 'CH₂CO' + CH2(n - 4) + M3);
+    const name = (k, nn, p) => { const P = PRE[nn - 1];
+      if(k === 'ane') return P+'ane'; if(k === 'ene') return nn <= 3 ? P+'ene' : P+'-'+p+'-ene'; if(k === 'ol') return nn <= 2 ? P+'anol' : P+'an-'+p+'-ol';
+      if(k === 'oic') return P+'anoic acid'; if(k === 'al') return P+'anal'; return nn <= 4 ? P+'anone' : P+'an-'+p+'-one'; };
+    const right = name(kind, n, pos), lo = {ane:1, ene:2, ol:1, oic:1, al:1, one:3}[kind];
+    const other = {ane:'ene', ene:'ane', ol:'al', al:'ol', oic:'al', one:'al'}[kind];
+    const wr = [name(kind, Math.min(8, n + 1), pos), n - 1 >= lo ? name(kind, n - 1, Math.min(pos, 2)) : null, name(other, Math.max(other === 'ene' ? 2 : 1, n), 1)];
+    if((kind === 'ene' && n >= 4) || (kind === 'ol' && n >= 3) || (kind === 'one' && n >= 5)) wr.unshift(name(kind, n, kind === 'one' ? (pos === 2 ? 3 : 2) : (pos === 1 ? 2 : 1)));
+    const numbered = (kind === 'ene' && n >= 4) || (kind === 'ol' && n >= 3) || (kind === 'one' && n >= 5);
+    return qMake('naming', 'What is the name of '+cond+'?', right, wr.filter(v=>v && v !== right),
+      'Count the carbons in the chain: '+n+', so the stem is '+PRE[n - 1]+'-. The ending gives the family ('+({ane:'-ane: single bonds only', ene:'-ene: a C=C', ol:'-ol: an OH', oic:'-oic acid: a COOH', al:'-al: a CHO at the end of the chain', one:'-one: a C=O inside the chain'})[kind]+')'+(numbered ? ', and the number says which carbon it is on, counting from the end nearer to it' : '')+': '+right+'.');
+  }},
+  massspec:{name:'Mass spectrometry', g(){
+    const k = qPick(['iso','mz','frag']);
+    if(k === 'iso'){ const [pat, ans, why] = qPick([['M and M+2 peaks, the M+2 about a third as tall','one chlorine atom','Chlorine is 75.8% ³⁵Cl and 24.2% ³⁷Cl, so molecules with one Cl come in two masses 2 apart, about 3:1.'],
+        ['M and M+2 peaks of almost equal height','one bromine atom','Bromine is about half ⁷⁹Br and half ⁸¹Br, so one Br gives two peaks 2 apart, nearly 1:1.'],
+        ['M, M+2 and M+4 peaks in about a 1:2:1 ratio','two bromine atoms','Two bromines can be 79+79, 79+81 (two ways) or 81+81: 1:2:1.'],
+        ['M, M+2 and M+4 peaks in about a 9:6:1 ratio','two chlorine atoms','Two chlorines combine as 35+35, 35+37 (two ways) and 37+37, with chlorine’s 3:1 odds: 9:6:1.']]);
+      return qMake('massspec', 'A mass spectrum shows '+pat+' for the molecular ion. What does the molecule contain?', ans, ['one chlorine atom','one bromine atom','two bromine atoms','two chlorine atoms','a sulfur atom'].filter(v=>v !== ans).slice(0, 3), why); }
+    if(k === 'mz'){ const nm = qPick(['water','methane','ethanol','carbon dioxide','acetone','benzene','acetic acid','propane','glucose','caffeine','ammonia']);
+      const n = libLookup(libNormKey(nm)) || nm; let c = null; try{ c = l3SmilesCounts(L3_LIB[n]); }catch(e){}
+      if(!c){ const card = LIBRARY.find(m=>m.n.toLowerCase() === nm); if(card) c = countsOf(card.atoms.map(a=>({e:BY_SYM[a[0]].i}))); }
+      if(!c) return null;
+      const MI = {H:1, C:12, N:14, O:16, S:32, Cl:35, Br:79, F:19, P:31}, m = Object.keys(c).reduce((t, s)=>t + c[s]*(MI[s] || Math.round(BY_SYM[s].mass)), 0);
+      return qMake('massspec', 'At what m/z is the molecular ion of '+nm+' ('+qSub(benchFormula(c))+')?', String(m), [String(m + 1), String(m - 1), String(m + 14), String(m - 15)].filter(v=>v !== String(m)),
+        'The molecular ion is the whole molecule with one electron knocked off, so m/z is its mass using the commonest isotopes (H 1, C 12, N 14, O 16): '+m+'.'); }
+    const [mz, f, why] = qPick([[15,'CH₃⁺','A methyl group, 12 + 3 = 15: a peak 15 below M means a CH₃ broke off.'],[29,'C₂H₅⁺','An ethyl group, 24 + 5 = 29.'],[43,'CH₃CO⁺','An acylium ion, 12 + 3 + 12 + 16 = 43: the mark of a methyl ketone or acetate.'],[77,'C₆H₅⁺','A phenyl ring, 72 + 5 = 77.'],[91,'C₇H₇⁺','A benzyl group, which rearranges into the very stable tropylium ion: 91.']]);
+    return qMake('massspec', 'A strong fragment peak sits at m/z '+mz+'. Which ion is it most likely to be?', f, ['CH₃⁺','C₂H₅⁺','CH₃CO⁺','C₆H₅⁺','C₇H₇⁺'].filter(v=>v !== f).slice(0, 3), why);
+  }},
+  irspec:{name:'Infrared spectra', g(){
+    const C = [['ethanol','a strong, broad band at about 3350 cm⁻¹ and nothing near 1700'],['acetone','a strong, sharp band at about 1715 cm⁻¹ and no broad band above 3000'],
+      ['acetic acid','a very broad band from 2500 to 3300 cm⁻¹ together with a strong band at about 1710'],['hexane','only C–H bands just below 3000 cm⁻¹: nothing near 1700 and nothing broad'],
+      ['acetonitrile','a sharp band at about 2250 cm⁻¹'],['ethyl acetate','a strong band at about 1740 cm⁻¹ and strong bands at 1000–1300, with no broad O–H'],['acetaldehyde','a strong band at about 1730 cm⁻¹ and a weak pair near 2720 and 2820']]
+      .filter(([n])=>libLookup(libNormKey(n)));
+    const pick = C.slice().sort(()=>Math.random() - 0.5), [nm, d] = pick[0];
+    return qMake('irspec', 'An infrared spectrum shows '+d+'. Which compound is it most likely to be?', nm, pick.slice(1, 4).map(x=>x[0]),
+      ({ethanol:'The broad band near 3350 is an O–H, hydrogen bonded; with no C=O band it is an alcohol.', acetone:'1715 is a ketone’s C=O, and there is no O–H: a ketone.', 'acetic acid':'The huge, broad 2500–3300 band is the O–H of a carboxylic acid, and 1710 its C=O.', hexane:'Only C–H stretches: no functional group at all, an alkane.', acetonitrile:'2250 is the C≡N triple bond of a nitrile.', 'ethyl acetate':'1740 is an ester’s C=O, the 1000–1300 bands its C–O, and there is no O–H.', acetaldehyde:'1730 is a C=O, and the 2720/2820 pair is the C–H on an aldehyde’s carbonyl carbon.'})[nm]);
+  }},
+  nmrq:{name:'NMR spectra', g(){
+    const L = ['ethanol','methanol','acetone','benzene','ethyl acetate','propane','isopropanol','acetic acid','diethyl ether','chloroethane','propanal','methyl acetate','cyclohexane','dichloromethane','butanone','toluene']
+      .map(n=>[n, qGraph(n)]).filter(([n, M])=>M);
+    const [nm, M] = qPick(L), envs = anaNMR(M);
+    const split = envs.filter(e=>!e.broad && e.split >= 1 && e.split <= 3 && !/benzene|aldehyde/.test(e.note));
+    if(split.length && Math.random() < 0.45){ const e = qPick(split), m = MULTIPLICITY[e.split];
+      return qMake('nmrq', 'In the ¹H NMR spectrum of '+nm+', the signal at δ '+e.d.toFixed(1)+' ('+e.n+'H, '+e.note+') has '+e.split+' H on the next carbon'+(e.split > 1 ? 's' : '')+'. How is it split?', m+' ('+(e.split + 1)+' lines)', ['singlet (1 line)','doublet (2 lines)','triplet (3 lines)','quartet (4 lines)'].filter(v=>!v.startsWith(m)),
+        'The n+1 rule: a signal is split into n+1 lines by n hydrogens on neighbouring carbons. Here n = '+e.split+', so '+(e.split + 1)+' lines, a '+m+'.'); }
+    const n = envs.length, H = M.counts.H || 0;
+    return qMake('nmrq', 'How many signals does '+nm+' ('+M.f+') give in its ¹H NMR spectrum?', String(n), [String(n + 1), String(Math.max(1, n - 1)), String(H), String(n + 2)].filter(v=>v !== String(n)),
+      'Hydrogens in the same surroundings (related by the molecule’s symmetry) give one signal: '+envs.map(e=>e.n+'H '+e.note.split(',')[0]).join('; ')+'. That is '+n+' signal'+(n > 1 ? 's' : '')+'.');
+  }}
+});
+/* ---------- figures for the newer lessons ---------- */
+Object.assign(CFIG, {
+  mols:o=>'<div class="crs-mols">'+o.list.map(([sm, cap])=>{ let g = null; const card = LIBRARY.find(m=>m.n.toLowerCase() === String(sm).toLowerCase());
+      try{ g = L3_LIB[libLookup(libNormKey(sm))] ? l3SmilesGraph(L3_LIB[libLookup(libNormKey(sm))]) : card ? {syms:card.atoms.map(a=>a[0]), chg:card.atoms.map(a=>a[3]||0), bl:(card.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1}))} : l3SmilesGraph(sm); }catch(e){} return '<div><div class="crs-molpic">'+(g ? thumbSVG(g, {w:150, h:84, L:24, fs:12, sw:1.3}) : '')+'</div><span>'+cap+'</span></div>'; }).join('')+'</div>',
+  irspec:o=>{ const M = qGraph(o.name); return M ? anaIRSvg(anaBonds(M))+'<span class="crs-figcap">Infrared spectrum of '+o.name+' (simulated)</span>' : ''; },
+  nmrspec:o=>{ const M = qGraph(o.name); if(!M) return ''; const envs = anaNMR(M), g = {syms:M.atoms.map(a=>anaSym(a)), chg:M.atoms.map(a=>anaQ(a)), bl:M.bonds.map(b=>({a:b.a - 1, b:b.b - 1, o:b.order}))}, tags = M.atoms.map(()=> '');
+    envs.forEach(e=>e.hosts.forEach(id=>{ if(!tags[id - 1].includes(e.tag)) tags[id - 1] += e.tag; }));
+    return anaNMRSvg(envs)+'<div class="crs-molpic wide">'+thumbSVG(g, {w:300, h:96, L:30, fs:13, sw:1.4, tags})+'</div><span class="crs-figcap">¹H NMR of '+o.name+': '+envs.map(e=>e.tag+' '+e.n+'H '+e.mult).join(', ')+'</span>'; },
+  msspec:o=>{ const M = qGraph(o.name); return M ? anaMSSvg(anaMS(M))+'<span class="crs-figcap">Mass spectrum of '+o.name+' (simulated): the red peaks are the molecular ion</span>' : ''; },
+  titr:()=>{ const s = anaTitration({pkA:-7, pkB:15.7, sA:true, sB:true}), w = anaTitration({pkA:4.76, pkB:15.7, sA:false, sB:true}), W = 320, H = 170, X = v => 30 + v/50*(W - 40), Y = p => 10 + (14 - p)/14*(H - 30);
+    const path = (T, c) => F.p(T.pts.map((p, i)=>(i ? 'L' : 'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(''), c, 2);
+    return F.svg(H, [0, 7, 14].map(p=>F.l(30, Y(p), W - 10, Y(p), FC.line, 1)+F.t(24, Y(p), p, {s:8, c:FC.mute, a:'end'})).join('')+F.l(X(25), 10, X(25), H - 20, FC.faint, 1, '3 3')+F.t(X(25), H - 12, 'equivalence (25 mL)', {s:8, c:FC.mute})+
+      path(s, FC.blue)+path(w, FC.amber)+F.c(X(12.5), Y(w.pHhalf), 3, FC.amber)+F.t(X(12.5) + 6, Y(w.pHhalf) + 10, 'half-way: pH = pKa', {s:8, c:FC.amber, a:'start'})+
+      F.t(W - 12, Y(3.2), 'HCl (strong)', {s:8.5, c:FC.blue, a:'end'})+F.t(W - 12, Y(5.2), 'acetic acid (weak)', {s:8.5, c:FC.amber, a:'end'})+F.t(30, 6, 'pH', {s:8, c:FC.mute, a:'start'})+F.t(W - 10, H - 4, 'mL of 0.1 M NaOH', {s:8, c:FC.mute, a:'end'})); },
+  galv:()=>{ let s = '';
+    s += F.r(28, 70, 96, 70, '#EEF3FA', FC.line, 4)+F.r(196, 70, 96, 70, '#EEF3FA', FC.line, 4);
+    s += F.r(64, 46, 12, 80, '#9AA0A8', null, 2)+F.r(244, 46, 12, 80, '#C87533', null, 2);
+    s += F.p('M108 92 L108 58 L212 58 L212 92', FC.mute, 7)+F.p('M108 92 L108 58 L212 58 L212 92', '#F7F2E6', 4);
+    s += F.l(70, 46, 70, 22, FC.ink, 1.4)+F.l(250, 46, 250, 22, FC.ink, 1.4)+F.l(70, 22, 142, 22, FC.ink, 1.4)+F.l(178, 22, 250, 22, FC.ink, 1.4)+F.c(160, 22, 17, '#fff', FC.ink, 1.4)+F.t(160, 22, '1.10 V', {s:8.5, w:600});
+    s += F.ar(88, 31, 124, 31, FC.blue, 1.4)+F.ar(196, 31, 232, 31, FC.blue, 1.4)+F.t(106, 40, 'electrons', {s:8, c:FC.blue});
+    s += F.t(70, 150, 'Zn anode (−)', {s:9, w:600})+F.t(70, 161, 'Zn → Zn²⁺ + 2e⁻', {s:8, c:FC.mute})+F.t(250, 150, 'Cu cathode (+)', {s:9, w:600})+F.t(250, 161, 'Cu²⁺ + 2e⁻ → Cu', {s:8, c:FC.mute})+F.t(160, 50, 'salt bridge', {s:8, c:FC.mute});
+    return F.svg(168, s); },
+  orbitals:o=>{ const z = o.z || 16, occ = configure(z, z), rows = AUFBAU.slice(0, 8), H = 22 + rows.length*19; let s = '';
+    rows.forEach((sub, i)=>{ const y = H - 14 - i*19, cap = {s:2, p:6, d:10}[sub.slice(-1)], orb = cap/2, n = occ[sub] || 0, arr = Array(orb).fill(0); for(let k=0;k<n;k++) arr[k < orb ? k : k - orb]++;
+      s += F.t(40, y, sub, {s:9, w:600, c:n ? FC.ink : FC.faint, a:'end'});
+      arr.forEach((c, j)=>{ const x = 52 + j*24; s += F.r(x, y - 8, 20, 16, n ? '#fff' : FC.paper, n ? FC.ink : FC.line, 2); if(c >= 1) s += F.t(x + 7, y, '↑', {s:10, c:FC.blue, w:700}); if(c >= 2) s += F.t(x + 13, y, '↓', {s:10, c:FC.blue, w:700}); }); });
+    const e = EL.find(x=>x.z === z);
+    return F.svg(H, s+F.t(300, 14, e.name+' ('+z+' electrons)', {s:9, w:600, a:'end'})+F.t(300, 27, configString(z), {s:8.5, c:FC.mute, a:'end'})+F.t(300, H - 8, 'energy ↑', {s:8, c:FC.mute, a:'end'})); },
+  flames:()=>{ const L = [['Li','lithium'],['Na','sodium'],['K','potassium'],['Ca','calcium'],['Sr','strontium'],['Ba','barium'],['Cu','copper']]; let s = '';
+    L.forEach(([sy, n], i)=>{ const x = 26 + i*44, c = 'rgb('+FLAME_SEEN[sy].join(',')+')';
+      s += F.p('M'+x+' 92 C '+(x - 15)+' 70, '+(x - 6)+' 50, '+x+' 26 C '+(x + 6)+' 50, '+(x + 15)+' 70, '+x+' 92 Z', c, 1, c)+F.t(x, 106, sy, {s:9, w:700})+F.t(x, 118, n, {s:7.5, c:FC.mute}); });
+    return F.svg(126, s); },
+  gibbs:()=>{ let s = F.t(170, 10, 'ΔS > 0 (spreads out)', {s:8.5, c:FC.mute})+F.t(264, 10, 'ΔS < 0', {s:8.5, c:FC.mute});
+    const cell = (x, y, t, c) => F.r(x, y, 88, 40, c, FC.line, 6)+F.t(x + 44, y + 20, t, {s:9, w:600});
+    s += F.t(62, 42, 'ΔH < 0 (exothermic)', {s:8.5, c:FC.mute})+F.t(62, 88, 'ΔH > 0 (endothermic)', {s:8.5, c:FC.mute});
+    s += cell(126, 22, 'always', '#E3F1EE')+cell(220, 22, 'at low T', '#FBF3E2')+cell(126, 68, 'at high T', '#FBF3E2')+cell(220, 68, 'never', '#F8E8E4');
+    return F.svg(116, s+F.t(160, 112, 'when is ΔG = ΔH − TΔS negative?', {s:8.5, c:FC.mute})); },
+  hess:o=>{ o = Object.assign({a:'C + O₂', b:'CO + ½O₂', c:'CO₂', h1:'ΔH₁ = ?', h2:'ΔH₂ = −283', h3:'ΔH = −394'}, o); let s = '';
+    s += F.r(8, 96, 96, 26, '#fff', FC.ink, 6)+F.t(56, 109, o.a, {s:9, w:600})+F.r(216, 96, 96, 26, '#fff', FC.ink, 6)+F.t(264, 109, o.c, {s:9, w:600})+F.r(112, 14, 96, 26, '#fff', FC.ink, 6)+F.t(160, 27, o.b, {s:9, w:600});
+    s += F.ar(70, 94, 128, 42, FC.blue)+F.ar(192, 42, 250, 94, FC.blue)+F.ar(106, 116, 214, 116, FC.red);
+    s += F.t(74, 62, o.h1, {s:8.5, c:FC.blue, a:'end'})+F.t(246, 62, o.h2, {s:8.5, c:FC.blue, a:'start'})+F.t(160, 128, o.h3, {s:8.5, c:FC.red});
+    return F.svg(136, s); },
+  poly:()=>{ const one = thumbSVG(l3SmilesGraph('C=C'), {w:70, h:50, L:18, fs:10, explicit:true}), chain = thumbSVG(l3SmilesGraph('CCCCCCCC'), {w:180, h:46, L:20, fs:11});
+    return '<div class="crs-poly"><div>'+one+'</div><div>'+one+'</div><div>'+one+'</div><b>→</b><div class="ch">'+chain+'</div></div><span class="crs-figcap">Ethene monomers open their double bonds and join end to end: poly(ethene), written –[CH₂–CH₂]ₙ–</span>'; }
+});
+/* course steps can carry buttons that do something: open a compound in Analysis mode, polymerise */
+const CRS_ACTS = {
+  ana:arg=>{ const list = String(arg||'').split('+').map(s=>s.trim()).filter(Boolean); say('Opening Analysis mode. Your place in the course is saved: press Course to come back.', 'learn'); anaStart(list, list.length > 1 ? 'rx' : 0); },
+  poly:()=>{ l3Polymerise(); }
+};
 
 function examStart(){
   /* twelve fresh questions, each on a different skill, with all their data given:
@@ -11401,7 +11952,7 @@ function thumbSVG(g, o){
         dots += '<circle cx="'+(cx2+px).toFixed(1)+'" cy="'+(cy2+py).toFixed(1)+'" r="'+(fs*0.11).toFixed(2)+'"/><circle cx="'+(cx2-px).toFixed(1)+'" cy="'+(cy2-py).toFixed(1)+'" r="'+(fs*0.11).toFixed(2)+'"/>'; }); }
     /* letters that tie a drawn atom to a row elsewhere (NMR environments) */
     const tg = o.tags ? o.tags[i] : '';
-    if(tg){ const t = clear(k, 1, nh ? [0] : [])[0], R = labelled(k) ? fs*1.15 : fs*0.75;
+    if(tg){ const t = clear(k, 1, nh ? [B && B.left ? Math.PI : 0] : [])[0], R = labelled(k) ? fs*1.25 + (nh && B && Math.abs(Math.cos(t)) > 0.5 ? B.wh*0.6 : 0) : fs*0.75;
       tags += '<text x="'+(X(k) + Math.cos(t)*R).toFixed(1)+'" y="'+(Y(k) + Math.sin(t)*R + fs*0.3).toFixed(1)+'" text-anchor="middle" class="tg">'+tg+'</text>'; }
   });
   return '<svg viewBox="0 0 '+VW+' '+VH+'" aria-hidden="true"><g stroke="#3A3F46" stroke-width="'+(o.sw || 1.15)+'" stroke-linecap="round">'+out+'</g>'+
@@ -19868,8 +20419,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 126;
+const VERSION = 127;
 const CHANGELOG = [
+  [127, 'A bigger course and more to learn. Twenty-two new lessons, taking the course to 73 lessons in 13 units: orbitals and electron configurations (with box diagrams, and the configuration on the selected-atom card), light and flame tests (heat sodium and copper ions on the bench until they glow their colours), resonance and formal charge, hybrid orbitals, isomers (build both C\u2084H\u2081\u2080 isomers), percentage composition and empirical formulas, the limiting reactant (watch the ammonia run out), concentration and dilution, Hess\u2019s law, entropy and free energy, Le Chatelier\u2019s principle and the Haber process, weak acids, Ka and buffers, titrations (strong and weak curves), oxidation states, electrochemical cells (copper meeting silver ions), naming organic compounds (build them from their names) and polymers (polymerise ethene). A new Unit 13, Identifying compounds, covers mass spectrometry, infrared and NMR with spectra simulated from real molecules, and ends with an unknown to solve. Some steps open Analysis mode on the compound in question. Nineteen new kinds of practice question (configurations, flame tests, formal charge, hybridisation, isomers, limiting reactants, concentration, empirical formulas, Hess\u2019s law, free energy, Le Chatelier, buffers, titrations, oxidation states, cell voltages, naming, mass spectra, infrared and NMR), each with its working; the unit checks draw on them. Learn mode has four new reactions to watch: a bare proton finding water, ammonia meeting hydrogen chloride, a silver chloride precipitate, and copper meeting silver ions.'],
   [126, 'Analysis mode, deeper. React now predicts H\u207a + OH\u207b (it said no reaction: a bare proton was not counted as an acid), and the predictions are rebuilt on balanced equations: precipitates by the solubility rules as well as the six the bench models (BaSO\u2084, Cu(OH)\u2082, Fe(OH)\u2083 with their colours), metals balanced by charge (2Al + 3Cu\u00b2\u207a), reactive metals in alcohols, halogens displacing halides, hydrogenation, and ammonia in water. For the predicted reaction there is a grams-in calculator with the limiting reactant and theoretical yields; for acids and bases an ICE table solved exactly, with K, \u0394G\u00b0 and the pH left behind, and a titration curve with its equivalence point, buffer region and the right indicator; for redox an electrochemical cell with half-equations, cell notation, E\u00b0cell, \u0394G\u00b0, K and a Nernst example; and an energy profile. Runs report half-lives. A compound can be heated until its first bond breaks (Find its breaking point), and its size, volume, surface and an estimated density are shown. Structure drawings are fixed: metal ions held by a coordinate bond were drawn bonded (silver nitrate, copper sulfate), aromatic rings came out as all double bonds (now a ring circle), and bonds crossed wide labels like Cu\u00b2\u207a and OH. Element atoms added to a reaction no longer land on the same spot and fly apart.'],
   [125, 'Fixed the pair of electrons that kept flickering between molecules on the 3D bench. Water (or ammonia) on a metal ion makes a coordinate bond, shown as two electrons flying across, and those bonds were being shaken loose by the jolt of their own forming, every second or two, and taken straight back, so the animation played again and again. Coordinate bonds are now judged at the bath\u2019s temperature, as the solvent soaks up that jolt, and are sturdier: ligands stay put at room temperature and come off when you heat the bench (most are gone by 900 K). A ligand that does let go waits a moment before the same ion can take it back, and the same pair is not animated twice in quick succession. In Analysis mode, the prediction is made from the molecules exactly as built, before anything moves.'],
   [124, 'Analysis mode, from the Analyse button in the header. Pick up to four compounds (by name, formula, SMILES or ion, with suggestions as you type) and the bench and its panels step aside for one wide report. Each compound is built alone on a cold bench, relaxed and measured, then taken apart: its structure drawing, molar mass, unsaturation, rings, stereocentres and cis/trans bonds; composition by mass and the empirical formula; a card for each element; every kind of bond with its measured length, enthalpy, \u0394EN, character and infrared band, the total atomisation energy and the weakest bond with the light that would split it; the shape, electron geometry, hybridisation and measured angle at every centre; the electron count, formal charges and octets, a Lewis structure with its lone pairs drawn as dots, a molecular-orbital diagram for diatomics (O\u2082 comes out paramagnetic, with bond order 2) and the oxidation state of every atom; partial charges and the dipole, with why it is or is not polar; the forces between molecules, melting and boiling points, a comparison with an alkane of the same mass, solubility in water, an estimated logP and Lipinski\u2019s rule of five; every acidic hydrogen and basic site with its pKa, the pH of a 0.10 mol/L solution and the conjugate acid and base; functional groups with what each does, and the isomers in the library with the same formula; what it reacts with, each with a Try it button; estimated enthalpies of formation and combustion, checked against measured values where known; and simulated infrared, proton NMR (environments lettered on the structure, with integrals and n+1 splitting), carbon-13 NMR, mass (isotope pattern and fragments) and UV\u2013visible spectra with the colour it would be. Pointing at a row lights its atoms up on the bench. Compare puts two to four side by side in one table, and on the bench, and says in words what the numbers mean (isomers, which boils higher and why, which is the stronger acid and by how much). React sets them in a box of their own: before anything moves it predicts what should happen (proton transfer with K from the two pKa values, precipitates, metals with acids, water and other metals\u2019 ions with E\u00b0cell and \u0394G, Lewis adducts, ligands, additions, esters, combustion, or no reaction and whether they would mix), then runs the real engine and accounts for it: species before and now, the net equation, the bonds broken and formed with a Hess\u2019s law \u0394H beside the bench\u2019s own, every step with its reason, and charts of the species, the heat and the temperature. Also: typed names like 2-butanol and 2-pentanone now find butan-2-ol and pentan-2-one, Build understands the hand-drawn library names (oxygen, carbon dioxide) on both benches, and a lesson or analysis no longer overwrites your saved 3D bench.'],
