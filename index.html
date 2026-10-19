@@ -580,9 +580,9 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 
 /* ---------- overlays ---------- */
 [hidden]{display:none !important}
-#browser,#library,#share,#versions{position:fixed;inset:0;z-index:82;display:flex;align-items:center;justify-content:center;padding:18px}
+#browser,#library,#showcase,#share,#versions{position:fixed;inset:0;z-index:82;display:flex;align-items:center;justify-content:center;padding:18px}
 #crash{position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;padding:18px}
-#browser::before,#library::before,#share::before,#versions::before,#crash::before{
+#browser::before,#library::before,#showcase::before,#share::before,#versions::before,#crash::before{
   content:'';position:absolute;inset:0;background:rgba(250,250,248,.9);backdrop-filter:blur(8px);
 }
 #browser.fade{opacity:.07;pointer-events:none;transition:opacity .2s var(--ease)}
@@ -592,6 +592,35 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
   animation:sheetIn .36s var(--ease) both;
 }
 #share .sheet,#versions .sheet{width:min(94vw,540px)}
+/* the Showcase */
+.show-btn{position:relative}
+.show-btn.new::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--surface)}
+.show-intro{margin:-4px 0 10px;color:var(--muted);font-size:13px;line-height:1.5}
+.show-g{display:block;margin:16px 0 7px}
+.show-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.show-card{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px 11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--surface);box-shadow:inset 3px 0 0 var(--sc,#2F5BEA);transition:transform .14s var(--ease),box-shadow .14s}
+.show-card:hover{transform:translateY(-1px);box-shadow:inset 3px 0 0 var(--sc,#2F5BEA),var(--shadow-s)}
+.show-card b{font-size:13.5px;font-weight:600}
+.show-card span{font-size:12px;color:var(--muted);line-height:1.4}
+.show-card.sg0{--sc:#C2402F}.show-card.sg1{--sc:#2A7A78}.show-card.sg2{--sc:#A98411}.show-card.sg3{--sc:#2F5BEA}.show-card.sg4{--sc:#8A5BB0}.show-card.sg5{--sc:#6B7A8A}
+#demoCard{position:fixed;right:18px;top:160px;z-index:70;max-height:calc(100vh - 180px);overflow:auto;width:min(350px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-l);padding:12px 14px 12px;animation:sheetIn .3s var(--ease) both}
+body.analysing #demoCard{right:auto;left:18px}
+#demoCard .dc-top{display:flex;align-items:center;gap:8px}
+#demoCard .dc-top .close-x{width:24px;height:24px}
+#demoCard .dc-t{display:block;font-family:var(--font-display);font-weight:500;font-size:17px;margin:3px 0 4px}
+#demoCard p{margin:0 0 9px;font-size:12.5px;line-height:1.5;color:var(--ink)}
+#demoCard .dc-try{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+#demoCard .dc-try button{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:999px;background:var(--sunk);border:1px solid var(--line)}
+#demoCard .dc-try button:hover{background:var(--ink);color:#fff}
+#demoCard .dc-nav{display:flex;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+#demoCard .dc-nav button{font-size:12px;font-weight:600;padding:4px 8px;border-radius:7px;color:var(--muted)}
+#demoCard .dc-nav button:hover:not(:disabled){background:var(--sunk);color:var(--ink)}
+#demoCard .dc-nav button:disabled{opacity:.35}
+#demoCard .dc-nav .dc-next{margin-left:auto;background:var(--ink);color:#fff}
+#demoCard .dc-nav .dc-next:hover:not(:disabled){background:var(--accent);color:#fff}
+@media (max-width:640px){#demoCard{left:16px;right:16px;width:auto;top:auto;bottom:12px}}
+/* room in the top bar for the Showcase button: the RT chip goes first on narrower screens */
+@media (max-width:1100px){#benchRT{display:none}}
 #crash .sheet{width:min(94vw,470px)}
 .sheet-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:15px}
 .sheet-head h3{margin:0;font-family:var(--font-display);font-weight:500;font-size:20px;line-height:1.1}
@@ -1306,6 +1335,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     </div>
     <span class="chip" id="benchTemp">298 K</span>
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
+    <button class="ghost-btn show-btn" id="showBtn" type="button" title="One-click demonstrations of everything the bench can do">Showcase</button>
     <button class="ghost-btn course-btn" id="courseBtn" type="button" title="A whole chemistry course taught on the bench: lessons, guided bench time and free bench time">Course</button>
     <button class="ghost-btn ana-btn" id="anaBtn" type="button" title="Look at one to four compounds in depth: structure, bonds, shape, electrons, polarity, acids and bases, spectra, and how they react together">Analyse</button>
     <button class="ghost-btn learn-btn" id="learnBtn" type="button" title="A quieter view for watching one reaction at a time">Learn mode</button>
@@ -1781,6 +1811,18 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     <p class="sheet-foot">Click to place &middot; drag onto the bench &middot; radii Cordero, Alvarez &amp; Shannon; Z &ge; 104 estimated</p>
   </div>
 </div>
+<div id="showcase" hidden role="dialog" aria-modal="true" aria-label="Showcase">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>What the bench can do</h3>
+      <button class="close-x" id="closeShow" type="button" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 2l9 9M11 2l-9 9"/></svg>
+      </button>
+    </div>
+    <div id="showBody"></div>
+  </div>
+</div>
+<div id="demoCard" hidden role="region" aria-label="Showcase demonstration"></div>
 <div id="library" hidden role="dialog" aria-modal="true" aria-label="Molecule library">
   <div class="sheet">
     <div class="sheet-head">
@@ -12118,6 +12160,151 @@ function buildTours(){
     TOURS[k].steps.length+' steps</span></button>').join('');
   el('tours').querySelectorAll('button').forEach(b=>{ b.onclick=()=>startTour(b.dataset.k); });
 }
+/* ---------- the Showcase ----------
+   A gallery of one-click demonstrations, one for each thing the bench can do.
+   Each sets the bench up (which bench, the scene, the temperature, the tools,
+   the equipment), then a card in the corner says what to watch for and offers a
+   few things to try next, with Back and Next to walk through the lot like a tour. */
+const SHOWC = {i:-1};
+const showK = K => setSlider('temp', crsK(K));
+/* a clean 3D bench: no stirring, field, equipment, stepping or leftover box size */
+function showFresh3D(K){
+  if(ANA.on) anaExit(); if(LEARN.on) learnMode(false); if(CRS.on) courseExit();
+  if(!L3.on) set3D(true);
+  stepMode(false, true);
+  L3.mix = false; L3.field = null; L3.gear = []; L3.photons && (L3.photons.length = 0);
+  if(L3.solvent){ try{ toggleMode('solvent', false); }catch(e){} }
+  showK(K || 298);
+  try{ l3Build(); renderLeft3D(); }catch(e){}
+}
+function showEmpty3D(K, box){ showFresh3D(K); l3Push(); l3Clear(); L3.box = L3.boxTo = box || 540; L3.dist = L3.box*3.8; }
+const showScene = (k, K) => { showFresh3D(K); l3Scene(k); };
+const showNuc = kind => { showEmpty3D(298, 820); renderLeft3D(); const b = document.querySelector('[data-l3nuc="'+kind+'"]'); if(b) b.click(); };
+const showFit = () => { try{ l3FitView(true); }catch(e){} };
+const SHOWCASE = [
+  /* reactions */
+  {g:'Reactions you can watch', t:'Acid meets base', d:'Hydronium hands its proton to hydroxide: neutralisation, molecule by molecule.', go:()=>showScene('neutral'),
+    watch:'Each H₃O⁺ passes a proton to an OH⁻ and two waters are left. Every pass gives out 57 kJ/mol: the notebook records it, and the energy chart shows the heat.',
+    tries:[['Slow it down: step through', ()=>stepMode(true)], ['Stir it', ()=>l3MixToggle(true)]]},
+  {g:'Reactions you can watch', t:'Sodium in water', d:'An alkali metal frees hydrogen from water and leaves hydroxide behind.', go:()=>showScene('naw'),
+    watch:'Sodium gives its electron away (E° = −2.71 V): Na⁺ forms, a hydrogen is freed from water and pairs with another as H₂, and the solution turns alkaline with OH⁻.',
+    tries:[['Try potassium', ()=>showScene('kw')], ['Try magnesium (slower)', ()=>showScene('mgw')]]},
+  {g:'Reactions you can watch', t:'Golden rain', d:'Two clear solutions meet and a yellow solid comes out of nowhere.', go:()=>showScene('pbi2'),
+    watch:'Pb²⁺ and I⁻ hold each other more tightly than water can hold them apart (Ksp 9.8 × 10⁻⁹), so they gather into a solid that settles. Warm it and more dissolves: that is how the real golden rain is made.',
+    tries:[['Heat it to 360 K', ()=>showK(360)], ['Cool it to 280 K', ()=>showK(280)], ['Silver chloride instead', ()=>showScene('agcl')]]},
+  {g:'Reactions you can watch', t:'Acids that dissolve copper', d:'Hydrochloric acid cannot touch copper. Nitric acid can.', go:()=>showScene('cunitric'),
+    watch:'Nitrate takes copper’s electrons itself, which H⁺ cannot (copper is at +0.34 V). Copper goes into solution as Cu²⁺ and brown NO₂ comes off, four nitric acids used per copper.',
+    tries:[['Plain hydrochloric acid', ()=>showScene('cuacid')], ['Gold in aqua regia', ()=>showScene('aquaregia')], ['Tungsten in HF + nitric', ()=>showScene('wacid')]]},
+  {g:'Reactions you can watch', t:'A metal pushes out another', d:'Zinc gives its electrons to copper ions: the reaction inside a battery.', go:()=>showScene('zncu'),
+    watch:'Zinc (−0.76 V) gives electrons to Cu²⁺ (+0.34 V): zinc dissolves and copper metal comes out, with a cell voltage of 1.10 V. Separate the two halves with a wire and this is a Daniell cell.',
+    tries:[['Work out the cell in Analysis', ()=>anaStart(['zinc', 'copper(II) ion'], 'rx')], ['Copper and silver ions', ()=>showScene('agcu')]]},
+  {g:'Reactions you can watch', t:'Stir it to react', d:'Mix brings molecules together without breaking any of them.', go:()=>{ showScene('hbr'); l3MixToggle(true); },
+    watch:'The liquid itself is stirred and carries every molecule along whole: no bond is stretched and no heat is added. Partners simply meet more often, so HBr adds across ethene’s double bond sooner.',
+    tries:[['Stop stirring', ()=>l3MixToggle(false)], ['Step through each reaction', ()=>stepMode(true)]]},
+  {g:'Reactions you can watch', t:'An equilibrium', d:'Acid and alcohol make an ester and water, and the ester comes apart again.', go:()=>showScene('ester'),
+    watch:'Esters form and hydrolyse side by side: watch the notebook count both directions. Neither side wins outright; the mixture settles where the two rates match.',
+    tries:[['Heat it to 400 K', ()=>showK(400)], ['Stir it', ()=>l3MixToggle(true)]]},
+  {g:'Reactions you can watch', t:'Make a polymer', d:'Ethene molecules join end to end into a polyethylene chain.', go:()=>{ showEmpty3D(298, 820); for(let i=0;i<10;i++) l3BuildAny('ethene'); l3Polymerise(); showFit(); },
+    watch:'Each C=C double bond opens and links to the next molecule: ten ethenes become one chain of twenty carbons, with every carbon now singly bonded.',
+    tries:[['Do it again', ()=>{ showEmpty3D(298, 820); for(let i=0;i<10;i++) l3BuildAny('ethene'); l3Polymerise(); showFit(); }]]},
+  {g:'Reactions you can watch', t:'Hot and cold packs', d:'Dissolving a salt can warm the water or chill it.', go:()=>showScene('hotpack'),
+    watch:'Calcium chloride gives out heat as its ions are wrapped in water. The calorimetry readout on the right adds it up.',
+    tries:[['The cold pack', ()=>showScene('coldpack')]]},
+  /* matter */
+  {g:'Matter and energy', t:'Melt ice', d:'Warm a cluster of frozen water and watch the hydrogen bonds let go.', go:()=>{ showEmpty3D(150); l3Crystal('ice'); showFit(); },
+    watch:'At 150 K the waters sit locked in a hydrogen-bonded network (Weak-force lines show the bonds). Warm it past 273 K and they start to slide; past 373 K they fly apart as steam.',
+    tries:[['Warm it to 290 K', ()=>showK(290)], ['Boil it at 420 K', ()=>showK(420)], ['Freeze it again', ()=>showK(150)]]},
+  {g:'Matter and energy', t:'A metal crystal', d:'Copper atoms in their real face-centred cubic packing, at the real spacing.', go:()=>{ showFresh3D(298); L3.metalSym = 'Cu'; l3Crystal('metal'); },
+    watch:'Each copper atom has twelve neighbours, held by a sea of shared electrons rather than bonds to any one of them. Heat it far enough and the lattice melts.',
+    tries:[['Melt it at 1600 K', ()=>showK(1600)], ['Iron instead (body-centred)', ()=>{ showFresh3D(298); L3.metalSym = 'Fe'; l3Crystal('metal'); }]]},
+  {g:'Matter and energy', t:'Salt dissolving', d:'Water pulls a sodium chloride crystal apart ion by ion.', go:()=>showScene('saltaq'),
+    watch:'Water’s δ− oxygens turn towards Na⁺ and its δ+ hydrogens towards Cl⁻. Each ion that comes away is wrapped in a shell of water.',
+    tries:[['Cool it right down', ()=>showK(200)]]},
+  {g:'Matter and energy', t:'Gas under pressure', d:'Squeeze a box of nitrogen with the piston.', go:()=>{ showEmpty3D(298, 820); for(let i=0;i<20;i++) l3BuildAny('nitrogen'); showFit(); },
+    watch:'The pressure gauge counts the push of molecules on the walls. Halve the box and the pressure roughly doubles; heat it and it rises again. A real gas soon stops obeying PV = nRT when squeezed hard.',
+    tries:[['Squeeze', ()=>{ L3.boxTo = 380; renderLeft3D(); }], ['Let it out', ()=>{ L3.boxTo = 820; L3.box = Math.max(L3.box, 820); renderLeft3D(); }], ['Heat it to 600 K', ()=>showK(600)]]},
+  {g:'Matter and energy', t:'An electric field', d:'Polar water molecules swing into line with a field.', go:()=>{ showEmpty3D(298); for(let i=0;i<14;i++) l3BuildAny('water'); L3.field = {x:24000, y:0, z:0, len:200}; l3SetTool('field'); showFit(); },
+    watch:'Each water is a dipole: its δ− oxygen is pulled one way and its δ+ hydrogens the other, so the molecules turn to line up with the field. Ions would drift along it instead.',
+    tries:[['Flip the field', ()=>{ if(L3.field){ L3.field.x = -L3.field.x; L3.field.y = -L3.field.y; L3.field.z = -L3.field.z; } }], ['Switch it off', ()=>{ L3.field = null; }]]},
+  {g:'Matter and energy', t:'Light breaks a bond', d:'Ultraviolet photons split chlorine and set off a chain reaction with hydrogen.', go:()=>{ showEmpty3D(298); for(let i=0;i<4;i++){ l3BuildAny('chlorine'); l3BuildAny('hydrogen'); } L3.nm = 330; l3AddGear('lamp'); showFit(); },
+    watch:'A 330 nm photon carries 363 kJ/mol, more than the Cl–Cl bond’s 243, so it splits chlorine into atoms. Each chlorine atom takes a hydrogen from H₂ and frees another atom to carry on: HCl builds up.',
+    tries:[['Red light (700 nm): too weak', ()=>{ L3.nm = 700; renderLeft3D(); }], ['Back to ultraviolet', ()=>{ L3.nm = 330; renderLeft3D(); }]]},
+  {g:'Matter and energy', t:'Electrodes', d:'Two charged plates pull ions across a salt solution.', go:()=>{ showScene('saltaq'); L3.volts = 150; l3AddGear('anode'); l3AddGear('cathode'); },
+    watch:'Na⁺ drifts towards the cathode (−) and Cl⁻ towards the anode (+), and the waters turn to face the field. That migration is how a current flows through a solution.',
+    tries:[['Full voltage', ()=>{ L3.volts = 200; renderLeft3D(); }], ['Switch them off', ()=>{ L3.gear.forEach(g=>g.on = false); renderLeft3D(); }]]},
+  /* nuclear */
+  {g:'Nuclear', t:'A chain reaction', d:'One neutron splits uranium-235, which frees more neutrons.', go:()=>showNuc('chain'),
+    watch:'Each fission splits a U-235 into two lighter nuclei and two or three neutrons, which split more uranium. The energy per fission is about 200 MeV, millions of times a chemical bond.',
+    tries:[['Again', ()=>showNuc('chain')]]},
+  {g:'Nuclear', t:'Fusion', d:'A deuteron and a triton fired together fuse into helium.', go:()=>showNuc('fusion'),
+    watch:'Hydrogen-2 and hydrogen-3 come close enough for the strong force to win over their repulsion: they fuse to helium-4 and a fast neutron, giving out 17.6 MeV. This is the reaction fusion reactors aim for.',
+    tries:[['Again', ()=>showNuc('fusion')]]},
+  /* looking closer */
+  {g:'Look closer', t:'Take a molecule apart', d:'Caffeine in depth: bonds, shape, polarity, and simulated IR, NMR and mass spectra.', go:()=>anaStart(['caffeine'], 0),
+    watch:'Analysis builds caffeine on the 3D bench and measures everything from it: every bond length and energy, its shape and dipole, its acids and bases, and spectra worked out from its structure.',
+    tries:[['Compare ethanol with dimethyl ether', ()=>anaStart(['ethanol', 'dimethyl ether'], 0)], ['Aspirin', ()=>anaStart(['aspirin'], 0)]]},
+  {g:'Look closer', t:'Predict a reaction', d:'Will it react, and why? With the equation, energy and a stoichiometry calculator.', go:()=>anaStart(['copper', 'nitric acid'], 'rx'),
+    watch:'The prediction gives the balanced equation, the electrode potentials behind it and the energy, then runs the reaction on the bench to check.',
+    tries:[['Copper and hydrochloric acid', ()=>anaStart(['copper', 'hydrogen chloride'], 'rx')], ['Silver ion and chloride', ()=>anaStart(['silver ion', 'chloride'], 'rx')]]},
+  {g:'Look closer', t:'Eleven thousand molecules', d:'The library: medicines, natural products, salts and whole families, all buildable.', go:()=>openLib(),
+    watch:'Search by name or formula, or browse by family. Click any card to build it on the bench.', tries:[]},
+  {g:'Look closer', t:'One step at a time', d:'Step through slows reactions down and stops after each step to explain it.', go:()=>{ showScene('nh3hcl'); stepMode(true); },
+    watch:'The bench runs slowly and pauses at each reaction step with a card saying what happened and why. Press Next step, or N, to carry on.', tries:[['Turn stepping off', ()=>stepMode(false)]]},
+  /* learning */
+  {g:'Learn chemistry', t:'Learn mode', d:'Topics explained, then shown on the bench with predictions and quizzes.', go:()=>{ if(ANA.on) anaExit(); learnMode(true); },
+    watch:'Pick a topic: each one explains the idea, runs it on the bench, and asks you to predict what happens first.', tries:[]},
+  {g:'Learn chemistry', t:'The course', d:'Thirteen units of chemistry, taught on the bench with hands-on tasks.', go:()=>{ if(ANA.on) anaExit(); if(LEARN.on) learnMode(false); const b = el('courseBtn'); if(b) b.click(); },
+    watch:'Lessons mix reading, worked examples, things to do on the bench (checked as you do them) and quizzes.', tries:[]},
+  /* the flat bench */
+  {g:'The flat bench', t:'A guided tour', d:'Sharing electrons, step by step, on the 2D bench.', go:()=>{ if(ANA.on) anaExit(); if(L3.on) set3D(false); startTour('covalent'); },
+    watch:'The flat bench draws molecules as chemists do: shells, lone pairs, partial charges and electron movement.', tries:[['Handing electrons over (ionic)', ()=>startTour('ionic')]]},
+  {g:'The flat bench', t:'An electrochemical cell', d:'Split the bench into two half-cells joined by a wire.', go:()=>{ if(ANA.on) anaExit(); if(L3.on) set3D(false); toggleMode('cell', true); scene2D('zncu'); },
+    watch:'Electrons flow through the wire from the zinc side to the copper side, and the voltage comes from the difference in their electrode potentials.', tries:[['Back to one bench', ()=>toggleMode('cell', false)]]},
+];
+function showcaseHTML(){
+  const groups = [...new Set(SHOWCASE.map(x=>x.g))];
+  return '<p class="show-intro">One click sets each one up. A card then says what to watch and what to try next, and Next walks you through the rest.</p>'+
+    '<div class="btn-row"><button type="button" class="ghost-btn show-all" data-show="0">Start from the beginning</button></div>'+
+    groups.map((g, gi)=>'<span class="eyebrow show-g">'+g+'</span><div class="show-grid">'+SHOWCASE.map((x, i)=>[x, i]).filter(([x])=>x.g === g)
+      .map(([x, i])=>'<button type="button" class="show-card sg'+gi+'" data-show="'+i+'"><b>'+x.t+'</b><span>'+x.d+'</span></button>').join('')+'</div>').join('');
+}
+function openShowcase(){
+  el('showBody').innerHTML = showcaseHTML(); el('showcase').hidden = false;
+  try{ localStorage.setItem('bondingbench.showseen', '1'); }catch(e){} const b = el('showBtn'); if(b) b.classList.remove('new');
+}
+const closeShowcase = () => { el('showcase').hidden = true; };
+function showDemo(i){
+  if(i < 0 || i >= SHOWCASE.length) return;
+  SHOWC.i = i; closeShowcase(); closeLib();
+  try{ SHOWCASE[i].go(); }catch(e){ console.error(e); }
+  renderDemoCard();
+}
+function renderDemoCard(){
+  const c = el('demoCard'); if(!c) return;
+  if(SHOWC.i < 0){ c.hidden = true; return; }
+  const x = SHOWCASE[SHOWC.i], n = SHOWCASE.length;
+  c.innerHTML = '<div class="dc-top"><span class="eyebrow">Showcase · '+(SHOWC.i+1)+' of '+n+' · '+x.g+'</span><button type="button" class="close-x" data-dc="x" aria-label="Close the showcase card"><svg width="11" height="11" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 2l9 9M11 2l-9 9"/></svg></button></div>'+
+    '<b class="dc-t">'+x.t+'</b><p>'+x.watch+'</p>'+
+    (x.tries.length ? '<div class="dc-try">'+x.tries.map(([l], j)=>'<button type="button" data-dt="'+j+'">'+l+'</button>').join('')+'</div>' : '')+
+    '<div class="dc-nav"><button type="button" data-dc="prev"'+(SHOWC.i ? '' : ' disabled')+'>‹ Back</button><button type="button" data-dc="all">All demos</button><button type="button" class="dc-next" data-dc="next"'+(SHOWC.i < n-1 ? '' : ' disabled')+'>Next ›</button></div>';
+  c.hidden = false;
+}
+function showcaseInit(){
+  const b = el('showBtn'); if(!b) return;
+  b.onclick = openShowcase;
+  try{ if(!localStorage.getItem('bondingbench.showseen')) b.classList.add('new'); }catch(e){}
+  el('closeShow').onclick = closeShowcase;
+  el('showcase').addEventListener('click', ev=>{ const d = ev.target.closest('[data-show]'); if(d){ showDemo(+d.dataset.show); return; } if(ev.target === el('showcase')) closeShowcase(); });
+  el('demoCard').addEventListener('click', ev=>{
+    const t = ev.target.closest('[data-dt]'); if(t){ try{ SHOWCASE[SHOWC.i].tries[+t.dataset.dt][1](); }catch(e){ console.error(e); } return; }
+    const d = ev.target.closest('[data-dc]'); if(!d) return;
+    if(d.dataset.dc === 'x'){ SHOWC.i = -1; renderDemoCard(); }
+    else if(d.dataset.dc === 'prev') showDemo(SHOWC.i - 1);
+    else if(d.dataset.dc === 'next') showDemo(SHOWC.i + 1);
+    else if(d.dataset.dc === 'all') openShowcase();
+  });
+  document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && !el('showcase').hidden) closeShowcase(); });
+}
 /* the library is laid out the first time it opens: with ten thousand entries it is not worth doing at start-up */
 let LIB_BUILT = false;
 const openLib  = () => { if(!LIB_BUILT){ LIB_BUILT = true; buildLibrary(); } el('library').hidden=false; const q = el('libSearch'); if(q){ if(q.value){ q.value = ''; q.dispatchEvent(new Event('input')); } setTimeout(()=>q.focus(), 0); } };
@@ -17289,7 +17476,9 @@ function l3Step(dt){
         /* Mg+ still has an electron to give: a neutral chlorine that touches it takes the second */
         (!L3.solvent && [[p, q], [q, p]].some(([m, x])=>m.ion > 0 && m.ion < l3MetalVal(m) && isMetal(EL[m.e]) && !x.ion && !isMetal(EL[x.e]) &&
           l3Free(x, m) > 0 && (EL[x.e].en||0) - (EL[m.e].en||0) >= 1.7 && !(m.nW >= 0.5)));
-      if(s===0 && d < L*1.35 && canB && !L3.noAuto){
+      /* the two halves of a bond light has just split fly apart before they can pair again */
+      const reJoin = (p.noRe && p.noRe.id === q.id && (L3.simT||0) < p.noRe.until) || (q.noRe && q.noRe.id === p.id && (L3.simT||0) < q.noRe.until);
+      if(s===0 && d < L*1.35 && canB && !L3.noAuto && !reJoin){
         const nbd = l3Bond(p, q, 1, pairIons ? 'ionic' : undefined); nb.get(p.id).push(q); nb.get(q.id).push(p);
         /* an ion coming back out of water onto a crystal: the shell it sheds costs
            back almost all the bond gives, as for dissolving run backwards */
@@ -17331,6 +17520,40 @@ function l3Step(dt){
             if(dE > 0) l3Kick(rad, tgt, dE);
             l3Note(-dE, 'added across a double bond', rad, tgt);
             continue;
+          }
+        }
+        /* Atom transfer: a radical pulls a hydrogen or halogen atom off a molecule,
+           leaving the molecule's other end as the new radical. Cl + H2 -> HCl + H,
+           then H + Cl2 -> HCl + Cl: the chain that light starts in hydrogen and
+           chlorine. The barrier follows the bond energies (Evans-Polanyi): about
+           10 kJ/mol plus half the energy it costs, never less than that cost, so
+           Br + H2 (70 kJ/mol uphill) is slow and H + Cl2 (189 downhill) is almost
+           free. Away from water only: in solution these atoms meet water first. */
+      }
+      if(s===0 && !canB && (l3Free(p) > 0) !== (l3Free(q) > 0) && d < (EL[p.e].rv + EL[q.e].rv)*0.9){
+        const rad = l3Free(p) > 0 ? p : q, tgt = rad === p ? q : p;
+        const ySym = EL[tgt.e].sym, yb = l3Bonds(tgt);
+        if(!(l3Metal(rad) || rad.ion || tgt.ion) && /^(H|F|Cl|Br|I)$/.test(ySym) && yb.length === 1 && yb[0].type === 'covalent' && yb[0].order === 1 &&
+           ((rad.nW||0) + (tgt.nW||0)) < 1 && /^(H|F|Cl|Br|I|C|O|S|N)$/.test(EL[rad.e].sym)){
+          const z = l3Find(l3Other(yb[0], tgt.id));
+          if(z && z !== rad && EL[z.e].sym !== EL[rad.e].sym && !z.ion){
+            const eNew = bondEnthalpy(EL[rad.e].sym, ySym, 1), dH = yb[0].energy - eNew;
+            /* the bench runs chemistry fast: barriers count at 1/2.5, as bond energies do (at 1/3.4) when bonds shake apart */
+            const Ea = Math.max(4, 10 + 0.5*dH, dH)/2.5*(l3InCat(rad) ? 0.35 : 1);
+            const Tc = Math.max(kelvin(), ((rad.Ts||0) + (tgt.Ts||0))/2);
+            if(Math.random() < Math.exp(-Ea/(0.008314*Tc))*0.6){
+              const zB = species3D(z).f, ob = yb[0]; L3.bonds.splice(L3.bonds.indexOf(ob), 1); L3.bv = (L3.bv||0) + 1;
+              const zl = nb.get(z.id), tl = nb.get(tgt.id); if(zl) zl.splice(zl.indexOf(tgt), 1); if(tl) tl.splice(tl.indexOf(z), 1);
+              l3Bond(rad, tgt, 1); nb.get(rad.id).push(tgt); nb.get(tgt.id).push(rad);
+              if(-dH > 0) l3Kick(rad, tgt, -dH);
+              const rS = EL[rad.e].sym, zA = species3D(z).f, pr = species3D(rad).f, key = rS+ySym+zB;
+              L3.atNoted = L3.atNoted || {};
+              const meta = L3.atNoted[key] ? null : (L3.atNoted[key] = true, {c:'radical', title:'Radical chain step: '+rS+'\u00b7 takes '+(ySym === 'H' ? 'a hydrogen' : 'a '+elName(ySym))+' atom from '+zB,
+                eq:rS+'\u00b7 + '+zB+' \u2192 '+pr+' + '+zA+'\u00b7   \u0394H '+fmtDH(dH),
+                why:'An atom with an unpaired electron pulls '+(ySym === 'H' ? 'a hydrogen' : 'an atom')+' off the molecule and leaves an unpaired electron behind on the other end: one radical makes another, so the reaction carries on as a chain. '+(dH < 0 ? 'The new bond is stronger than the one broken, so it is downhill and fast.' : 'The new bond is a little weaker than the old, so this step needs a push from the heat around it.')+' Two radicals meeting end the chain by pairing up.'});
+              l3Note(-dH, rS+' took '+ySym+' from '+zB, rad, tgt, meta);
+              continue;
+            }
           }
         }
       }
@@ -19239,7 +19462,13 @@ function l3GearStep(dt){
         if(b.order > 1){ const e0 = b.energy, p = l3Find(b.a), q = l3Find(b.b); b.order--; L3.bv = (L3.bv||0) + 1; b.energy = bondEnthalpy(EL[p.e].sym, EL[q.e].sym, b.order); l3Note(e0 - b.energy, 'light broke a pi bond', p, q); }
         else l3Break(b, 'light broke it');
         const p = l3Find(b.a), q = l3Find(b.b);
-        if(p && q) l3Kick(p, q, E - b.energy);            /* what is left over goes into motion */
+        if(p && q && b.order <= 1){
+          /* the photon's spare energy sends the two fragments flying apart along the old bond, as in a real photolysis,
+             rather than leaving them side by side to pair straight up again */
+          const ex = Math.max(0, E - b.energy), dx = q.x - p.x, dy = q.y - p.y, dz = q.z - p.z, dl = Math.hypot(dx, dy, dz) || 1;
+          p.noRe = {id:q.id, until:(L3.simT||0) + 0.6}; q.noRe = {id:p.id, until:(L3.simT||0) + 0.6};
+          for(const [a2, sg] of [[p, -1], [q, 1]]){ const v = Math.sqrt(2*(ex/2 + 40)*L3_KJ*0.004/l3Mass(a2)); a2.vx += sg*dx/dl*v; a2.vy += sg*dy/dl*v; a2.vz += sg*dz/dl*v; }
+        } else if(p && q) l3Kick(p, q, E - b.energy);       /* what is left over goes into motion */
         L3.flashes.push({x:a.x, y:a.y, z:a.z, t:0, hot:false, light:true});
       } else {
         const m = EL[a.e].mass, v = Math.sqrt(2*E*L3_KJ*0.004/m);
@@ -19954,7 +20183,8 @@ function l3Draw(){
     g.textAlign = 'center'; g.fillStyle = 'rgba(71,76,84,.85)'; g.font = '500 15px Archivo, system-ui, sans-serif'; g.fillText('An empty box', cx, cy+30);
     g.fillStyle = 'rgba(138,144,152,.95)'; g.font = '12.5px Archivo, system-ui, sans-serif';
     if(typeof CRS !== 'undefined' && CRS.on){ g.fillText('Add atoms with the buttons in the course panel,', cx, cy+52); g.fillText('or follow the step there.', cx, cy+70); }
-    else { g.fillText('Click an element in the table, type a name like caffeine into Build,', cx, cy+52); g.fillText('or pick a reaction on the left.', cx, cy+70); }
+    else { g.fillText('Click an element in the table, type a name like caffeine into Build,', cx, cy+52); g.fillText('or pick a reaction on the left.', cx, cy+70);
+      g.fillStyle = 'rgba(47,91,234,.85)'; g.fillText('New here? Showcase, in the top bar, shows what the bench can do.', cx, cy+96); }
     g.restore();
   }
   if(STEP.on && STEP.focus.length && STEP.bench === '3D'){ const tn = performance.now();
@@ -21272,8 +21502,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 135;
+const VERSION = 136;
 const CHANGELOG = [
+  [136, 'Showcase: a new button in the top bar opens a gallery of 26 one-click demonstrations of what the bench can do, in six groups (reactions you can watch, matter and energy, nuclear, look closer, learning, and the flat bench): neutralisation, sodium in water, golden rain, oxidising acids, displacement, stirring, an equilibrium, polymerisation, hot and cold packs, melting ice, a copper crystal, salt dissolving, gas under pressure, an electric field, light breaking a bond, electrodes, fission, fusion, Analysis, the library, step through, Learn mode, the course, a tour and the electrochemical cell. Each sets the bench up completely, then a card says what to watch, offers two or three things to try next (heat it, flip the field, try potassium), and walks on to the next with Back and Next. The empty 3D box points to it. New chemistry it needed: radical chain reactions. A radical can now take a hydrogen or halogen atom from a molecule, leaving a new radical behind, with a barrier set by the bond energies, so light splitting chlorine sets off the real chain with hydrogen (Cl + H2 -> HCl + H, H + Cl2 -> HCl + Cl) and hydrogen chloride builds up. The two atoms a photon splits now fly apart with its spare energy instead of pairing straight up again. The RT chip in the top bar steps aside on narrower screens to make room.'],
   [135, 'Mix, on the 3D bench (the Mix button in the top bar, or M). It stirs the box the way a stirrer moves a liquid: the heat bath itself flows, swirling in layers that turn opposite ways about an axis that changes every few seconds, with a gentle drift towards the middle, and every molecule is carried along whole, all its atoms at the same speed, so no bond is stretched or shaken apart. The temperature is measured against the moving liquid, so stirring adds no heat: a reaction still needs what the temperature gives it, but partners meet far more often. In tests, three ethene and three hydrogen bromide molecules spread through a large box all reacted within a minute when mixed, against one without.'],
   [134, 'The electric field can be switched off again. On the 3D bench every press with the field tool started a drag, so the click that its tip promised would clear the field never arrived: now a click without dragging switches it off, and so does choosing the field tool again (or pressing 8). On the flat bench a click without a drag switches it off too, the Off button still works, and Clear now resets the field along with everything else.'],
   [133, 'Medicines and natural products: 365, up from 123, and 107 molecules of life, up from 82 (11,201 compounds in all). New medicines include the statins (simvastatin, atorvastatin, rosuvastatin), blood-pressure and heart drugs (lisinopril, metoprolol, valsartan, nifedipine, amiodarone, apixaban), diabetes drugs (sitagliptin, dapagliflozin, pioglitazone), antidepressants and antipsychotics (paroxetine, venlafaxine, bupropion, olanzapine, aripiprazole), anticonvulsants, the opioids and their antidote naltrexone, antibiotics (tetracycline, cefalexin, chloramphenicol, linezolid, clavulanic acid), antivirals (zidovudine, lamivudine, efavirenz, favipiravir), antifungals, antimalarials, cancer drugs (methotrexate, imatinib, temozolomide, bortezomib) and the anaesthetics propofol and desflurane. Natural products: alkaloids (strychnine, papaverine, LSD, DMT, harmine, huperzine A), cannabidiol, flavonoids (EGCG, kaempferol, genistein), lycopene, plant hormones (abscisic acid, indole-3-acetic acid, zeatin), terpenes, aflatoxin, camptothecin and podophyllotoxin. Molecules of life: anandamide, prostaglandin E2, spermine, cortisone, DHEA, cholic acid, inosine and more. Every one is checked against its molecular formula.'],
@@ -25419,7 +25650,7 @@ function start(data){
   setInterval(()=>{ dirty=true; }, 500);
 
   buildFullTable(); renderSlots();
-  buildFragments(); buildTours(); loadGoals(); renderGoals(); renderVersions(); renderModes();
+  buildFragments(); buildTours(); showcaseInit(); loadGoals(); renderGoals(); renderVersions(); renderModes();
   el('identify').onclick=identify;
   el('polyBtn').onclick=polymerise;
   el('mechs').innerHTML = Object.keys(MECHANISMS).map(k=>
