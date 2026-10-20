@@ -11906,10 +11906,17 @@ function libEntries(){
   const push = e => { if(all.length >= LIB_SIZE || !e.key || seen.has(e.key)) return; seen.add(e.key); all.push(e); };
   LIBRARY.forEach(m=>push({n:m.n, f:m.f, cat:m.cat === 'organic' ? (LIB_ORG[m.n] || 'oxygen') : m.cat, spec:m, key:specKey(m)}));
   const names = Object.keys(LIB_CAT_OF).filter(n=>L3_LIB[n]);
-  names.map((n, i)=>[n, LIB_PRI[n] != null ? LIB_PRI[n] : 100 + i*0.01]).sort((a, b)=>a[1] - b[1]).forEach(([n])=>{
+  /* The generated families (priority 5000 and up) are unique among themselves by
+     construction (tests/library.js checks every one), so a generated compound is
+     fingerprinted only when something written by hand shares its formula: that
+     keeps the first opening of twenty thousand entries quick. */
+  const handF = new Set(all.map(e=>e.f));
+  names.map((n, i)=>[n, LIB_PRI[n] != null ? LIB_PRI[n] : 100 + i*0.01]).sort((a, b)=>a[1] - b[1]).forEach(([n, pr])=>{
     const sm = L3_LIB[n]; let f = LIB_FORMULA[n];
     if(!f){ try{ const g = l3SmilesGraph(sm), c = {}; g.syms.forEach(x=>{ c[x] = (c[x]||0) + 1; }); f = benchFormula(c) + chargeSup(g.chg.reduce((t,q)=>t+(q||0), 0)); }catch(e){ return; } }
-    push({n, f, cat:LIB_CAT_OF[n], sm, key:smilesKey(sm)});
+    const gen = pr >= 5000, key = gen && !handF.has(f) ? 'gen|'+n : smilesKey(sm);
+    if(!gen) handF.add(f);
+    push({n, f, cat:LIB_CAT_OF[n], sm, key});
   });
   return (LIB_ALL = all);
 }
@@ -12246,7 +12253,7 @@ const SHOWCASE = [
   {g:'Look closer', t:'Predict a reaction', d:'Will it react, and why? With the equation, energy and a stoichiometry calculator.', go:()=>anaStart(['copper', 'nitric acid'], 'rx'),
     watch:'The prediction gives the balanced equation, the electrode potentials behind it and the energy, then runs the reaction on the bench to check.',
     tries:[['Copper and hydrochloric acid', ()=>anaStart(['copper', 'hydrogen chloride'], 'rx')], ['Silver ion and chloride', ()=>anaStart(['silver ion', 'chloride'], 'rx')]]},
-  {g:'Look closer', t:'Eleven thousand molecules', d:'The library: medicines, natural products, salts and whole families, all buildable.', go:()=>openLib(),
+  {g:'Look closer', t:'Twenty-two thousand molecules', d:'The library: medicines, natural products, salts and whole families, all buildable.', go:()=>openLib(),
     watch:'Search by name or formula, or browse by family. Click any card to build it on the bench.', tries:[]},
   {g:'Look closer', t:'One step at a time', d:'Step through slows reactions down and stops after each step to explain it.', go:()=>{ showScene('nh3hcl'); stepMode(true); },
     watch:'The bench runs slowly and pauses at each reaction step with a card saying what happened and why. Press Next step, or N, to carry on.', tries:[['Turn stepping off', ()=>stepMode(false)]]},
@@ -18580,6 +18587,54 @@ const libAdd = (cat, name, sm, pri, f, expect) => {
     if(L > n || (L === n && p > 1)) continue;
     const nm = (n === 2 ? '' : p+'-')+(/^\(/.test(o) && n > 2 ? '['+o+']' : o)+P[n-1]+'ane'; add('oxygen', nm, C(p-1)+'C(O'+os+')'+C(n-p));
   }
+  /* ---------- and on to twenty thousand ----------
+     Thirteen more benzene parents, each with one more substituent (of 17) or two
+     (of 12), and three more ring systems with their own fixed numbering:
+     pyrimidine (N at 1 and 3), pyrazine (N at 1 and 4) and naphthalene. */
+  const MID = ['F','Cl','Br','I','NO2','Me','Et','OMe','OEt','CF3','iPr','SMe'];
+  const encO = s => /\(/.test(s) ? '['+s+'phenoxy]' : '('+s+'phenoxy)';
+  const PARENTS2 = [
+    ['C(=O)OCC', 'acid', s=>'ethyl '+s+'benzoate'], ['CCO', 'oxygen', s=>'2-'+enc(s)+'ethan-1-ol'], ['CCN', 'nitrogen', s=>'2-'+enc(s)+'ethan-1-amine'],
+    ['C(=O)CC', 'oxygen', s=>'1-'+enc(s)+'propan-1-one'], ['B(O)O', 'acid', s=>enc(s)+'boronic acid'], ['S(N)(=O)=O', 'nitrogen', s=>s+'benzenesulfonamide'],
+    ['S(=O)(=O)Cl', 'acid', s=>s+'benzenesulfonyl chloride'], ['NN', 'nitrogen', s=>enc(s)+'hydrazine'], ['S', 'nitrogen', s=>s+'benzene-1-thiol'],
+    ['CC#N', 'nitrogen', s=>'2-'+enc(s)+'acetonitrile'], ['NC(C)=O', 'nitrogen', s=>'N-'+enc(s)+'acetamide'], ['OCC(=O)O', 'acid', s=>'2-'+encO(s)+'acetic acid'],
+    ['C(C)O', 'oxygen', s=>'1-'+enc(s)+'ethan-1-ol']];
+  const DI6 = [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4]];
+  for(const [sm0, cat, nm] of PARENTS2){
+    for(const k of ALL) for(const p of [1, 2, 3]){ const subs = {[p]:k}; add(cat, nm(prefixStr(ringNumber(6, subs, 0))), ring6('c', subs, {0:sm0})); }
+    for(const [p, q] of DI6) for(const a of MID) for(const b of MID){ const subs = {[p]:a, [q]:b}; add(cat, nm(prefixStr(ringNumber(6, subs, 0))), ring6('c', subs, {0:sm0})); }
+  }
+  /* a ring numbered only in the given ways ([start, direction] pairs): lowest locants, then alphabetical */
+  function ringNumberAt(N, subs, ways){
+    let best = null;
+    for(const [s0, d] of ways){
+      const loc = Object.keys(subs).map(p=>[((+p - s0)*d % N + N) % N + 1, subs[p]]);
+      const set = loc.map(x=>x[0]).sort((a, b)=>a - b), cite = citeOrder(loc);
+      if(!best || lexLess(set, best.set) || (set.join() === best.set.join() && lexLess(cite, best.cite))) best = {loc, set, cite};
+    }
+    return best.loc;
+  }
+  const ringAt = (syms, subs) => syms.map((a, i)=>a + (i === 0 || i === syms.length - 1 ? '1' : '') + br(subs[i] ? SUB[subs[i]][1] : '')).join('');
+  /* pyrimidine: atoms N0 C1 N2 C3 C4 C5, numbered from either nitrogen through C2 */
+  const PYM = ['n','c','n','c','c','c'], pymWays = [[0, 1], [2, -1]];
+  const pym = subs => add('nitrogen', prefixStr(ringNumberAt(6, subs, pymWays))+'pyrimidine', ringAt(PYM, subs));
+  for(const k of ALL) for(const p of [1, 3, 4]) pym({[p]:k});
+  for(const [p, q] of [[1, 3], [1, 4], [3, 4], [3, 5]]) for(const a of MID) for(const b of MID) pym({[p]:a, [q]:b});
+  /* pyrazine: atoms N0 C1 C2 N3 C4 C5, numbered from either nitrogen either way */
+  const PYZ = ['n','c','c','n','c','c'], pyzWays = [[0, 1], [0, -1], [3, 1], [3, -1]];
+  const pyz = subs => add('nitrogen', prefixStr(ringNumberAt(6, subs, pyzWays))+'pyrazine', ringAt(PYZ, subs));
+  for(const k of ALL) pyz({1:k});
+  for(const [p, q] of [[1, 2], [1, 4], [1, 5]]) for(const a of MID) for(const b of MID) pyz({[p]:a, [q]:b});
+  /* naphthalene: positions 1-8 round the outside; its four equivalent numberings */
+  const NAPH = [[1,2,3,4,5,6,7,8], [4,3,2,1,8,7,6,5], [8,7,6,5,4,3,2,1], [5,6,7,8,1,2,3,4]];
+  const naph = subs => {     /* subs {locant 1-8: key} */
+    let best = null;
+    for(const map of NAPH){ const loc = Object.keys(subs).map(l=>[map[+l - 1], subs[l]]); const set = loc.map(x=>x[0]).sort((a, b)=>a - b), cite = citeOrder(loc);
+      if(!best || lexLess(set, best.set) || (set.join() === best.set.join() && lexLess(cite, best.cite))) best = {loc, set, cite}; }
+    const g = l => subs[l] ? br(SUB[subs[l]][1]) : '';
+    add('aromatic', prefixStr(best.loc)+'naphthalene', 'c1'+g(1)+'c'+g(2)+'c'+g(3)+'c'+g(4)+'c2c'+g(5)+'c'+g(6)+'c'+g(7)+'c'+g(8)+'c12');
+  };
+  for(let p=1;p<=8;p++) for(let q=p+1;q<=8;q++) for(const a of FEW) for(const b of FEW) naph({[p]:a, [q]:b});
 })();
 
 /* written out by hand: [name, SMILES, molecular formula it must build to] */
@@ -21502,8 +21557,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 136;
+const VERSION = 137;
 const CHANGELOG = [
+  [137, 'The molecule library doubles: 22,664 compounds. Thirteen more benzene families, each with one more substituent or two, named by the IUPAC rules: ethyl benzoates, 2-phenylethanols and 2-phenylethylamines, propiophenones, boronic acids, sulfonamides, sulfonyl chlorides, hydrazines, thiophenols, phenylacetonitriles, acetanilides, phenoxyacetic acids and 1-phenylethanols; and three more ring systems with their own numbering: pyrimidines, pyrazines and naphthalenes with two substituents (all ten dichloronaphthalenes, for one). Every entry builds in 3D and draws in the library. The library opens faster than its size suggests: the generated families are unique by construction, so it only fingerprints one when a hand-written entry shares its formula, and the test checks every fingerprint instead.'],
   [136, 'Showcase: a new button in the top bar opens a gallery of 26 one-click demonstrations of what the bench can do, in six groups (reactions you can watch, matter and energy, nuclear, look closer, learning, and the flat bench): neutralisation, sodium in water, golden rain, oxidising acids, displacement, stirring, an equilibrium, polymerisation, hot and cold packs, melting ice, a copper crystal, salt dissolving, gas under pressure, an electric field, light breaking a bond, electrodes, fission, fusion, Analysis, the library, step through, Learn mode, the course, a tour and the electrochemical cell. Each sets the bench up completely, then a card says what to watch, offers two or three things to try next (heat it, flip the field, try potassium), and walks on to the next with Back and Next. The empty 3D box points to it. New chemistry it needed: radical chain reactions. A radical can now take a hydrogen or halogen atom from a molecule, leaving a new radical behind, with a barrier set by the bond energies, so light splitting chlorine sets off the real chain with hydrogen (Cl + H2 -> HCl + H, H + Cl2 -> HCl + Cl) and hydrogen chloride builds up. The two atoms a photon splits now fly apart with its spare energy instead of pairing straight up again. The RT chip in the top bar steps aside on narrower screens to make room.'],
   [135, 'Mix, on the 3D bench (the Mix button in the top bar, or M). It stirs the box the way a stirrer moves a liquid: the heat bath itself flows, swirling in layers that turn opposite ways about an axis that changes every few seconds, with a gentle drift towards the middle, and every molecule is carried along whole, all its atoms at the same speed, so no bond is stretched or shaken apart. The temperature is measured against the moving liquid, so stirring adds no heat: a reaction still needs what the temperature gives it, but partners meet far more often. In tests, three ethene and three hydrogen bromide molecules spread through a large box all reacted within a minute when mixed, against one without.'],
   [134, 'The electric field can be switched off again. On the 3D bench every press with the field tool started a drag, so the click that its tip promised would clear the field never arrived: now a click without dragging switches it off, and so does choosing the field tool again (or pressing 8). On the flat bench a click without a drag switches it off too, the Off button still works, and Clear now resets the field along with everything else.'],
