@@ -3018,6 +3018,11 @@ const WALL_E = 0.995;               /* walls are nearly elastic, so they do not 
 const MD = {verlet:true, thermostat:true, pbc:false};
 let potential = 0, energy0 = null, energyDrift = 0;
 let gauss2 = null;
+/* the heat bath's kicks, thousands a frame: drawn from a table of normal numbers
+   read from a random place with a random odd stride, far cheaper than fresh ones */
+const GQ = (()=>{ const t = new Float64Array(16384); for(let i=0;i<t.length;i+=2){ let u, v, s2; do{ u = Math.random()*2-1; v = Math.random()*2-1; s2 = u*u+v*v; }while(s2 >= 1 || s2 === 0); const f = Math.sqrt(-2*Math.log(s2)/s2); t[i] = u*f; t[i+1] = v*f; } return t; })();
+let gqI = 0, gqS = 1, gqN = 0;
+function gaussQ(){ if(--gqN <= 0){ gqI = Math.floor(Math.random()*16384); gqS = 2*Math.floor(Math.random()*4000)+1; gqN = 4096; } gqI = (gqI + gqS) & 16383; return GQ[gqI]; }
 function gauss(){
   if(gauss2!==null){ const g=gauss2; gauss2=null; return g; }
   let u=0, v=0, s2=0;
@@ -12230,6 +12235,9 @@ const SHOWCASE = [
   {g:'Matter and energy', t:'Gas under pressure', d:'Squeeze a box of nitrogen with the piston.', go:()=>{ showEmpty3D(298, 820); for(let i=0;i<20;i++) l3BuildAny('nitrogen'); showFit(); },
     watch:'The pressure gauge counts the push of molecules on the walls. Halve the box and the pressure roughly doubles; heat it and it rises again. A real gas soon stops obeying PV = nRT when squeezed hard.',
     tries:[['Squeeze', ()=>{ L3.boxTo = 380; renderLeft3D(); }], ['Let it out', ()=>{ L3.boxTo = 820; L3.box = Math.max(L3.box, 820); renderLeft3D(); }], ['Heat it to 600 K', ()=>showK(600)]]},
+  {g:'Matter and energy', t:'A box of air', d:'A thousand molecules of air in true proportion: nitrogen, oxygen, argon and water vapour.', go:()=>{ showFresh3D(293); l3Push(); l3Air(1000, true); },
+    watch:'About 78% nitrogen (blue pairs), 21% oxygen (red pairs), 1% argon and some water vapour, molecule for molecule. Carbon dioxide is one molecule in 2,400, so a sample this size holds one at most. Real air is about 400 times sparser: these molecules would be 3.3 nm apart.',
+    tries:[['Add the trace gases', ()=>l3AirTrace()], ['Heat it to 4000 K, like lightning', ()=>showK(4000)], ['3,000 molecules', ()=>l3Air(3000, true)]]},
   {g:'Matter and energy', t:'An electric field', d:'Polar water molecules swing into line with a field.', go:()=>{ showEmpty3D(298); for(let i=0;i<14;i++) l3BuildAny('water'); L3.field = {x:24000, y:0, z:0, len:200}; l3SetTool('field'); showFit(); },
     watch:'Each water is a dipole: its δ− oxygen is pulled one way and its δ+ hydrogens the other, so the molecules turn to line up with the field. Ions would drift along it instead.',
     tries:[['Flip the field', ()=>{ if(L3.field){ L3.field.x = -L3.field.x; L3.field.y = -L3.field.y; L3.field.z = -L3.field.z; } }], ['Switch it off', ()=>{ L3.field = null; }]]},
@@ -17272,7 +17280,8 @@ const l3Temp = a => { const f = a.flow, x = a.vx - (f ? f.x : 0), y = a.vy - (f 
    its own cell and the 26 round it, instead of at every other atom in the box.
    Five hundred atoms is a quarter of a million pairs; the grid finds the few
    thousand that matter. */
-function l3Pairs(A, reach){
+function l3Pairs(A, reach, short){
+  /* short: past this squared distance, keep a pair only if one of its atoms is marked _far */
   const n = A.length, C = reach || 650;
   const buf = () => L3._pb && L3._pb.length >= 2*n*48 ? L3._pb : (L3._pb = new Int32Array(Math.max(4096, 2*n*48)));
   if(n < 90){ const out = new Int32Array(n*(n-1)); let k = 0; for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ out[k++] = i; out[k++] = j; } return out.subarray(0, k); }
@@ -17292,7 +17301,9 @@ function l3Pairs(A, reach){
       for(let j=head[(ax*gy + ay)*gz + az]; j>=0; j=next[j]){
         if(j <= i) continue;
         const b = A[j], dx = b.x-A[i].x, dy = b.y-A[i].y, dz = b.z-A[i].z;
-        if(dx*dx + dy*dy + dz*dz > C*C) continue;       /* only pairs within reach */
+        const r2 = dx*dx + dy*dy + dz*dz;
+        if(r2 > C*C) continue;                            /* only pairs within reach */
+        if(short && r2 > short && !A[i]._far && !b._far) continue;
         if(k+2 > out.length){ const nb = new Int32Array(out.length*2); nb.set(out); out = L3._pb = nb; }
         out[k++] = i; out[k++] = j;
       }
@@ -17353,19 +17364,36 @@ function l3Step(dt){
   const fES = l3Knob('es'), fHB = l3Knob('hb'), fVDW = l3Knob('vdw'), gy = (P.gravity||0)*40;
   const subs = 4, h = dt/subs;
   const nb = new Map(A.map(a=>[a.id, []]));
+  for(const a of A) a._met = l3Metal(a);
   L3.bonds.forEach(b=>{ const p=l3Find(b.a), q=l3Find(b.b); if(p&&q){ nb.get(p.id).push(q); nb.get(q.id).push(p); } });
   /* atoms two bonds apart are held by the bond angle and left out of the pair
      forces; metals and ions have no directed bonds and no angles, so every pair
      of them feels its full pair force: that is what packs them into a lattice */
-  const nonDirected = x => x.ion || l3Metal(x);
+  const nonDirected = x => x.ion || x._met;
   /* a metal ion against the charged atom of a molecular anion (Ca2+ on carbonate's
      O-) is an ion pair too: Coulomb and a hard core, with no angle to keep */
   const ionSite = (p, q) => (p.ion > 0 && q.asite) || (q.ion > 0 && p.asite);
-  const close = (p, q) => {
+  const closeFull = (p, q) => {
     if(nonDirected(p) && nonDirected(q)) return false;
     if(ionSite(p, q)) return false;
     return nb.get(p.id).includes(q) || nb.get(p.id).some(m=>!nonDirected(m) && !ionSite(p, m) && !ionSite(q, m) && nb.get(m.id).includes(q));
   };
+  /* the same answer looked up: each atom's bonded and two-bonds-away partners, gathered
+     once a frame. An atom that gains or loses a bond during the frame (_nbd) is
+     asked the long way until the next one. */
+  const EX = new Map();
+  for(const p of A){ p._nbd = false; const S = new Set(nb.get(p.id));
+    for(const m of nb.get(p.id)){ if(nonDirected(m) || ionSite(p, m)) continue; for(const q of nb.get(m.id)) if(q !== p && !ionSite(q, m)) S.add(q); }
+    EX.set(p.id, S); }
+  const close = (p, q) => {
+    if(p._nbd || q._nbd) return closeFull(p, q);
+    if(nonDirected(p) && nonDirected(q)) return false;
+    if(ionSite(p, q)) return false;
+    const S = EX.get(p.id); return !!S && S.has(q);
+  };
+  const nbLink = (p, q) => { nb.get(p.id).push(q); nb.get(q.id).push(p); p._nbd = q._nbd = true; };
+  /* an atom's contact size: an ion against a molecular anion meets it at its ionic radius */
+  const rvx = (x, y) => x.ion > 0 && y.anMol && EL[x.e].ri != null ? EL[x.e].ri*1.15 : EL[x.e].rv;
   /* partial charges: each bond hands charge toward its more electronegative end */
   for(const a of A) a.q = (a.ion || 0) + (a.fq || 0);   /* an ion, or a charged atom in a molecule, carries its full charge */
   for(const b of L3.bonds){
@@ -17382,7 +17410,15 @@ function l3Step(dt){
   /* counted smoothly (full by 320 pm, none past 420), so the screening it sets
      never jumps as a water drifts across a line, which would feed in false heat */
   for(const a of A) if(a.ion || a.asite){ let n = 0; for(const o of L3.waterO){ if(Math.abs(o.x-a.x) > 420) continue; const r = Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z); if(r < 420) n += Math.min(1, (420 - r)/100); } a.nW = n; }
-  const PR = l3Pairs(A).slice();                  /* once a step: atoms move a few pm in four substeps */
+  /* which atoms could still form a bond this frame: worked out once, so the pair loop
+     can skip the bonding tests for the great majority of pairs (two saturated molecules).
+     Bonds only form inside the substeps, so an atom marked full stays full till next frame. */
+  for(const a of A) a._may = !!(a.ion || L3_HYPER[EL[a.e].sym] || l3Free(a) > 0);
+  /* and which feel anything past 450 pm: a charge (whole or partial), a metal, or a free
+     valence (radicals draw together from 520). Between two atoms with none of these the
+     only force is dispersion, which has died away by then, so those pairs stop at 450. */
+  for(const a of A) a._far = !!(a.q || a.ion || a._may || l3Metal(a));
+  const PR = l3Pairs(A, 650, 202500).slice();     /* once a step: atoms move a few pm in four substeps */
   const IONS = A.filter(a=>a.ion || a.asite);
   /* a precipitate is denser than water and settles: its ions get a gentle pull down */
   const SINK = new Set();
@@ -17427,7 +17463,7 @@ function l3Step(dt){
     for(let k=0;k<PR.length;k+=2){
       const p = A[PR[k]], q = A[PR[k+1]];
       const dx=q.x-p.x, dy=q.y-p.y, dz=q.z-p.z, d2=dx*dx+dy*dy+dz*dz;
-      if(d2 > 360000) continue;
+      if(d2 > 360000 || (d2 > 202500 && !p._far && !q._far)) continue;
       if(close(p, q)) continue;
       const d = Math.sqrt(d2)||1;
       /* two opposite ions that meet pair up again as an ionic bond */
@@ -17444,7 +17480,7 @@ function l3Step(dt){
           const x = rho*(d - r0)/r0, ex = Math.exp(-x);
           const f = 2*l3Coh(p, q)*L3_KJ*(rho/r0)*ex*(1 - ex);
           p.fx += f*dx/d; p.fy += f*dy/d; p.fz += f*dz/d; q.fx -= f*dx/d; q.fy -= f*dy/d; q.fz -= f*dz/d;
-          if(s===0 && d < r0*1.18 && !nb.get(p.id).includes(q)){ l3Bond(p, q, 1, 'metallic'); nb.get(p.id).push(q); nb.get(q.id).push(p); }
+          if(s===0 && d < r0*1.18 && !nb.get(p.id).includes(q)){ l3Bond(p, q, 1, 'metallic'); nbLink(p, q); }
         }
         continue;
       }
@@ -17478,15 +17514,17 @@ function l3Step(dt){
          enough to take it (ionic), never a shared covalent bond with carbon or hydrogen */
       /* a metal bonds to something clearly more electronegative (ionic past 1.7, polar below), never to another like carbon */
       const metalOK = !(l3Metal(p) || l3Metal(q)) || Math.abs((EL[p.e].en||1.5) - (EL[q.e].en||1.5)) >= 1.0;
-      const L = l3Len(p, q, 1), canB = (l3Free(p, q) > 0 && l3Free(q, p) > 0 && !p.ion && !q.ion && !(l3Metal(p) && l3Metal(q)) && metalOK) ||
+      const canB = (p._may && q._may && l3Free(p, q) > 0 && l3Free(q, p) > 0 && !p.ion && !q.ion && !(l3Metal(p) && l3Metal(q)) && metalOK) ||
         (pairIons && (l3Ppt(p, q) || (!(wet(p) && wet(q)) && !shelled(p) && !shelled(q)))) ||
         /* Mg+ still has an electron to give: a neutral chlorine that touches it takes the second */
-        (!L3.solvent && [[p, q], [q, p]].some(([m, x])=>m.ion > 0 && m.ion < l3MetalVal(m) && isMetal(EL[m.e]) && !x.ion && !isMetal(EL[x.e]) &&
+        (!L3.solvent && (p.ion > 0 || q.ion > 0) && [[p, q], [q, p]].some(([m, x])=>m.ion > 0 && m.ion < l3MetalVal(m) && isMetal(EL[m.e]) && !x.ion && !isMetal(EL[x.e]) &&
           l3Free(x, m) > 0 && (EL[x.e].en||0) - (EL[m.e].en||0) >= 1.7 && !(m.nW >= 0.5)));
+      /* the bond length matters only where a bond could form */
+      const L = canB || p._may || q._may ? l3Len(p, q, 1) : 0;
       /* the two halves of a bond light has just split fly apart before they can pair again */
       const reJoin = (p.noRe && p.noRe.id === q.id && (L3.simT||0) < p.noRe.until) || (q.noRe && q.noRe.id === p.id && (L3.simT||0) < q.noRe.until);
       if(s===0 && d < L*1.35 && canB && !L3.noAuto && !reJoin){
-        const nbd = l3Bond(p, q, 1, pairIons ? 'ionic' : undefined); nb.get(p.id).push(q); nb.get(q.id).push(p);
+        const nbd = l3Bond(p, q, 1, pairIons ? 'ionic' : undefined); nbLink(p, q);
         /* an ion coming back out of water onto a crystal: the shell it sheds costs
            back almost all the bond gives, as for dissolving run backwards */
         const wetPair = nbd.type === 'ionic' && (wet(p) || wet(q)), eNet = wetPair ? l3WetE(p, q) : nbd.energy;
@@ -17522,7 +17560,7 @@ function l3Step(dt){
           const Tc = Math.max(kelvin(), ((rad.Ts||0) + (tgt.Ts||0))/2);
           if(Math.random() < Math.exp(-Ea/(0.008314*Tc))*0.6){
             pi.order--; L3.bv = (L3.bv||0) + 1; pi.energy -= piE;
-            const nbd = l3Bond(rad, tgt, 1); nb.get(rad.id).push(tgt); nb.get(tgt.id).push(rad);
+            const nbd = l3Bond(rad, tgt, 1); nbLink(rad, tgt);
             const dE = nbd.energy - piE;
             if(dE > 0) l3Kick(rad, tgt, dE);
             l3Note(-dE, 'added across a double bond', rad, tgt);
@@ -17537,11 +17575,11 @@ function l3Step(dt){
            Br + H2 (70 kJ/mol uphill) is slow and H + Cl2 (189 downhill) is almost
            free. Away from water only: in solution these atoms meet water first. */
       }
-      if(s===0 && !canB && (l3Free(p) > 0) !== (l3Free(q) > 0) && d < (EL[p.e].rv + EL[q.e].rv)*0.9){
+      if(s===0 && !canB && (p._may || q._may) && (l3Free(p) > 0) !== (l3Free(q) > 0) && d < (EL[p.e].rv + EL[q.e].rv)*0.9){
         const rad = l3Free(p) > 0 ? p : q, tgt = rad === p ? q : p;
         const ySym = EL[tgt.e].sym, yb = l3Bonds(tgt);
         if(!(l3Metal(rad) || rad.ion || tgt.ion) && /^(H|F|Cl|Br|I)$/.test(ySym) && yb.length === 1 && yb[0].type === 'covalent' && yb[0].order === 1 &&
-           ((rad.nW||0) + (tgt.nW||0)) < 1 && /^(H|F|Cl|Br|I|C|O|S|N)$/.test(EL[rad.e].sym)){
+           /^(H|F|Cl|Br|I|C|O|S|N)$/.test(EL[rad.e].sym) && !L3.waterO.some(o=>o !== rad && Math.abs(o.x - rad.x) < 340 && Math.hypot(o.x - rad.x, o.y - rad.y, o.z - rad.z) < 340)){
           const z = l3Find(l3Other(yb[0], tgt.id));
           if(z && z !== rad && EL[z.e].sym !== EL[rad.e].sym && !z.ion){
             const eNew = bondEnthalpy(EL[rad.e].sym, ySym, 1), dH = yb[0].energy - eNew;
@@ -17551,7 +17589,7 @@ function l3Step(dt){
             if(Math.random() < Math.exp(-Ea/(0.008314*Tc))*0.6){
               const zB = species3D(z).f, ob = yb[0]; L3.bonds.splice(L3.bonds.indexOf(ob), 1); L3.bv = (L3.bv||0) + 1;
               const zl = nb.get(z.id), tl = nb.get(tgt.id); if(zl) zl.splice(zl.indexOf(tgt), 1); if(tl) tl.splice(tl.indexOf(z), 1);
-              l3Bond(rad, tgt, 1); nb.get(rad.id).push(tgt); nb.get(tgt.id).push(rad);
+              l3Bond(rad, tgt, 1); nbLink(rad, tgt); z._nbd = true;
               if(-dH > 0) l3Kick(rad, tgt, -dH);
               const rS = EL[rad.e].sym, zA = species3D(z).f, pr = species3D(rad).f, key = rS+ySym+zB;
               L3.atNoted = L3.atNoted || {};
@@ -17568,7 +17606,6 @@ function l3Step(dt){
       /* a hydrogen bond lets H and its acceptor sit well inside their van der Waals radii */
       const hb = !canB ? (l3HBond(p, q) || l3HBond(q, p)) : null;
       /* a metal ion meets the rest of a molecular anion at its ionic size, not its atom's */
-      const rvx = (x, y) => x.ion > 0 && y.anMol && EL[x.e].ri != null ? EL[x.e].ri*1.15 : EL[x.e].rv;
       const contact = canB ? L*0.8 : hb ? 150 : (rvx(p, q) + rvx(q, p))*0.8;
       if(d < contact){
         const f = -kR*(contact - d)/d;
@@ -17758,9 +17795,9 @@ function l3Step(dt){
       /* while mixing, the bath flows (see l3MixFlow) and grips a little harder so the molecules follow it */
       const fl = mixFlow && mixFlow.get(a.id), gm = (a.cool > 0 ? gamma*10 : fl ? Math.max(gamma, 3) : gamma)*(mts ? 1.6 : 1);
       const m = l3Mass(a), sig = Math.sqrt(2*gm*kT/(m*h)), ux = fl ? fl.x : 0, uy = fl ? fl.y : 0, uz = fl ? fl.z : 0;
-      a.vx += (a.fx/m - gm*(a.vx - ux) + sig*gauss())*h;
-      a.vy += (a.fy/m + gy - gm*(a.vy - uy) + sig*gauss())*h;          /* gravity pulls toward the floor */
-      a.vz += (a.fz/m - gm*(a.vz - uz) + sig*gauss())*h;
+      a.vx += (a.fx/m - gm*(a.vx - ux) + sig*gaussQ())*h;
+      a.vy += (a.fy/m + gy - gm*(a.vy - uy) + sig*gaussQ())*h;          /* gravity pulls toward the floor */
+      a.vz += (a.fz/m - gm*(a.vz - uz) + sig*gaussQ())*h;
       const v = Math.hypot(a.vx, a.vy, a.vz);
       if(v > 3000){ a.vx *= 3000/v; a.vy *= 3000/v; a.vz *= 3000/v; }
       a.x += a.vx*h; a.y += a.vy*h; a.z += a.vz*h;
@@ -19130,6 +19167,82 @@ function l3BuildGraph(syms, bl, iso, chg, label, sm){
   say((label ? label.charAt(0).toUpperCase()+label.slice(1)+', from its known structure: ' : 'Built from SMILES: ')+benchFormula(countsOf(made))+', '+bl.length+' bonds.','bench');
   return made;
 }
+/* ---------- many molecules at once ----------
+   Building one molecule looks for a clear spot by checking every atom already
+   there, which is fine for a handful and hopeless for thousands. A bulk build
+   works out each species' shape once, then deals out copies on a jittered grid
+   through the box, each turned a random way: linear in the number made. */
+function l3Template(name){
+  const key = String(name).toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+  let syms, bl, iso = [], chg = [], label = name;
+  const nm = libLookup(key);
+  if(BY_SYM[name] && !nm){ syms = [name]; bl = []; }
+  else if(nm){ const g = l3ParseSmiles(L3_LIB[nm]); syms = []; bl = []; label = nm;
+    g.atoms.forEach(a=>{ syms.push(a.sym); iso.push(a.iso||0); chg.push(a.q||0); }); g.bonds.forEach(b=>bl.push({a:b.a, b:b.b, o:b.o}));
+    g.atoms.forEach((a, k)=>{ for(let j=0;j<(a.h||0);j++){ syms.push('H'); iso.push(0); chg.push(0); bl.push({a:k, b:syms.length-1, o:1}); } }); }
+  else { const card = LIBRARY.find(m=>m.n.toLowerCase() === key); if(!card) return null; label = card.n.toLowerCase();
+    syms = card.atoms.map(r=>r[0]); chg = card.atoms.map(r=>r[3]||0); iso = card.atoms.map(r=>r[4]||0); bl = (card.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1})); }
+  const P = syms.length > 1 ? l3Embed(syms, bl) : [[0, 0, 0]];
+  const c = [0, 1, 2].map(k=>P.reduce((t, p)=>t + p[k], 0)/P.length);
+  return {syms, bl, iso, chg, label, P:P.map(p=>[p[0]-c[0], p[1]-c[1], p[2]-c[2]])};
+}
+function l3Bulk(list, quiet){
+  const T = list.map(([n, k])=>[l3Template(n), k]).filter(([t, k])=>t && k > 0);
+  const N = T.reduce((s, [, k])=>s + k, 0); if(!N) return 0;
+  const B = L3.box - 60, side = Math.ceil(Math.cbrt(N*1.15)), step = 2*B/side;
+  const cells = []; for(let i=0;i<side;i++) for(let j=0;j<side;j++) for(let k=0;k<side;k++) cells.push([i, j, k]);
+  for(let i=cells.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
+  let ci = 0;
+  for(const [t, k] of T) for(let m=0;m<k;m++){
+    const [i, j, kk] = cells[ci++ % cells.length], jit = step*0.18;
+    const o = [-B + (i + 0.5)*step + (Math.random()*2-1)*jit, -B + (j + 0.5)*step + (Math.random()*2-1)*jit, -B + (kk + 0.5)*step + (Math.random()*2-1)*jit];
+    /* a random turn: a random unit quaternion */
+    const u1 = Math.random(), u2 = Math.random()*TAU, u3 = Math.random()*TAU, qa = Math.sqrt(1-u1)*Math.sin(u2), qb = Math.sqrt(1-u1)*Math.cos(u2), qc = Math.sqrt(u1)*Math.sin(u3), qd = Math.sqrt(u1)*Math.cos(u3);
+    const rot = p => { const [x, y, z] = p, w = qd;
+      return [x*(1-2*(qb*qb+qc*qc)) + y*2*(qa*qb-qc*w) + z*2*(qa*qc+qb*w), x*2*(qa*qb+qc*w) + y*(1-2*(qa*qa+qc*qc)) + z*2*(qb*qc-qa*w), x*2*(qa*qc-qb*w) + y*2*(qb*qc+qa*w) + z*(1-2*(qa*qa+qb*qb))]; };
+    const tag = L3.seq++;
+    const made = t.syms.map((s2, n)=>{ const r = rot(t.P[n]); const a = l3Add(s2, o[0]+r[0], o[1]+r[1], o[2]+r[2], t.iso[n] || undefined); a.cool = 0.3; a.lib = t.label; a.libId = tag; a.libN = t.syms.length; return a; });
+    t.bl.forEach(b=>l3Bond(made[b.a], made[b.b], b.o, 'covalent'));
+    made.forEach((a, n)=>{ if(!t.chg[n]) return; if(!t.bl.some(b=>b.a===n||b.b===n)) l3SetIon(a, t.chg[n]); else l3SetFq(a, t.chg[n]); });
+  }
+  L3.idx = null; L3.dirty = true;
+  return N;
+}
+/* ---------- air ----------
+   Dry air by number of molecules (NOAA and IUPAC figures): 78.08% nitrogen,
+   20.95% oxygen, 0.934% argon, 0.042% carbon dioxide, then parts per million of
+   neon, helium, methane, krypton, hydrogen, nitrous oxide, carbon monoxide, xenon
+   and ozone. Water vapour comes on top, anything from almost none to 4%. The box
+   is sized for about 450 pm between molecules: some 400 times denser than air at
+   sea level (3.3 nm apart), or it would have to be seven times wider. */
+const AIR_MAJOR = [['nitrogen', 0.78084, 'N\u2082'], ['oxygen', 0.20946, 'O\u2082'], ['argon', 0.00934, 'Ar'], ['carbon dioxide', 0.00042, 'CO\u2082']];
+const AIR_TRACE = [['Ne', 18.18, 'neon'], ['He', 5.24, 'helium'], ['methane', 1.92, 'methane'], ['Kr', 1.14, 'krypton'], ['hydrogen', 0.55, 'hydrogen'],
+  ['nitrous oxide', 0.33, 'nitrous oxide'], ['carbon monoxide', 0.1, 'carbon monoxide'], ['Xe', 0.087, 'xenon'], ['ozone', 0.04, 'ozone']];
+function airCounts(n, humid){
+  const w = humid ? 0.02 : 0, parts = AIR_MAJOR.map(([nm, f, sym])=>[nm, f*(1 - w)*n, sym]).concat(w ? [['water', w*n, 'H\u2082O']] : []);
+  /* whole molecules, by largest remainder, so the total is exactly n */
+  const out = parts.map(([nm, x, sym])=>[nm, Math.floor(x), sym, x - Math.floor(x)]);
+  let left = n - out.reduce((t, x)=>t + x[1], 0);
+  out.slice().sort((a2, b2)=>b2[3] - a2[3]).forEach(x=>{ if(left > 0){ x[1]++; left--; } });
+  return out.filter(x=>x[1] > 0);
+}
+function l3Air(n, humid){
+  l3Clear();
+  const half = clamp(Math.cbrt(n)*450/2, 540, 3500);
+  L3.box = L3.boxTo = Math.round(half); L3.dist = L3.box*3.8;
+  setSlider('temp', crsK(293));
+  const cs = airCounts(n, humid);
+  l3Bulk(cs.map(([nm, k])=>[nm, k]));
+  try{ renderLeft3D(); l3FitView(true); }catch(e){}
+  const co2 = AIR_MAJOR[3][1]*n;
+  say('Air: '+cs.map(([, k, sym])=>k+' '+sym).join(', ')+'. In true proportion'+(co2 < 1 ? ', so even carbon dioxide (one molecule in 2,400) is likelier absent than present here' : '')+
+    '. About 400 times denser than real air at sea level, so things happen while you watch.', 'bench');
+  return cs;
+}
+function l3AirTrace(){
+  l3Bulk(AIR_TRACE.map(([nm])=>[nm, 1]));
+  say('One of each trace gas added: '+AIR_TRACE.map(([, ppm, nm])=>nm+' ('+ppm+' ppm)').join(', ')+'. In real air you would need about 25 million molecules to meet the ozone.', 'bench');
+}
 /* a flat bench card (a saved compound or a library molecule) built in 3D */
 function specTo3D(spec, label){
   if(!spec || !spec.atoms || !spec.atoms.length) return null;
@@ -19661,7 +19774,7 @@ function l3Project(p, W3, H3){
 function l3MinDist(t){ return Math.max(450, L3.box*1.74 + (t ? Math.hypot(t.x, t.y, t.z) : 0)); }
 function l3CamTo(t, dist, anim){
   if(!t || !isFinite(t.x) || !isFinite(t.y) || !isFinite(t.z) || !isFinite(dist)) return;
-  const to = {x:t.x, y:t.y, z:t.z, d:clamp(dist, l3MinDist(t), 6000)};
+  const to = {x:t.x, y:t.y, z:t.z, d:clamp(dist, l3MinDist(t), Math.max(6000, L3.box*8))};
   if(!anim){ L3.target = {x:to.x, y:to.y, z:to.z}; L3.dist = to.d; L3.camAnim = null; return; }
   const T = L3.target || {x:0, y:0, z:0};
   L3.camAnim = {t0:performance.now(), dur:650, f:{x:T.x, y:T.y, z:T.z, d:L3.dist}, to};
@@ -20448,9 +20561,29 @@ function l3Track(){
   L3.atoms.forEach(a=>{ const t = L3.track.get(a.id); if(!t || now - t.t > 2.5) L3.track.set(a.id, {t:now, x:a.x, y:a.y, z:a.z, px:t?t.x:a.x, py:t?t.y:a.y, pz:t?t.z:a.z}); });
 }
 function l3Moved(a){ const t = L3.track && L3.track.get(a.id); return t ? Math.hypot(t.x-t.px, t.y-t.py, t.z-t.pz) : 0; }
+/* what l3Phase needs, worked out once per look at the bench: the molecules grouped
+   by formula, which molecule each atom is in, and the atoms filed in a 420 pm grid,
+   so asking whether a molecule touches another is a look at its neighbours'
+   cells, not at every atom in the box (thousands of molecules made it crawl) */
+function l3PhaseCtx(){
+  const k = (L3.simT||0)+'|'+L3.atoms.length+'|'+L3.bv;
+  if(L3._phc && L3._phc.k === k) return L3._phc;
+  const groups = l3Molecules(), byF = new Map(), molOf = new Map();
+  groups.forEach((g, i)=>{ const f = benchFormula(countsOf(g)); if(!byF.has(f)) byF.set(f, []); byF.get(f).push(g); g.forEach(a=>molOf.set(a.id, i)); });
+  const C = 420, cell = new Map(), key = (x, y, z) => x+','+y+','+z;
+  for(const a of L3.atoms){ const kk = key(Math.floor(a.x/C), Math.floor(a.y/C), Math.floor(a.z/C)); if(!cell.has(kk)) cell.set(kk, []); cell.get(kk).push(a); }
+  return L3._phc = {k, byF, molOf, cell, C, key};
+}
 function l3Phase(list, n){
-  const same = l3Molecules().filter(g=>benchFormula(countsOf(g))===benchFormula(countsOf(list)));
-  const clingy = g => g.some(a=>L3.atoms.some(o=>!g.includes(o) && Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z) < (EL[a.e].rv + EL[o.e].rv)*0.8));
+  const X = l3PhaseCtx();
+  let same = X.byF.get(benchFormula(countsOf(list))) || [];
+  /* a big crowd is judged from a sample of three hundred of its molecules */
+  if(same.length > 300){ const pick = []; for(let i=0;i<300;i++) pick.push(same[Math.floor(Math.random()*same.length)]); same = pick; }
+  const clingy = g => { const m = X.molOf.get(g[0].id);
+    return g.some(a=>{ const cx = Math.floor(a.x/X.C), cy = Math.floor(a.y/X.C), cz = Math.floor(a.z/X.C);
+      for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++) for(let k=-1;k<=1;k++){ const c = X.cell.get(X.key(cx+i, cy+j, cz+k)); if(!c) continue;
+        for(const o of c) if(X.molOf.get(o.id) !== m && Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z) < (EL[a.e].rv + EL[o.e].rv)*0.8) return true; }
+      return false; }); };
   const wander = g => g.reduce((t,a)=>t+l3Moved(a), 0)/g.length;
   /* A metal is molten when its own atoms are hotter than its melting point.
      Thirty-odd atoms cannot show a sharp melting transition in a few seconds (a
@@ -20665,6 +20798,10 @@ function renderLeft3D(){
     '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C</span>'+
       '<input type="range" class="temp-range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
     sec('rx', 'Reactions', rx, SCENES.length)+
+    sec('air', 'Air', '<div class="l3-pres">'+[[250,'250 molecules'],[1000,'1,000'],[3000,'3,000']].map(([k, l])=>'<button type="button" data-l3air="'+k+'">'+l+'</button>').join('')+'</div>'+
+      '<button type="button" class="switch'+(L3.airHumid ? ' on' : '')+'" role="switch" aria-checked="'+!!L3.airHumid+'" data-l3humid="1" style="margin-top:6px"><span>Humid <em>'+(L3.airHumid ? '2% water vapour' : 'dry air')+'</em></span><span class="track"></span></button>'+
+      '<div class="btn-row" style="margin-top:6px"><button class="ghost-btn" type="button" data-l3trace="1">Add one of each trace gas</button></div>'+
+      '<p class="vault-tip">78% nitrogen, 21% oxygen, 0.93% argon and 0.04% CO\u2082, molecule for molecule. The bigger the sample, the slower it runs: 3,000 molecules is over 6,000 atoms.</p>')+
     sec('mol', 'Molecules', '<div class="l3-pres">'+Object.keys(L3_PRESETS).map(k=>'<button type="button" data-l3pre="'+k+'">'+k+'</button>').join('')+'</div>'+
       '<div class="btn-row" style="margin-top:8px"><button class="ghost-btn" type="button" data-l3lib="1">Molecule library</button><button class="ghost-btn" type="button" data-l3poly="1">Polymerise the alkenes</button></div>', Object.keys(L3_PRESETS).length)+
     sec('vault', 'Saved compounds', (vault.length ? '<div class="l3-pres sm">'+vault.slice(0, 24).map(v=>'<button type="button" data-l3vault="'+v.id+'" title="Build it here">'+subHtml(v.f)+'</button>').join('')+'</div>' : '<p class="vault-tip">Nothing kept yet.</p>')+
@@ -20676,9 +20813,9 @@ function renderLeft3D(){
       '</select><button type="button" data-l3crys="metal">Metal crystal</button></div>'+
     '')+
     sec('box', 'Box and pressure', '<div class="l3-pres">'+
-      [['Small',540],['Medium',820],['Large',1150]].map(([l,bx])=>'<button type="button" data-l3box="'+bx+'"'+(L3.boxTo===bx?' style="background:var(--ink);color:#fff"':'')+'>'+l+'</button>').join('')+'</div>'+
+      [['Small',540],['Medium',820],['Large',1150],['Huge',2000],['Giant',3500]].map(([l,bx])=>'<button type="button" data-l3box="'+bx+'"'+(L3.boxTo===bx?' style="background:var(--ink);color:#fff"':'')+'>'+l+'</button>').join('')+'</div>'+
     '<div class="slider" style="margin-top:10px"><label>Piston</label><span class="val" id="l3BoxVal">'+Math.round(L3.boxTo*2)+' pm across</span>'+
-      '<input type="range" id="l3Box" min="300" max="1150" step="10" value="'+Math.round(L3.boxTo)+'"><span class="note">squeeze the walls in: pressure rises, and a gas heats as you push</span></div>'+
+      '<input type="range" id="l3Box" min="300" max="3500" step="10" value="'+Math.round(L3.boxTo)+'"><span class="note">squeeze the walls in: pressure rises, and a gas heats as you push</span></div>'+
       '<button type="button" class="switch'+(L3.freePress ? '' : ' on')+'" role="switch" aria-checked="'+!L3.freePress+'" data-l3press="1" style="margin-top:4px"><span>Realistic press <em>'+(L3.freePress ? 'off: crushes anything, and what it crushes flies apart' : 'stalls at '+PISTON_MAX.toLocaleString()+' atm')+'</em></span><span class="track"></span></button>'+
       '')+
     sec('gear', 'Equipment', '<div class="l3-gear-add">'+gearRow+'</div>'+cards+(L3.gear.length ? '' : '<p class="vault-tip">Two electrodes and a lamp.</p>'), L3.gear.length || '')+
@@ -20693,6 +20830,9 @@ function renderLeft3D(){
   host.onclick = ev=>{
     const b = ev.target.closest('button'); if(!b) return;
     if(b.dataset.l3crys){ l3Crystal(b.dataset.l3crys); return; }
+    if(b.dataset.l3air){ l3Push(); l3Air(+b.dataset.l3air, L3.airHumid); return; }
+    if(b.dataset.l3trace){ l3Push(); l3AirTrace(); return; }
+    if(b.dataset.l3humid){ L3.airHumid = !L3.airHumid; renderLeft3D(); return; }
     if(b.dataset.l3scene){ l3Scene(b.dataset.l3scene); return; }
     if(b.dataset.l3vault){ const v = vault.find(x=>x.id === b.dataset.l3vault); if(v) specTo3D(v.spec, v.n); return; }
     if(b.dataset.l3keep){ l3KeepSelected(); return; }
@@ -20992,7 +21132,7 @@ function l3Build(){
   const up = ()=>{ if(L3.drag && L3.drag.fieldFrom){ if(!L3.drag.aimed){ const was = !!L3.field; L3.field = null; L3.dirty = true; say(was ? 'Field off.' : 'Drag across the box to switch on a field.','field'); } else say('Field on along your drag. Click anywhere to switch it off.','field'); } L3.drag = null; };
   cv3.addEventListener('pointerup', up); cv3.addEventListener('pointercancel', up);
   /* never so close that the front of the box reaches the camera */
-  cv3.addEventListener('wheel', ev=>{ ev.preventDefault(); L3.camAnim = null; L3.dist = clamp(L3.dist*(ev.deltaY>0 ? 1.08 : 0.93), l3MinDist(L3.target), 6000); }, {passive:false});
+  cv3.addEventListener('wheel', ev=>{ ev.preventDefault(); L3.camAnim = null; L3.dist = clamp(L3.dist*(ev.deltaY>0 ? 1.08 : 0.93), l3MinDist(L3.target), Math.max(6000, L3.box*8)); }, {passive:false});
   /* double-click an atom to look at it; double-click empty space to see everything */
   cv3.addEventListener('dblclick', ev=>{
     const r = cv3.getBoundingClientRect(), hit = pick(ev.clientX-r.left, ev.clientY-r.top);
@@ -21557,8 +21697,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 137;
+const VERSION = 138;
 const CHANGELOG = [
+  [138, 'Air, bigger boxes, and thousands of molecules at once. A new Air section on the 3D bench fills the box with 250, 1,000 or 3,000 molecules of air in true proportion (78.08% nitrogen, 20.95% oxygen, 0.934% argon, 0.042% carbon dioxide), dry or humid, with a button that adds one of each trace gas (neon, helium, methane, krypton, hydrogen, nitrous oxide, carbon monoxide, xenon, ozone); it is in the Showcase too, where heating it to 4000 K makes nitric oxide as lightning does. The box now goes to Huge (4,000 pm across) and Giant (7,000 pm), and the piston and camera follow. Under the hood: molecules made in bulk are dealt onto a grid in a single pass instead of each searching the box for room (3,000 molecules in under a tenth of a second, where it took twenty); the physics step decides once a frame which atoms could still bond and which feel anything past 450 pm, so saturated, uncharged pairs (nearly all of air) skip the rest; the bonded-neighbour test is looked up rather than searched, the heat bath draws its random kicks from a table, and the phase readout no longer compares every atom with every other (it froze the panel for over a second at 6,000 atoms). 6,000 atoms now run at about 30 frames a second, 2,000 at 60. Fixed: the radical step from 136 could cycle in water (OH + H2 and back), because its away-from-water test never saw the water.'],
   [137, 'The molecule library doubles: 22,664 compounds. Thirteen more benzene families, each with one more substituent or two, named by the IUPAC rules: ethyl benzoates, 2-phenylethanols and 2-phenylethylamines, propiophenones, boronic acids, sulfonamides, sulfonyl chlorides, hydrazines, thiophenols, phenylacetonitriles, acetanilides, phenoxyacetic acids and 1-phenylethanols; and three more ring systems with their own numbering: pyrimidines, pyrazines and naphthalenes with two substituents (all ten dichloronaphthalenes, for one). Every entry builds in 3D and draws in the library. The library opens faster than its size suggests: the generated families are unique by construction, so it only fingerprints one when a hand-written entry shares its formula, and the test checks every fingerprint instead.'],
   [136, 'Showcase: a new button in the top bar opens a gallery of 26 one-click demonstrations of what the bench can do, in six groups (reactions you can watch, matter and energy, nuclear, look closer, learning, and the flat bench): neutralisation, sodium in water, golden rain, oxidising acids, displacement, stirring, an equilibrium, polymerisation, hot and cold packs, melting ice, a copper crystal, salt dissolving, gas under pressure, an electric field, light breaking a bond, electrodes, fission, fusion, Analysis, the library, step through, Learn mode, the course, a tour and the electrochemical cell. Each sets the bench up completely, then a card says what to watch, offers two or three things to try next (heat it, flip the field, try potassium), and walks on to the next with Back and Next. The empty 3D box points to it. New chemistry it needed: radical chain reactions. A radical can now take a hydrogen or halogen atom from a molecule, leaving a new radical behind, with a barrier set by the bond energies, so light splitting chlorine sets off the real chain with hydrogen (Cl + H2 -> HCl + H, H + Cl2 -> HCl + Cl) and hydrogen chloride builds up. The two atoms a photon splits now fly apart with its spare energy instead of pairing straight up again. The RT chip in the top bar steps aside on narrower screens to make room.'],
   [135, 'Mix, on the 3D bench (the Mix button in the top bar, or M). It stirs the box the way a stirrer moves a liquid: the heat bath itself flows, swirling in layers that turn opposite ways about an axis that changes every few seconds, with a gentle drift towards the middle, and every molecule is carried along whole, all its atoms at the same speed, so no bond is stretched or shaken apart. The temperature is measured against the moving liquid, so stirring adds no heat: a reaction still needs what the temperature gives it, but partners meet far more often. In tests, three ethene and three hydrogen bromide molecules spread through a large box all reacted within a minute when mixed, against one without.'],
