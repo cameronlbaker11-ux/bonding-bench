@@ -12104,20 +12104,43 @@ function libThumb(e){
 /* structure drawings are made as their cards come into view: two thousand at
    once held the sheet up for a second */
 let LIB_IO = null;
-function libFillThumbs(all){
+/* Thumbnails are drawn only for cards coming into view, and through a queue that
+   spends at most a few milliseconds a frame: a fast scroll through twenty thousand
+   cards used to ask for thousands of drawings at once and froze the page. A card
+   that scrolls away before its turn is dropped from the queue. */
+const LIB_Q = new Set(); let LIB_QRUN = false, LIB_QALL = null; let libMoreFn = null;
+function libThumbFill(p){ if(!p.dataset.t || !LIB_QALL) return; const e = LIB_QALL[+p.dataset.t]; if(e) p.innerHTML = libThumb(e); p.removeAttribute('data-t'); if(LIB_IO) LIB_IO.unobserve(p); }
+function libThumbRun(){
+  if(LIB_QRUN) return; LIB_QRUN = true;
+  const step = () => { const t0 = performance.now();
+    for(const p of LIB_Q){ LIB_Q.delete(p); if(p.isConnected) libThumbFill(p); if(performance.now() - t0 > 8) break; }
+    if(LIB_Q.size) setTimeout(step, 16); else LIB_QRUN = false; };
+  setTimeout(step, 0);
+}
+/* when the observer is held back (a background tab, a hidden pane), find the cards on
+   screen directly: the few family grids overlapping the view, then a binary search on
+   each one's cards by position, so a handful of measurements rather than thousands */
+function libVisibleFill(sheet){
+  if(!sheet || !LIB_QALL) return;
+  const r0 = sheet.getBoundingClientRect(), lo = r0.top - 300, hi = r0.bottom + 300;
+  sheet.querySelectorAll('#libList .lib-grid').forEach(g=>{
+    const rg = g.getBoundingClientRect(); if(rg.bottom < lo || rg.top > hi) return;
+    const kids = g.children, top = k => kids[k].getBoundingClientRect().top;
+    let a = 0, b = kids.length - 1; while(a < b){ const m = (a + b) >> 1; if(top(m) + 120 < lo) a = m + 1; else b = m; }
+    for(let k=a; k<kids.length; k++){ const c = kids[k], t = c.getBoundingClientRect().top; if(t > hi) break; const p = c.querySelector('.lib-pic[data-t]'); if(p) LIB_Q.add(p); }
+  });
+  if(LIB_Q.size) libThumbRun();
+}
+function libFillThumbs(all, scope){
   const host = el('libList'), sheet = host && host.closest('.sheet'); if(!host) return;
-  const fill = p => { if(!p.dataset.t) return; p.innerHTML = libThumb(all[+p.dataset.t]); p.removeAttribute('data-t'); };
-  const pics = [...host.querySelectorAll('.lib-pic[data-t]')];
-  pics.slice(0, 120).forEach(fill);
-  if(LIB_IO) LIB_IO.disconnect();
-  if(typeof IntersectionObserver !== 'undefined'){
-    LIB_IO = new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting){ fill(en.target); LIB_IO.unobserve(en.target); } }), {root:sheet, rootMargin:'400px'});
-    pics.slice(120).forEach(p=>LIB_IO.observe(p));
-  }
-  /* and on scrolling, in case the observer is held back (a background tab) */
-  if(sheet && !sheet._thumbScroll){ sheet._thumbScroll = true; let t = null;
-    sheet.addEventListener('scroll', ()=>{ clearTimeout(t); t = setTimeout(()=>{ const r0 = sheet.getBoundingClientRect();
-      sheet.querySelectorAll('.lib-pic[data-t]').forEach(p=>{ const r = p.getBoundingClientRect(); if(r.bottom > r0.top - 500 && r.top < r0.bottom + 500) fill(p); }); }, 60); }, {passive:true}); }
+  LIB_QALL = all;
+  const pics = [...(scope || host).querySelectorAll('.lib-pic[data-t]')];
+  if(!scope){ LIB_Q.clear(); pics.slice(0, 36).forEach(libThumbFill); }
+  if(typeof IntersectionObserver === 'undefined'){ pics.forEach(p=>LIB_Q.add(p)); libThumbRun(); return; }
+  if(!LIB_IO || LIB_IO._root !== sheet){ if(LIB_IO) LIB_IO.disconnect();
+    LIB_IO = new IntersectionObserver(es=>{ es.forEach(en=>{ if(en.isIntersecting) LIB_Q.add(en.target); else LIB_Q.delete(en.target); }); if(LIB_Q.size) libThumbRun(); }, {root:sheet, rootMargin:'300px'});
+    LIB_IO._root = sheet; }
+  pics.forEach(p=>{ if(p.dataset.t) LIB_IO.observe(p); });
 }
 const LIB_UI = {cat:'all', q:'', more:false};
 function buildLibrary(){
@@ -12128,24 +12151,51 @@ function buildLibrary(){
     '<div id="libList"></div><p class="lib-more">Not here? Build understands '+Object.keys(L3_LIB).length+' names, any formula and any SMILES string. Press Enter in the search box to build the first match.</p>';
   const plain = f => f.replace(/[⁰-₟²³¹]/g, d=>'0123456789+-'['⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'.indexOf(d)] || '');
   const card = (e, i) => '<button class="lib lc-'+e.cat+'" type="button" data-i="'+i+'" title="'+e.n.replace(/"/g, '&quot;')+'"><i class="lib-pic"'+(THUMB.has(e.n) ? '>'+THUMB.get(e.n) : ' data-t="'+i+'">')+'</i><b>'+subHtml(e.f)+'</b><span>'+e.n+'</span></button>';
+  /* the list grows as it is scrolled: four hundred cards at a time, the next lot
+     added as the end comes near, never all twenty thousand at once */
+  let parts = [], pi = 0, ci = 0, grid = null, LIB_MORE_IO = null;
+  const addChunk = n => {
+    const list = el('libList'), sent = el('libSent'); if(!list) return;
+    const start = list.querySelectorAll('.lib-grid').length;
+    while(n > 0 && pi < parts.length){
+      const P = parts[pi];
+      if(!grid){ if(P.head) sent.insertAdjacentHTML('beforebegin', P.head); sent.insertAdjacentHTML('beforebegin', '<div class="lib-grid"></div>'); grid = sent.previousElementSibling; }
+      const take = P.cards.slice(ci, ci + n); grid.insertAdjacentHTML('beforeend', take.join('')); ci += take.length; n -= take.length;
+      if(ci >= P.cards.length){ pi++; ci = 0; grid = null; }
+    }
+    libFillThumbs(all, list);
+    if(pi >= parts.length && sent){ sent.innerHTML = parts.tail || ''; }
+  };
   const draw = () => {
     const q = LIB_UI.q.trim().toLowerCase(), qf = q.replace(/\s/g, '');
     el('libChips').querySelectorAll('[data-lc]').forEach(b=>b.classList.toggle('on', b.dataset.lc === LIB_UI.cat && !q));
     const idx = all.map((e, i)=>[e, i]).filter(([e])=>(LIB_UI.cat === 'all' || q || e.cat === LIB_UI.cat) && (!q || e.n.toLowerCase().includes(q) || plain(e.f).toLowerCase().includes(qf)));
-    let h = '';
+    parts = []; pi = 0; ci = 0; grid = null;
     if(q){
       /* best first: names that start with the search, then the rest */
       idx.sort((a, b)=>(b[0].n.toLowerCase().startsWith(q) - a[0].n.toLowerCase().startsWith(q)) || a[0].n.length - b[0].n.length);
-      const lim = LIB_UI.more ? idx.length : 120;
-      h = idx.length ? '<span class="eyebrow lib-cat">'+idx.length+' match'+(idx.length === 1 ? '' : 'es')+'</span><div class="lib-grid">'+idx.slice(0, lim).map(([e, i])=>card(e, i)).join('')+'</div>'+(idx.length > lim ? '<button type="button" class="ghost-btn lib-showall" data-more="1">Show all '+idx.length+'</button>' : '')
-        : '<p class="lib-more">Nothing in the library matches. Try it in Build: it may still know it.</p>';
+      if(idx.length) parts.push({head:'<span class="eyebrow lib-cat">'+idx.length+' match'+(idx.length === 1 ? '' : 'es')+'</span>', cards:idx.map(([e, i])=>card(e, i))});
+      else parts.tail = '<p class="lib-more">Nothing in the library matches. Try it in Build: it may still know it.</p>';
     } else if(LIB_UI.cat === 'all'){
-      h = LIB_CATS.map(([c, label])=>{ const list = idx.filter(([e])=>e.cat === c); if(!list.length) return '';
-        /* every compound, family by family: nothing held back behind a "show all" */
-        return '<span class="eyebrow lib-cat">'+label+' <i>'+list.length+'</i></span><div class="lib-grid">'+list.map(([e, i])=>card(e, i)).join('')+'</div>'; }).join('');
-    } else h = '<div class="lib-grid">'+idx.map(([e, i])=>card(e, i)).join('')+'</div>';
-    el('libList').innerHTML = h;
-    libFillThumbs(all);
+      /* every compound, family by family */
+      LIB_CATS.forEach(([c, label])=>{ const list = idx.filter(([e])=>e.cat === c); if(list.length) parts.push({head:'<span class="eyebrow lib-cat">'+label+' <i>'+list.length+'</i></span>', cards:list.map(([e, i])=>card(e, i))}); });
+    } else parts.push({head:'', cards:idx.map(([e, i])=>card(e, i))});
+    el('libList').innerHTML = '<div id="libSent" class="lib-sent"></div>';
+    const sheet = el('libList').closest('.sheet');
+    if(LIB_MORE_IO) LIB_MORE_IO.disconnect();
+    if(typeof IntersectionObserver !== 'undefined'){
+      LIB_MORE_IO = new IntersectionObserver(es=>{ if(es.some(en=>en.isIntersecting) && pi < parts.length) addChunk(400); }, {root:sheet, rootMargin:'1500px'});
+      LIB_MORE_IO.observe(el('libSent'));
+    }
+    addChunk(400);
+    if(typeof IntersectionObserver === 'undefined') while(pi < parts.length) addChunk(2000);
+    /* and whenever the scroll comes within 2000 px of the end (the observer only speaks
+       when the end crosses into range, not while it stays there) */
+    if(sheet && !sheet._libMore){ sheet._libMore = true; let busy = false;
+      sheet.addEventListener('scroll', ()=>{ if(busy) return; busy = true; setTimeout(()=>{ busy = false;
+        if(sheet.scrollTop + sheet.clientHeight > sheet.scrollHeight - 2000 && libMoreFn) libMoreFn();
+        libVisibleFill(sheet); }, 80); }, {passive:true}); }
+    libMoreFn = () => { if(pi < parts.length) addChunk(400); };
   };
   const build = m => {
     if(m.spec){
@@ -12158,7 +12208,6 @@ function buildLibrary(){
   };
   el('libBody').onclick = ev=>{
     const c = ev.target.closest('[data-lc]'); if(c){ LIB_UI.cat = c.dataset.lc; LIB_UI.q = ''; LIB_UI.more = false; el('libSearch').value = ''; draw(); el('libList').scrollIntoView({block:'nearest'}); return; }
-    if(ev.target.closest('[data-more]')){ LIB_UI.more = true; draw(); return; }
     const b = ev.target.closest('.lib[data-i]'); if(b) build(all[+b.dataset.i]);
   };
   const s = el('libSearch');
@@ -21697,8 +21746,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 138;
+const VERSION = 139;
 const CHANGELOG = [
+  [139, 'The molecule library no longer freezes when you scroll it. With twenty-two thousand cards on the page, every pause in scrolling measured each one, and a fast scroll asked for thousands of structure drawings at once. Now the list grows as you scroll (four hundred cards at a time, the next lot added as the end comes near), drawings come through a queue that spends a few milliseconds a frame and drops cards that have scrolled past before their turn, and where the browser holds back its visibility events (a background tab) the cards on screen are found by a quick binary search instead of measuring them all. It also opens in about half the time.'],
   [138, 'Air, bigger boxes, and thousands of molecules at once. A new Air section on the 3D bench fills the box with 250, 1,000 or 3,000 molecules of air in true proportion (78.08% nitrogen, 20.95% oxygen, 0.934% argon, 0.042% carbon dioxide), dry or humid, with a button that adds one of each trace gas (neon, helium, methane, krypton, hydrogen, nitrous oxide, carbon monoxide, xenon, ozone); it is in the Showcase too, where heating it to 4000 K makes nitric oxide as lightning does. The box now goes to Huge (4,000 pm across) and Giant (7,000 pm), and the piston and camera follow. Under the hood: molecules made in bulk are dealt onto a grid in a single pass instead of each searching the box for room (3,000 molecules in under a tenth of a second, where it took twenty); the physics step decides once a frame which atoms could still bond and which feel anything past 450 pm, so saturated, uncharged pairs (nearly all of air) skip the rest; the bonded-neighbour test is looked up rather than searched, the heat bath draws its random kicks from a table, and the phase readout no longer compares every atom with every other (it froze the panel for over a second at 6,000 atoms). 6,000 atoms now run at about 30 frames a second, 2,000 at 60. Fixed: the radical step from 136 could cycle in water (OH + H2 and back), because its away-from-water test never saw the water.'],
   [137, 'The molecule library doubles: 22,664 compounds. Thirteen more benzene families, each with one more substituent or two, named by the IUPAC rules: ethyl benzoates, 2-phenylethanols and 2-phenylethylamines, propiophenones, boronic acids, sulfonamides, sulfonyl chlorides, hydrazines, thiophenols, phenylacetonitriles, acetanilides, phenoxyacetic acids and 1-phenylethanols; and three more ring systems with their own numbering: pyrimidines, pyrazines and naphthalenes with two substituents (all ten dichloronaphthalenes, for one). Every entry builds in 3D and draws in the library. The library opens faster than its size suggests: the generated families are unique by construction, so it only fingerprints one when a hand-written entry shares its formula, and the test checks every fingerprint instead.'],
   [136, 'Showcase: a new button in the top bar opens a gallery of 26 one-click demonstrations of what the bench can do, in six groups (reactions you can watch, matter and energy, nuclear, look closer, learning, and the flat bench): neutralisation, sodium in water, golden rain, oxidising acids, displacement, stirring, an equilibrium, polymerisation, hot and cold packs, melting ice, a copper crystal, salt dissolving, gas under pressure, an electric field, light breaking a bond, electrodes, fission, fusion, Analysis, the library, step through, Learn mode, the course, a tour and the electrochemical cell. Each sets the bench up completely, then a card says what to watch, offers two or three things to try next (heat it, flip the field, try potassium), and walks on to the next with Back and Next. The empty 3D box points to it. New chemistry it needed: radical chain reactions. A radical can now take a hydrogen or halogen atom from a molecule, leaving a new radical behind, with a barrier set by the bond energies, so light splitting chlorine sets off the real chain with hydrogen (Cl + H2 -> HCl + H, H + Cl2 -> HCl + Cl) and hydrogen chloride builds up. The two atoms a photon splits now fly apart with its spare energy instead of pairing straight up again. The RT chip in the top bar steps aside on narrower screens to make room.'],
