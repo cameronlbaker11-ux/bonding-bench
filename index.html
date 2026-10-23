@@ -3082,6 +3082,29 @@ function logDative2D(bd, s0, cx0){
       why: capFirst(elName(ds))+' has a lone pair, and '+elName(es)+' has an empty orbital to take it. The pair is shared as a coordinate (dative) bond: both electrons came from '+ds+', so it takes a formal + charge and '+es+' a formal \u2212.'});
   }
 }
+/* O + O2 -> O3, as ozone forms in the stratosphere: a lone oxygen atom takes a lone
+   pair from one end of an O2, which becomes O=O+ while the newcomer carries the - :
+   O=O+-O-. Real collisions need a third molecule to carry off the 106 kJ/mol, so
+   only some meetings stick. */
+function ozone2D(){
+  const live = atoms.filter(a=>!a.dying), O = BY_SYM.O.i;
+  for(const o of live){
+    if(o.e !== O || o.charge || bondsOf(o).length) continue;
+    for(const q of live){
+      if(q === o || q.e !== O || q.charge) continue;
+      const qb = bondsOf(q); if(qb.length !== 1 || qb[0].type !== 'covalent' || qb[0].order !== 2) continue;
+      const r = findAtom(qb[0].a === q.id ? qb[0].b : qb[0].a); if(!r || r.e !== O || r.charge || bondsOf(r).length !== 1) continue;
+      if(Math.hypot(q.x - o.x, q.y - o.y) > pmToPx(250) || Math.random() > 0.5) continue;
+      setCharge2D(q, 1); setCharge2D(o, -1); refreshFree(q); refreshFree(o);
+      building = true; const nb = makeBond(q, o, true); building = false;
+      if(!nb){ setCharge2D(q, 0); setCharge2D(o, 0); refreshFree(q); refreshFree(o); continue; }
+      say('O + O\u2082 \u2192 O\u2083: the lone oxygen takes a lone pair from O\u2082, giving ozone, O=O\u207a\u2013O\u207b.', 'bond');
+      try{ logRx({c:'resonance', title:'Ozone forms: O + O\u2082 \u2192 O\u2083', eq:'O + O\u2082 \u2192 O\u2083   \u0394H \u2212106 kJ/mol', bench:'2D', dH:-106, atoms:[q.id, o.id],
+        why:'A lone oxygen atom is one pair short of an octet; one end of an O\u2082 shares a lone pair with it. That end now makes three bonds and carries a + charge, the newcomer a \u2212. In real ozone the double bond takes turns between the two ends (resonance), so both bonds are the same length, between single and double. This is how ozone forms high in the atmosphere, after sunlight splits O\u2082 into atoms.'}); }catch(e){}
+      break;
+    }
+  }
+}
 function scanDative(){
   for(let i=0;i<atoms.length;i++){
     const a=atoms[i]; if(a.dying) continue;
@@ -3138,7 +3161,7 @@ function step(dt){
   }
   detectHBonds();
   datClock += dt;
-  if(SHOW.autobond && datClock>0.3){ datClock=0; scanDative(); }
+  if(SHOW.autobond && datClock>0.3){ datClock=0; scanDative(); ozone2D(); }
   const subs = 2, h = dt/subs;
   for(let s=0;s<subs;s++) physics(h, s===0);
   gearStep(dt);
@@ -11370,11 +11393,11 @@ const LIBRARY = [
   {f:'HCl', n:'hydrogen chloride', cat:'simple', atoms:[['H',-44,0],['Cl',44,0]], bonds:[[0,1,1]]},
   {f:'HF', n:'hydrogen fluoride', cat:'simple', atoms:[['H',-38,0],['F',38,0]], bonds:[[0,1,1]]},
   {f:'H2S', n:'hydrogen sulfide', cat:'simple', atoms:[['S',0,-14],['H',-72,42],['H',72,42]], bonds:[[0,1,1],[0,2,1]]},
-  {f:'O3', n:'ozone', cat:'inorganic', atoms:[['O',0,-18],['O',-64,26],['O',64,26]], bonds:[[0,1,2],[0,2,1]]},
+  {f:'O3', n:'ozone', cat:'inorganic', atoms:[['O',0,-18,1],['O',-64,26],['O',64,26,-1]], bonds:[[0,1,2],[0,2,1]]},
   {f:'SO2', n:'sulfur dioxide', cat:'inorganic', atoms:[['S',0,-16],['O',-74,38],['O',74,38]], bonds:[[0,1,2],[0,2,2]]},
   {f:'SO3', n:'sulfur trioxide', cat:'inorganic', atoms:[['S',0,0],['O',0,-76],['O',66,38],['O',-66,38]], bonds:[[0,1,2],[0,2,2],[0,3,2]]},
   {f:'H2O2', n:'hydrogen peroxide', cat:'inorganic', atoms:[['O',-34,0],['O',34,0],['H',-62,-44],['H',62,44]], bonds:[[0,1,1],[0,2,1],[1,3,1]]},
-  {f:'CO', n:'carbon monoxide', cat:'inorganic', atoms:[['C',-36,0],['O',36,0]], bonds:[[0,1,3]]},
+  {f:'CO', n:'carbon monoxide', cat:'inorganic', atoms:[['C',-36,0,-1],['O',36,0,1]], bonds:[[0,1,3]]},
   {f:'HCN', n:'hydrogen cyanide', cat:'inorganic', atoms:[['H',-92,0],['C',-32,0],['N',40,0]], bonds:[[0,1,1],[1,2,3]]},
   {f:'CH2O', n:'formaldehyde', cat:'organic', atoms:[['C',0,0],['O',0,-70],['H',-70,42],['H',70,42]], bonds:[[0,1,2],[0,2,1],[0,3,1]]},
   {f:'CH4O', n:'methanol', cat:'organic', atoms:[['C',-46,0],['O',46,0],['H',-86,-56],['H',-86,56],['H',-46,-84],['H',96,-46]],
@@ -16772,6 +16795,34 @@ function l3OxAcid(span){
    Esterification: a carboxylic acid and an alcohol give an ester and water,
    slowly, only with an acid catalyst about (H3O+, a strong acid) and some heat,
    and the ester is hydrolysed back the same way, so it settles into equilibrium. */
+/* ---------- electrons settling into place ----------
+   Three oxygens that bond on contact make O-O-O, with an unpaired electron left at
+   each end: a diradical, which real ozone is not. The middle oxygen shares one of its
+   lone pairs instead, giving one end a double bond and the other a whole electron:
+   O=O+-O-, ozone as it really is (the two O-O bonds take turns, by resonance, and
+   come out the same length). The same happens wherever a full O, N or S with a lone
+   pair sits between two O, N or S atoms that are each one bond short. */
+function l3Settle(){
+  if(L3.settleV === L3.bv) return; L3.settleV = L3.bv;
+  const het = a => /^(O|N|S)$/.test(EL[a.e].sym) && !a.ion;
+  for(const y of L3.atoms){
+    if(!het(y) || (y.fq||0) !== 0 || l3Free(y) !== 0 || l3Lone(y) < 1) continue;
+    const bs = l3Bonds(y).filter(b=>b.type === 'covalent');
+    if(bs.length !== 2 || bs.some(b=>b.order !== 1)) continue;
+    const [x, z] = bs.map(b=>l3Find(l3Other(b, y.id)));
+    if(!x || !z || !het(x) || !het(z) || (x.fq||0) || (z.fq||0) || l3Free(x) < 1 || l3Free(z) < 1) continue;
+    if(l3Bonds(x).some(b=>l3Other(b, x.id) === z.id)) continue;               /* a three-membered ring is a different molecule */
+    const bx = bs.find(b=>l3Other(b, y.id) === x.id), e0 = bx.energy;
+    bx.order = 2; bx.energy = bondEnthalpy(EL[x.e].sym, EL[y.e].sym, 2); L3.bv = (L3.bv||0) + 1;
+    l3SetFq(y, 1); l3SetFq(z, -1);
+    const f = species3D(y).f;
+    L3.settleNoted = L3.settleNoted || {};
+    const meta = L3.settleNoted[f] ? null : (L3.settleNoted[f] = true, {c:'resonance', title:'The electrons settle: '+f+' takes its real structure',
+      eq:EL[x.e].sym+'\u00b7\u2013'+EL[y.e].sym+'\u2013'+EL[z.e].sym+'\u00b7 \u2192 '+EL[x.e].sym+'='+EL[y.e].sym+'\u207a\u2013'+EL[z.e].sym+'\u207b',
+      why:'Joined end to end by single bonds, the two outer atoms would each keep an unpaired electron. Instead the middle atom shares one of its lone pairs: it now makes three bonds and carries a + charge, one end gets a double bond and the other end a whole extra electron and a \u2212 charge. Every atom has a full octet. In reality the double bond takes turns between the two ends (resonance), so both bonds come out the same length, between single and double.'});
+    l3Note(-Math.min(120, (bx.energy - e0)*0.35), 'electrons settled into '+f, x, y, meta);
+  }
+}
 function l3Organic(dt){
   L3.orClock = (L3.orClock||0) + dt;
   if(L3.orClock < 0.15) return;
@@ -17903,6 +17954,7 @@ function l3Step(dt){
   l3MetalReact(dt);
   l3AcidBase(dt);
   l3Organic(dt);
+  l3Settle();
   l3Redox(dt);
   l3Census(dt);
   L3.flashes.forEach(f=>f.t += dt); L3.flashes = L3.flashes.filter(f=>f.t < 0.7);
@@ -21746,8 +21798,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 139;
+const VERSION = 140;
 const CHANGELOG = [
+  [140, 'Ozone that comes apart now goes back together as ozone. Three oxygens bonding on contact made O\u2013O\u2013O with an unpaired electron at each end; now the electrons settle the way they really do: the middle oxygen shares a lone pair, giving O=O\u207a\u2013O\u207b (the same rule applies wherever a full O, N or S sits between two O, N or S atoms that are each a bond short). On the flat bench a lone oxygen atom meeting O\u2082 now forms ozone too (O + O\u2082 \u2192 O\u2083, as in the stratosphere), where before it could never join. The library cards for ozone and carbon monoxide now carry their formal charges (O=O\u207a\u2013O\u207b and C\u207b\u2261O\u207a); they had three-bonded atoms with no charge.'],
   [139, 'The molecule library no longer freezes when you scroll it. With twenty-two thousand cards on the page, every pause in scrolling measured each one, and a fast scroll asked for thousands of structure drawings at once. Now the list grows as you scroll (four hundred cards at a time, the next lot added as the end comes near), drawings come through a queue that spends a few milliseconds a frame and drops cards that have scrolled past before their turn, and where the browser holds back its visibility events (a background tab) the cards on screen are found by a quick binary search instead of measuring them all. It also opens in about half the time.'],
   [138, 'Air, bigger boxes, and thousands of molecules at once. A new Air section on the 3D bench fills the box with 250, 1,000 or 3,000 molecules of air in true proportion (78.08% nitrogen, 20.95% oxygen, 0.934% argon, 0.042% carbon dioxide), dry or humid, with a button that adds one of each trace gas (neon, helium, methane, krypton, hydrogen, nitrous oxide, carbon monoxide, xenon, ozone); it is in the Showcase too, where heating it to 4000 K makes nitric oxide as lightning does. The box now goes to Huge (4,000 pm across) and Giant (7,000 pm), and the piston and camera follow. Under the hood: molecules made in bulk are dealt onto a grid in a single pass instead of each searching the box for room (3,000 molecules in under a tenth of a second, where it took twenty); the physics step decides once a frame which atoms could still bond and which feel anything past 450 pm, so saturated, uncharged pairs (nearly all of air) skip the rest; the bonded-neighbour test is looked up rather than searched, the heat bath draws its random kicks from a table, and the phase readout no longer compares every atom with every other (it froze the panel for over a second at 6,000 atoms). 6,000 atoms now run at about 30 frames a second, 2,000 at 60. Fixed: the radical step from 136 could cycle in water (OH + H2 and back), because its away-from-water test never saw the water.'],
   [137, 'The molecule library doubles: 22,664 compounds. Thirteen more benzene families, each with one more substituent or two, named by the IUPAC rules: ethyl benzoates, 2-phenylethanols and 2-phenylethylamines, propiophenones, boronic acids, sulfonamides, sulfonyl chlorides, hydrazines, thiophenols, phenylacetonitriles, acetanilides, phenoxyacetic acids and 1-phenylethanols; and three more ring systems with their own numbering: pyrimidines, pyrazines and naphthalenes with two substituents (all ten dichloronaphthalenes, for one). Every entry builds in 3D and draws in the library. The library opens faster than its size suggests: the generated families are unique by construction, so it only fingerprints one when a hand-written entry shares its formula, and the test checks every fingerprint instead.'],
