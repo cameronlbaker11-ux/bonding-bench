@@ -16745,7 +16745,8 @@ function l3OxAcid(span){
     const s = sym(m), cap = L3_OXCAP[s]; if(!cap || m.dying) continue;
     if(!(l3Metal(m) || (m.ion > 0 && m.ion < cap && !m.fq))) continue;
     let e = L3_EPOT[s], how = 'nitric';
-    if(s === 'Au' || s === 'Pt'){ if(!near(m, x=>sym(x) === 'Cl' && x.ion < 0, 700)) continue; e = s === 'Au' ? 1.00 : 0.76; how = 'aqua'; }
+    /* chloride, or hydrochloric acid itself: in concentrated aqua regia most of it is still HCl */
+    if(s === 'Au' || s === 'Pt'){ if(!near(m, x=>sym(x) === 'Cl' && (x.ion < 0 || nb(x).some(y=>sym(y) === 'H')), 700)) continue; e = s === 'Au' ? 1.00 : 0.76; how = 'aqua'; }
     if(s === 'W'){ if(!near(m, x=>sym(x) === 'F' && (x.ion < 0 || nb(x).some(y=>sym(y) === 'H')), 700)) continue; e = 0.1; how = 'hf'; }
     /* nitrate to NO reaches +0.96 V; aqua regia also makes chlorine and nitrosyl chloride (to +1.36 V) */
     const lim = how === 'aqua' ? 1.36 : 0.96;
@@ -16802,6 +16803,13 @@ function l3OxAcid(span){
    O=O+-O-, ozone as it really is (the two O-O bonds take turns, by resonance, and
    come out the same length). The same happens wherever a full O, N or S with a lone
    pair sits between two O, N or S atoms that are each one bond short. */
+function l3RadOK(r){
+  const sy = EL[r.e].sym, bs = l3Bonds(r).filter(b=>b.type === 'covalent');
+  if((r.fq||0) || bs.some(b=>{ const o = l3Find(l3Other(b, r.id)); return o && (o.fq||0); })) return false;
+  if(!bs.length) return /^(H|F|Cl|Br|I|O)$/.test(sy);
+  if(sy === 'C') return true;
+  return sy === 'O' && bs.length === 1 && EL[l3Find(l3Other(bs[0], r.id)).e].sym === 'H';
+}
 function l3Settle(){
   if(L3.settleV === L3.bv) return; L3.settleV = L3.bv;
   const het = a => /^(O|N|S)$/.test(EL[a.e].sym) && !a.ion;
@@ -17679,7 +17687,9 @@ function l3Step(dt){
         const rad = l3Free(p) > 0 ? p : q, tgt = rad === p ? q : p;
         const ySym = EL[tgt.e].sym, yb = l3Bonds(tgt);
         if(!(l3Metal(rad) || rad.ion || tgt.ion) && /^(H|F|Cl|Br|I)$/.test(ySym) && yb.length === 1 && yb[0].type === 'covalent' && yb[0].order === 1 &&
-           /^(H|F|Cl|Br|I|C|O|S|N)$/.test(EL[rad.e].sym) && !L3.waterO.some(o=>o !== rad && Math.abs(o.x - rad.x) < 340 && Math.hypot(o.x - rad.x, o.y - rad.y, o.z - rad.z) < 340)){
+           /* the radical: a lone atom (H, a halogen, O), a carbon radical, or hydroxyl. Not N or O radicals inside
+              charged molecules (NO2 on nitric acid swapped hydrogens back and forth for ever) */
+           l3RadOK(rad) && !L3.waterO.some(o=>o !== rad && Math.abs(o.x - rad.x) < 340 && Math.hypot(o.x - rad.x, o.y - rad.y, o.z - rad.z) < 340)){
           const z = l3Find(l3Other(yb[0], tgt.id));
           if(z && z !== rad && EL[z.e].sym !== EL[rad.e].sym && !z.ion){
             const eNew = bondEnthalpy(EL[rad.e].sym, ySym, 1), dH = yb[0].energy - eNew;
@@ -19281,7 +19291,7 @@ function l3Template(name){
   else if(nm){ const g = l3ParseSmiles(L3_LIB[nm]); syms = []; bl = []; label = nm;
     g.atoms.forEach(a=>{ syms.push(a.sym); iso.push(a.iso||0); chg.push(a.q||0); }); g.bonds.forEach(b=>bl.push({a:b.a, b:b.b, o:b.o}));
     g.atoms.forEach((a, k)=>{ for(let j=0;j<(a.h||0);j++){ syms.push('H'); iso.push(0); chg.push(0); bl.push({a:k, b:syms.length-1, o:1}); } }); }
-  else { const card = LIBRARY.find(m=>m.n.toLowerCase() === key); if(!card) return null; label = card.n.toLowerCase();
+  else { const card = LIBRARY.find(m=>m.n.toLowerCase() === key) || LIBRARY.find(m=>m.f === String(name).replace(/\s/g, '')); if(!card) return null; label = card.n.toLowerCase();
     syms = card.atoms.map(r=>r[0]); chg = card.atoms.map(r=>r[3]||0); iso = card.atoms.map(r=>r[4]||0); bl = (card.bonds||[]).map(b=>({a:b[0], b:b[1], o:b[2]||1})); }
   const P = syms.length > 1 ? l3Embed(syms, bl) : [[0, 0, 0]];
   const c = [0, 1, 2].map(k=>P.reduce((t, p)=>t + p[k], 0)/P.length);
@@ -19476,6 +19486,8 @@ function scene2D(k){
 }
 function l3BuildAny(str){
   str = str.trim(); const key = str.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+  /* mixtures by name: aqua regia is one part nitric acid to three of hydrochloric */
+  if(key === 'aqua regia'){ l3Bulk([['nitric acid', 3], ['hydrogen chloride', 9]]); say('Aqua regia: three nitric acid and nine hydrogen chloride molecules, the classic 1:3 mixture. Neither acid dissolves gold alone; together they do.', 'bench'); return L3.atoms.slice(-1); }
   const ion = ionTyped(str);
   if(ion){ if(ion.err){ say(ion.err,'bench'); return null; } return l3BuildSmiles(ion.sm, ion.name || undefined); }
   const name = libLookup(key);
@@ -21798,8 +21810,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 140;
+const VERSION = 141;
 const CHANGELOG = [
+  [141, 'Aqua regia dissolves gold metal, not only a lone gold atom. The rule looked for chloride ions beside the gold, but in concentrated aqua regia (and on the bench, with little water) most of the hydrochloric acid stays as HCl molecules, so a lump of gold met no chloride and never dissolved; HCl now counts. You can type \u201caqua regia\u201d into Build for the 1:3 mixture of nitric and hydrochloric acid. A lump dissolves only as far as its nitric acid lasts, as in a real beaker: each surface atom needs nitrate to take its electrons. Also fixed: the radical step from 136 let NO\u2082 pull hydrogens off nitric acid and back again endlessly, using up the acid; it is now kept to lone atoms, carbon radicals and hydroxyl. Building in bulk understands formulas like HCl.'],
   [140, 'Ozone that comes apart now goes back together as ozone. Three oxygens bonding on contact made O\u2013O\u2013O with an unpaired electron at each end; now the electrons settle the way they really do: the middle oxygen shares a lone pair, giving O=O\u207a\u2013O\u207b (the same rule applies wherever a full O, N or S sits between two O, N or S atoms that are each a bond short). On the flat bench a lone oxygen atom meeting O\u2082 now forms ozone too (O + O\u2082 \u2192 O\u2083, as in the stratosphere), where before it could never join. The library cards for ozone and carbon monoxide now carry their formal charges (O=O\u207a\u2013O\u207b and C\u207b\u2261O\u207a); they had three-bonded atoms with no charge.'],
   [139, 'The molecule library no longer freezes when you scroll it. With twenty-two thousand cards on the page, every pause in scrolling measured each one, and a fast scroll asked for thousands of structure drawings at once. Now the list grows as you scroll (four hundred cards at a time, the next lot added as the end comes near), drawings come through a queue that spends a few milliseconds a frame and drops cards that have scrolled past before their turn, and where the browser holds back its visibility events (a background tab) the cards on screen are found by a quick binary search instead of measuring them all. It also opens in about half the time.'],
   [138, 'Air, bigger boxes, and thousands of molecules at once. A new Air section on the 3D bench fills the box with 250, 1,000 or 3,000 molecules of air in true proportion (78.08% nitrogen, 20.95% oxygen, 0.934% argon, 0.042% carbon dioxide), dry or humid, with a button that adds one of each trace gas (neon, helium, methane, krypton, hydrogen, nitrous oxide, carbon monoxide, xenon, ozone); it is in the Showcase too, where heating it to 4000 K makes nitric oxide as lightning does. The box now goes to Huge (4,000 pm across) and Giant (7,000 pm), and the piston and camera follow. Under the hood: molecules made in bulk are dealt onto a grid in a single pass instead of each searching the box for room (3,000 molecules in under a tenth of a second, where it took twenty); the physics step decides once a frame which atoms could still bond and which feel anything past 450 pm, so saturated, uncharged pairs (nearly all of air) skip the rest; the bonded-neighbour test is looked up rather than searched, the heat bath draws its random kicks from a table, and the phase readout no longer compares every atom with every other (it froze the panel for over a second at 6,000 atoms). 6,000 atoms now run at about 30 frames a second, 2,000 at 60. Fixed: the radical step from 136 could cycle in water (OH + H2 and back), because its away-from-water test never saw the water.'],
