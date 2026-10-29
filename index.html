@@ -2237,7 +2237,11 @@ const shellGap = n => n<=3 ? 10 : (OUTER_R-SHELL_0)/(n-1);
    when it gains one. Metals use their metallic radius, ions their ionic one. */
 function sizeTarget(a){
   const e = EL[a.e];
-  const r = a.charge ? radPm(a) : (METAL_R[e.sym] || e.rc || 120);
+  const r0 = METAL_R[e.sym] || e.rc || 120;
+  /* an anion is drawn halfway (geometrically) between its atom and its full ionic
+     radius: the neutral atom is drawn at its bonded size, so the full 99 to 181 pm
+     of Cl to Cl- read as a sudden balloon rather than a swelling */
+  const r = !a.charge ? r0 : a.charge < 0 ? Math.sqrt(r0*radPm(a)) : radPm(a);
   return clamp(Math.pow(r/120, 0.55), 0.7, 1.6);
 }
 const atomScale = a => a._rs == null ? sizeTarget(a) : a._rs;
@@ -2325,11 +2329,20 @@ const kelvinOf = t => t > 100 ? Math.round(1080*Math.pow(10000/1080, (t-100)/(T_
 const kelvin = () => kelvinOf(P.temp);
 
 /* ============================== chemistry ============================== */
+/* An ion's radius. The table holds one ionic radius per element, for its common ion:
+   an anion's where that is bigger than the atom (O2- 140 pm, Cl- 181), a cation's
+   where smaller (Na+ 102, Fe2+ 65). Used only for a charge of that same sign: an
+   O+ had been drawn with O2-'s 140 pm, twice the size of the atom it came from.
+   Otherwise the atom's own size is scaled: a cation shrinks, more with each charge,
+   and an anion swells, as the extra electrons push each other out. */
 function radPm(a){
-  const e = EL[a.e];
-  if(a.charge>0) return e.ri!=null ? e.ri : e.rc*0.62;
-  if(a.charge<0) return e.ri!=null ? e.ri : e.rc*1.35;
-  return e.rc;
+  const e = EL[a.e], q = a.charge || 0;
+  if(!q) return e.rc;
+  const base = METAL_R[e.sym] || e.rc || 120, riAnion = e.ri != null && e.ri > (e.rc || 0);
+  /* the tabulated ion's charge, from the group (O2-, Cl-, Na+, Mg2+, Al3+; transition metals 2+), and a step in size for each charge either side of it */
+  const common = riAnion ? Math.max(1, 18 - e.gcol) : (e.gcol <= 2 ? e.gcol : e.gcol === 13 ? 3 : 2);
+  if(e.ri != null && (q < 0) === riAnion) return e.ri*Math.pow(riAnion ? 1.1 : 0.88, Math.abs(q) - common);
+  return q > 0 ? base*0.72*Math.pow(0.88, q - 1) : base*1.28*Math.pow(1.1, -q - 1);
 }
 /* Goldschmidt metallic radii at coordination twelve, pm. Adding two of them
    gives the nearest-neighbour distance in the real metal: copper 256 against a
@@ -17501,7 +17514,7 @@ function l3Step(dt){
   };
   const nbLink = (p, q) => { nb.get(p.id).push(q); nb.get(q.id).push(p); p._nbd = q._nbd = true; };
   /* an atom's contact size: an ion against a molecular anion meets it at its ionic radius */
-  const rvx = (x, y) => x.ion > 0 && y.anMol && EL[x.e].ri != null ? EL[x.e].ri*1.15 : EL[x.e].rv;
+  const rvx = (x, y) => x.ion > 0 && y.anMol ? radPm({e:x.e, charge:x.ion})*1.15 : EL[x.e].rv;
   /* partial charges: each bond hands charge toward its more electronegative end */
   for(const a of A) a.q = (a.ion || 0) + (a.fq || 0);   /* an ion, or a charged atom in a molecule, carries its full charge */
   for(const b of L3.bonds){
@@ -17597,7 +17610,7 @@ function l3Step(dt){
          ions orders itself with each surrounded by the other sign: rock salt. */
       if((p.ion && q.ion) || sitePair){
         /* ionic radii: a chloride ion is far bigger than a chlorine atom, a sodium ion far smaller */
-        const ri = x => EL[x.e].ri != null ? EL[x.e].ri : EL[x.e].rc*((x.ion || x.fq) > 0 ? 0.62 : 1.35);
+        const ri = x => radPm({e:x.e, charge:x.ion || x.fq});
         const zp = p.ion || p.fq, zq = q.ion || q.fq;
         /* opposite ions touch at the sum of their radii (Na-Cl 282 pm, Mg-O 210); the wall
            is stiffer for higher charges, or a 2+ and a 2- squeeze far too close */
@@ -19916,10 +19929,13 @@ function l3Unproject(dx, dy, s){
 /* how big an atom is drawn. Ball-and-stick: half the covalent radius. Space-filling:
    the van der Waals radius, the size the molecule really takes up. Sticks: a joint. */
 const L3_VIEWS = {ball:'Ball & stick', space:'Space-filling', stick:'Sticks', esp:'Charge cloud'};
+/* an ion's drawn size on the 3D bench: its ionic radius (radPm, with the sign of its
+   charge), an anion softened halfway towards its atom as on the flat bench */
+const l3IonDrawR = a => { const r = radPm({e:a.e, charge:a.ion}), r0 = EL[a.e].rc || 120; return a.ion < 0 ? Math.sqrt(r*r0) : r; };
 const l3R = (a, s) => a.ion > 0 && EL[a.e].z === 1 && L3.view !== 'stick' ? Math.max(6, 14*s)   /* a bare proton: far too small to see at its true size, so drawn as a bright speck */
                     : L3.view === 'space' ? Math.max(5, EL[a.e].rv*0.92*s)
                     : L3.view === 'stick' || L3.view === 'esp' ? Math.max(2.5, 16*s)
-                    : a.ion ? Math.max(4, (EL[a.e].ri != null ? EL[a.e].ri : EL[a.e].rc*(a.ion > 0 ? 0.62 : 1.35))*0.5*s)   /* an ion at its own size: Na+ small, Cl- large */
+                    : a.ion ? Math.max(4, l3IonDrawR(a)*0.5*s)   /* an ion at its own size: Na+ small, Cl- larger */
                     : Math.max(4, EL[a.e].rc*0.5*s);
 /* the colour of something glowing at temperature T: dull red at 800 K, orange by
    1500, yellow-white by 3000 (roughly a black body, as a hot coal goes) */
@@ -20235,7 +20251,7 @@ function l3Draw(){
     for(const {a, p} of cl){
       const t = clamp((a.q||0)/0.45, -1, 1);
       /* an ion at its ionic radius: sodium shrinks to a small ball, chloride swells */
-      const rr = a.ion ? (EL[a.e].ri != null ? EL[a.e].ri : EL[a.e].rc*(a.ion > 0 ? 0.62 : 1.35))*1.05 : EL[a.e].rv*0.95;
+      const rr = a.ion ? radPm({e:a.e, charge:a.ion})*1.05 : EL[a.e].rv*0.95;
       const r = Math.max(6, rr*p.s);
       const base = t < 0 ? mix3('#ECE6DA', '#D6503F', -t) : mix3('#ECE6DA', '#4474D6', t);
       const c = fogCol(base, p.z);
@@ -21810,8 +21826,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 141;
+const VERSION = 142;
 const CHANGELOG = [
+  [142, 'Atoms no longer balloon when you give or take an electron. The bench keeps one ionic radius per element, for its common ion, and used it for any charge: so O\u207a (one electron taken) was drawn at O\u00b2\u207b\u2019s 140 pm, getting bigger when it should get smaller. Now that radius is used only for a charge of the same sign, adjusted a step for each charge away from the common one (O\u207b a little smaller than O\u00b2\u207b, Fe\u00b3\u207a smaller than Fe\u00b2\u207a), and otherwise a cation shrinks and an anion swells from the atom\u2019s own size. An anion is also drawn halfway towards its atom, since the atom is shown at its bonded size and the full jump (Cl 99 pm to Cl\u207b 181) looked like a balloon: Cl\u207b now draws 15% bigger than Cl, Na\u207a 40% smaller than Na. Ions in the physics (bond lengths, lattice energies) are unchanged for the common ions. The same fix applies on the 3D bench.'],
   [141, 'Aqua regia dissolves gold metal, not only a lone gold atom. The rule looked for chloride ions beside the gold, but in concentrated aqua regia (and on the bench, with little water) most of the hydrochloric acid stays as HCl molecules, so a lump of gold met no chloride and never dissolved; HCl now counts. You can type \u201caqua regia\u201d into Build for the 1:3 mixture of nitric and hydrochloric acid. A lump dissolves only as far as its nitric acid lasts, as in a real beaker: each surface atom needs nitrate to take its electrons. Also fixed: the radical step from 136 let NO\u2082 pull hydrogens off nitric acid and back again endlessly, using up the acid; it is now kept to lone atoms, carbon radicals and hydroxyl. Building in bulk understands formulas like HCl.'],
   [140, 'Ozone that comes apart now goes back together as ozone. Three oxygens bonding on contact made O\u2013O\u2013O with an unpaired electron at each end; now the electrons settle the way they really do: the middle oxygen shares a lone pair, giving O=O\u207a\u2013O\u207b (the same rule applies wherever a full O, N or S sits between two O, N or S atoms that are each a bond short). On the flat bench a lone oxygen atom meeting O\u2082 now forms ozone too (O + O\u2082 \u2192 O\u2083, as in the stratosphere), where before it could never join. The library cards for ozone and carbon monoxide now carry their formal charges (O=O\u207a\u2013O\u207b and C\u207b\u2261O\u207a); they had three-bonded atoms with no charge.'],
   [139, 'The molecule library no longer freezes when you scroll it. With twenty-two thousand cards on the page, every pause in scrolling measured each one, and a fast scroll asked for thousands of structure drawings at once. Now the list grows as you scroll (four hundred cards at a time, the next lot added as the end comes near), drawings come through a queue that spends a few milliseconds a frame and drops cards that have scrolled past before their turn, and where the browser holds back its visibility events (a background tab) the cards on screen are found by a quick binary search instead of measuring them all. It also opens in about half the time.'],
