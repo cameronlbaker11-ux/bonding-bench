@@ -16423,8 +16423,68 @@ function l3ZPE(E, mp, mq){
   const k = 2*(E*1000/6.022e23)*1.9e10*1.9e10, mu = mp*mq/(mp+mq)*1.6605e-27;
   return 0.5*6.626e-34*Math.sqrt(k/mu)/(2*Math.PI)*6.022e23/1000;
 }
+/* Measured bond lengths (pm; gas-phase structures, mostly from the CRC Handbook and
+   NIST's CCCBDB) for the bonds that come up most. Summed radii are a fair guess for
+   a bond between like atoms, but miss by up to 18 pm where the atoms differ a lot in
+   electronegativity (B-F 131, not 148) or repel each other's lone pairs (O-O 148 in
+   peroxide, not 126). Anything not listed falls back to Pyykko's radii. */
+const L3_BL = {
+  1:{'H-H':74.1,'B-H':119,'C-H':109,'H-N':101.2,'H-O':96,'F-H':91.7,'H-Si':148,'H-P':142,'H-S':133.6,'Cl-H':127.5,'Br-H':141.4,'H-I':160.9,'H-Se':146,'As-H':151.9,
+    'B-F':130.7,'B-Cl':174.2,'B-O':136,'B-C':157.8,'C-C':153.5,'C-N':147,'C-O':142.5,'C-F':135,'C-Si':186.7,'C-P':184.6,'C-S':181.5,'C-Cl':177,'Br-C':194,'C-I':214,
+    'N-N':145,'N-O':140,'F-N':136.5,'Cl-N':175.9,'O-O':147.5,'F-O':140.5,'O-Si':163,'O-P':160,'O-S':157.4,'Cl-O':170,
+    'F-F':141.2,'F-Si':155.4,'F-P':157,'F-S':156.1,'Cl-F':163,'Br-F':176,'F-I':191,'F-Xe':197.7,'F-Kr':187.5,
+    'Si-Si':235,'Cl-Si':201.9,'P-P':221,'Cl-P':204,'S-S':205.5,'Cl-S':201.5,'Cl-Cl':198.8,'Br-Br':228.1,'I-I':266.6,'Br-Cl':213.6,'Cl-I':232.1,'Br-I':247},
+  2:{'C-C':133.9,'C-N':127.9,'C-O':120.8,'C-S':161.1,'N-N':124.7,'N-O':121,'O-O':120.8,'O-S':143.1,'O-P':148,'Cl-O':147,'O-Se':160.8,'S-S':188.9,'N-S':151,'C-P':167},
+  3:{'C-C':120.3,'C-N':115.6,'C-O':112.8,'N-N':109.8},
+  1.5:{'C-C':139.7,'C-N':133.8},
+  /* bonds made equal by resonance: one drawn double, the rest single to an atom carrying the charge */
+  res:{'O-O':127.8,'N-O':122.5,'C-O':126,'O-S':148,'O-P':152,'Cl-O':144,'C-N':132}
+};
+/* How much charge a bond moves toward its more electronegative end, in electrons,
+   fitted to measured dipole moments: H-Cl 0.18 (1.08 D over 127.5 pm), O-H 0.33
+   (water, 1.85 D), C=O 0.36, C#N 0.44 (HCN, 2.98 D). A flat 0.3 per unit of
+   electronegativity difference, used before, gave dimethyl ether twice its real
+   dipole and hydrogen cyanide half. Bonds not listed use that rule scaled: less for
+   a single bond between two heavy atoms, whose charge is spread over a longer bond. */
+const L3_BQ = {
+  1:{'H-O':0.33,'H-N':0.27,'F-H':0.41,'Cl-H':0.18,'Br-H':0.12,'H-I':0.05,'H-S':0.11,'C-H':0.08,'C-O':0.15,'C-N':0.10,'C-F':0.21,'C-Cl':0.15,'Br-C':0.13,'C-I':0.10,'C-S':0.05,
+    'N-O':0.07,'B-F':0.30,'O-Si':0.30,'F-S':0.20,'Cl-P':0.12,'F-P':0.25,'H-Si':0.05,'H-P':0.02,'O-S':0.20,'O-P':0.25,'F-N':0.08,'F-Xe':0.25,'Cl-Si':0.2,'F-Si':0.3},
+  2:{'C-O':0.36,'C-N':0.25,'N-O':0.14,'O-S':0.26,'O-P':0.35,'C-S':0.10},
+  3:{'C-N':0.44,'C-O':0.27}
+};
+function l3BondDq(b, p, q){
+  if(b._qv === L3.tv && b._dq != null) return b._dq;
+  const d = EL[q.e].en - EL[p.e].en, t = L3_BQ[b.arom ? 0 : b.order], m = t && t[l3BLKey(p, q)];
+  const isH = EL[p.e].sym === 'H' || EL[q.e].sym === 'H';
+  const dq = m != null ? Math.sign(d)*m : clamp(d*0.3*(isH ? 0.85 : b.order === 1 && !b.arom ? 0.6 : 1), -0.6, 0.6);
+  b._qv = L3.tv; b._dq = dq; return dq;
+}
+const l3BLKey = (a, b) => { const x = EL[a.e].sym, y = EL[b.e].sym; return x < y ? x+'-'+y : y+'-'+x; };
+/* a bond's rest length in its molecule: the table or radii above, then two corrections.
+   A carbon holding two double bonds (CO2, CS2, an allene) pulls both in by about 4%.
+   And bonds that resonance makes equal come out equal: ozone's two, a nitro group's
+   two, a carboxylate's two, though only one of each is drawn double. */
+function l3BondR0(b, p, q){
+  if(b._rv === L3.tv && b._r0) return b._r0;
+  const order = b.arom ? 1.5 : b.order; let r = l3Len(p, q, order);
+  if(b.type === 'covalent' && !b.arom && order <= 2){
+    const E = (x, y) => { const ys = EL[y.e].sym; let dbl = 0, neg = 0;      /* x the centre, y one of its like neighbours */
+      for(const c of l3Bonds(x)){ if(c.type !== 'covalent') continue; const o = l3Find(l3Other(c, x.id)); if(!o || EL[o.e].sym !== ys) continue;
+        if(c.order === 2 && !(o.fq||0)) dbl++; else if(c.order === 1 && (o.fq||0) < 0 && l3Bonds(o).length === 1) neg++; }
+      return dbl > 0 && neg > 0; };
+    const mine = (x, y) => (order === 2 && !(y.fq||0)) || (order === 1 && (y.fq||0) < 0 && l3Bonds(y).length === 1);
+    if((E(p, q) && mine(p, q)) || (E(q, p) && mine(q, p))) r = L3_BL.res[l3BLKey(p, q)] || 0.3*l3Len(p, q, 1) + 0.7*l3Len(p, q, 2);
+    else if(order === 2 && [p, q].some(x=>EL[x.e].sym === 'C' && l3Bonds(x).filter(c=>c.type === 'covalent' && c.order === 2).length === 2)) r *= 0.962;
+    /* N2O, drawn N=N(+)=O: really closer to N#N(+)-O(-), so its N-N is nearly a triple bond */
+    else if(order === 2 && [p, q].some(x=>EL[x.e].sym === 'N' && (x.fq||0) > 0 && l3Bonds(x).filter(c=>c.type === 'covalent' && c.order === 2).length === 2)) r = l3BLKey(p, q) === 'N-N' ? 112.8 : l3BLKey(p, q) === 'N-O' ? 118.4 : r;
+    /* a C-H on a triply bonded carbon is shorter: more s character in the bond */
+    else if(order === 1 && l3BLKey(p, q) === 'C-H' && [p, q].some(x=>EL[x.e].sym === 'C' && l3Bonds(x).some(c=>c.order === 3))) r = 106.3;
+  }
+  b._rv = L3.tv; b._r0 = r; return r;
+}
 const l3Len = (a, b, order) => {
   if(l3Metal(a) && l3Metal(b)) return l3LenM(a, b);
+  const tb = L3_BL[order]; if(tb){ const v = tb[l3BLKey(a, b)]; if(v) return v; }
   const ra = PYY[EL[a.e].sym], rb = PYY[EL[b.e].sym];
   /* an aromatic bond (order 1.5) sits between single and double: 140 pm in benzene */
   if(order === 1.5) return ra && rb ? 0.4*(ra[0]+rb[0]) + 0.6*(ra[1]+rb[1]) : (EL[a.e].rc + EL[b.e].rc)*0.92;
@@ -16446,8 +16506,50 @@ function l3Target(a){
   const squeeze = sn===4 ? [0, 2.4, 5][Math.min(lp,2)] : sn===3 && lp ? 3 : 0;
   return (base - squeeze)*Math.PI/180;
 }
+/* The angle between two particular bonds on an atom, in degrees, where it is known to
+   differ from the plain VSEPR figure (measured gas-phase values):
+   - sulfur, selenium, phosphorus and arsenic bond through nearly pure p orbitals, so
+     H2S is 92 and PH3 93, not water's 104.5 and ammonia's 107;
+   - oxygen opens out as its partners get bulkier: water 104.5, an alcohol 108.5, an
+     ether 112, and closes to 100 in a peroxide;
+   - opposite a double bond the two single bonds close up to about 117 (ethene 117.4,
+     formaldehyde 116.5), leaving about 121.5 on either side of the double bond;
+   - on a carbon chain H-C-H is about 107.5 and C-C-C about 112. */
+function l3PairAngle(a, p, q, th0){
+  const sy = EL[a.e].sym, bs = l3Bonds(a), deg = bs.length;
+  if(a.ion || deg < 2 || deg > 4) return th0;
+  const lp = sy === 'H' || l3Conj(a) ? 0 : l3Lone(a), sn = deg + lp, ps = EL[p.e].sym, qs = EL[q.e].sym, nH = (ps === 'H') + (qs === 'H');
+  const D = Math.PI/180;
+  if(sn === 4 && lp === 2){
+    if(sy === 'O') return (nH === 2 ? 104.5 : (ps === 'O' || qs === 'O') ? 100 : nH === 1 ? 108.5 : (ps === 'F' && qs === 'F') ? 103.1 : 111.7)*D;
+    if(sy === 'S' || sy === 'Se' || sy === 'Te') return (nH === 2 ? (sy === 'S' ? 92.1 : 91) : nH === 1 ? 96.5 : 100)*D;
+    return th0;
+  }
+  if(sn === 4 && lp === 1){
+    if(sy === 'N') return (nH === 2 ? 106.7 : nH === 1 ? 109 : (ps === 'F' && qs === 'F') ? 102.4 : 110.5)*D;
+    if(sy === 'P' || sy === 'As' || sy === 'Sb') return (nH === 2 ? (sy === 'P' ? 93.3 : 92) : nH === 1 ? 96.5 : 99.5)*D;
+    return th0;
+  }
+  if(sn === 4 && lp === 0 && sy === 'C' && deg === 4){
+    const heavy = bs.filter(b=>{ const o = l3Find(l3Other(b, a.id)); return o && EL[o.e].sym !== 'H'; }).length;
+    if(heavy === 0 || heavy === 4) return th0;
+    if(heavy === 1) return (nH === 2 ? 107.8 : 111.1)*D;
+    if(heavy === 2) return (nH === 2 ? 106.5 : nH === 1 ? 109.4 : 112.4)*D;
+    return (nH === 1 ? 108.1 : 110.8)*D;
+  }
+  if(sn === 3 && lp === 0 && deg === 3){
+    const dbl = bs.filter(b=>b.type === 'covalent' && b.order === 2 && !b.arom);
+    if(dbl.length !== 1 || bs.some(b=>b.arom)) return th0;
+    const dx = l3Other(dbl[0], a.id);
+    return (p.id === dx || q.id === dx ? 121.6 : 116.8)*D;
+  }
+  if(sn === 3 && lp === 1 && sy === 'S') return 119.3*D;
+  /* nitrogen dioxide: one unpaired electron on N takes less room than a pair, so it opens to 134 */
+  if(sy === 'N' && deg === 2 && (a.fq||0) > 0 && ps === 'O' && qs === 'O' && l3Free(a) > 0) return 134.1*D;
+  return th0;
+}
 function l3Shape(a){
-  const deg = l3Bonds(a).length, lp = l3Conj(a) ? 0 : l3Lone(a);
+  const deg = l3Bonds(a).length, lp = l3Conj(a) ? 0 : l3Lone(a) + (EL[a.e].sym === 'N' && deg === 2 && (a.fq||0) > 0 && l3Free(a) > 0 ? 1 : 0);   /* NO2's odd electron bends it like a pair would */
   if(deg < 2) return null;
   const T = {2:['linear','bent','bent','linear'], 3:['trigonal planar','trigonal pyramidal','T-shaped'],
              4:['tetrahedral','seesaw','square planar'], 5:['trigonal bipyramidal','square pyramidal'], 6:['octahedral']};
@@ -17358,7 +17460,26 @@ function l3Break(b, why){
 /* How strong each intermolecular force is, in kJ/mol: London per unit of
    polarizability, Coulomb scaled for the screening a crowd of neighbours gives,
    and a hydrogen bond at about 14 kJ/mol when perfectly lined up. */
-const IMF = {disp:0.55, coul:0.07, hb:14, metal:18, ion:0.3};
+const IMF = {disp:1, coul:0.7, iond:0.08, hb:8, metal:18, ion:0.3, r0:1.22, w:55, hbR:195, hbC:205};
+/* Fitted (v143) to the measured binding energies of twenty-two pairs of molecules,
+   from Ne2 (0.35 kJ/mol) to the water dimer (21): Coulomb between the partial charges
+   at 0.7 of its vacuum strength, a hydrogen bond adding 8 kJ/mol when lined up with
+   its H...O distance at 195 pm, and the dispersion well's bottom at 0.98 of the summed
+   van der Waals radii (it was 0.90, packing everything a tenth too close). An ion
+   meeting a neutral molecule keeps its own, older scale (iond): the dissolving and
+   precipitating of salts is balanced round it. */
+/* London dispersion, per atom: the depth of the well between two like atoms, kJ/mol.
+   For the noble gases these are the measured dimer wells (Ne 0.35, Ar 1.19, Kr 1.67,
+   Xe 2.34); for atoms in molecules, the values molecular-mechanics force fields
+   (OPLS, UFF) settled on to reproduce liquids' densities and heats of vaporisation.
+   A pair of unlike atoms gets the geometric mean. An atom's polarizability as a free
+   atom, used before, overcounts once it is bonded: methane's four hydrogens and its
+   carbon summed to 1.7 times its measured polarizability, and hydrocarbons clung
+   two to three times too hard. A hydrogen on N, O or F has almost no cloud left. */
+const L3_EPS = {He:0.09, Ne:0.35, Ar:1.19, Kr:1.67, Xe:2.34, Rn:2.8, H:0.13, B:0.4, C:0.36, N:0.35, O:0.62, F:0.26, Si:0.8, P:0.9, S:1.15, Cl:1.2, Se:1.3, Br:1.75, I:2.4, As:1.1, Te:1.6};
+const l3Eps = a => { let v = a._eps; if(v === undefined || a._epsV !== L3.tv){ const sy = EL[a.e].sym; v = L3_EPS[sy]; if(v == null) v = Math.min(3, 0.45*Math.pow(EL[a.e].pol || 1, 0.7));
+    if(sy === 'H'){ const b = l3Bonds(a)[0], o = b && l3Find(l3Other(b, a.id)); if(o && HB_ATOMS[EL[o.e].sym]) v = 0.03; }
+    a._eps = v; a._epsV = L3.tv; } return v; };
 const HB_ATOMS = {N:1, O:1, F:1};
 /* is h a hydrogen-bond donor pointing at acc? returns how well lined up it is */
 /* acidic hydrogens (on Cl, Br, I, S) hydrogen-bond too, which is how HCl finds
@@ -17366,11 +17487,12 @@ const HB_ATOMS = {N:1, O:1, F:1};
    any O- or N- in a molecule) takes hydrogen bonds as readily as N, O and F do */
 const HB_DONOR = {N:1, O:1, F:1, Cl:1, Br:1, I:1, S:1};
 function l3HBond(h, acc){
-  if(EL[h.e].sym !== 'H' || !(HB_ATOMS[EL[acc.e].sym] || acc.ion < 0)) return null;
+  if(h.e !== 0 || acc._acc === false) return null;           /* h must be hydrogen; _acc is set each frame by l3Step */
+  if(acc._acc === undefined && !(HB_ATOMS[EL[acc.e].sym] || acc.ion < 0)) return null;
   const ns = L3.nb ? L3.nb.get(h.id) : null;
   if(!ns || ns.length !== 1) return null;
   const dn = ns[0];
-  if(!HB_DONOR[EL[dn.e].sym] || dn === acc || l3Lone(acc) < 1) return null;
+  if(!HB_DONOR[EL[dn.e].sym] || dn === acc || (acc._acc === undefined && l3Lone(acc) < 1)) return null;
   const ux = h.x-dn.x, uy = h.y-dn.y, uz = h.z-dn.z, vx = acc.x-h.x, vy = acc.y-h.y, vz = acc.z-h.z;
   const c = (ux*vx+uy*vy+uz*vz)/((Math.hypot(ux,uy,uz)*Math.hypot(vx,vy,vz))||1);
   return c > 0 ? {h, acc, ang:c*c} : null;
@@ -17473,6 +17595,12 @@ function l3MixToggle(on){
 function l3Step(dt){
   const A = L3.atoms;
   if(!A.length || !(dt > 0)) return;
+  /* the topology version: changes only when a bond, its order or a charge really
+     changes (a cheap fingerprint each frame), so what depends only on those (rest
+     lengths, bond charges, target angles) is worked out once and kept */
+  { let sg = L3.bonds.length*7 + A.length; for(const b of L3.bonds) sg = (sg*33 + b.a*7 + b.b*13 + b.order*5 + (b.arom ? 3 : 0) + b.type.length) | 0;
+    for(const a of A) if(a.fq || a.ion) sg = (sg*31 + a.id + (a.fq||0)*17 + (a.ion||0)*29) | 0;
+    if(sg !== L3.tsig){ L3.tsig = sg; L3.tv = (L3.tv||0) + 1; } }
   const mixFlow = L3.mix ? l3MixFlow(dt) : null;
   if(!mixFlow && L3.mixed){ for(const a of A) a.flow = null; } L3.mixed = !!mixFlow;
   L3.bv = (L3.bv||0) + 1; L3.idx = null;
@@ -17516,11 +17644,17 @@ function l3Step(dt){
   /* an atom's contact size: an ion against a molecular anion meets it at its ionic radius */
   const rvx = (x, y) => x.ion > 0 && y.anMol ? radPm({e:x.e, charge:x.ion})*1.15 : EL[x.e].rv;
   /* partial charges: each bond hands charge toward its more electronegative end */
-  for(const a of A) a.q = (a.ion || 0) + (a.fq || 0);   /* an ion, or a charged atom in a molecule, carries its full charge */
+  for(const a of A){ a.q = (a.ion || 0) + (a.fq || 0); a._fl = Math.abs(a.fq || 0); }   /* an ion, or a charged atom in a molecule, carries its full charge */
   for(const b of L3.bonds){
     if(b.type === 'ionic' || b.type === 'metallic') continue;   /* a metal's electrons belong to the whole lump */
     const p = l3Find(b.a), q = l3Find(b.b); if(!p || !q) continue;
-    const dq = clamp((EL[q.e].en - EL[p.e].en)*0.3, -0.6, 0.6);
+    /* A + and a - formal charge on neighbouring atoms (C-=O+ in carbon monoxide,
+       O=O+-O- in ozone, a nitro group) are bookkeeping, not real charges: the
+       shared electrons sit between them. They cancel, wholly between like atoms
+       and mostly between unlike ones, which is why CO's dipole is 0.1 D, not 4. */
+    if((p.fq||0)*(q.fq||0) < 0 && p._fl > 0 && q._fl > 0){ const amt = Math.min(p._fl, q._fl)*(p.e === q.e ? 1 : 0.7), sg = p.fq > 0 ? 1 : -1;
+      p.q -= sg*amt; q.q += sg*amt; p._fl -= amt; q._fl -= amt; }
+    const dq = l3BondDq(b, p, q);
     p.q += dq; q.q -= dq;
   }
   L3.nb = nb; L3.hb = [];
@@ -17539,6 +17673,8 @@ function l3Step(dt){
      valence (radicals draw together from 520). Between two atoms with none of these the
      only force is dispersion, which has died away by then, so those pairs stop at 450. */
   for(const a of A) a._far = !!(a.q || a.ion || a._may || l3Metal(a));
+  /* which atoms can accept a hydrogen bond (N, O, F or an anion, with a lone pair to offer), asked once a frame */
+  for(const a of A) a._acc = (HB_ATOMS[EL[a.e].sym] || a.ion < 0) ? l3Lone(a) >= 1 : false;
   const PR = l3Pairs(A, 650, 202500).slice();     /* once a step: atoms move a few pm in four substeps */
   const IONS = A.filter(a=>a.ion || a.asite);
   /* a precipitate is denser than water and settles: its ions get a gentle pull down */
@@ -17562,7 +17698,7 @@ function l3Step(dt){
          bond's energy. Lopsided, so a hot bond spends its time long: bonds
          lengthen as they warm, and a hard enough stretch simply lets go. */
       const kb = kB*clamp(b.energy/350, 0.45, 2.4), De = Math.max(40, b.energy + (b.arom ? L3_RES : 0))*L3_KJ/3.4;
-      const r0 = l3Len(p, q, b.arom ? 1.5 : b.order);
+      const r0 = l3BondR0(b, p, q);
       const am = Math.sqrt(kb/(2*De)), xm = Math.max(-1.6, am*(d - r0)), ex = Math.exp(-xm);
       /* far out on the stretch the bond still pulls back nearly as hard as a spring:
          a steady pull (an electric field) should not peel it open when the curve flattens,
@@ -17729,7 +17865,7 @@ function l3Step(dt){
       /* a hydrogen bond lets H and its acceptor sit well inside their van der Waals radii */
       const hb = !canB ? (l3HBond(p, q) || l3HBond(q, p)) : null;
       /* a metal ion meets the rest of a molecular anion at its ionic size, not its atom's */
-      const contact = canB ? L*0.8 : hb ? 150 : (rvx(p, q) + rvx(q, p))*0.8;
+      const contact = canB ? L*0.8 : hb ? IMF.hbC : (rvx(p, q) + rvx(q, p))*0.8;
       if(d < contact){
         const f = -kR*(contact - d)/d;
         p.fx += f*dx; p.fy += f*dy; p.fz += f*dz; q.fx -= f*dx; q.fy -= f*dy; q.fz -= f*dz;
@@ -17743,8 +17879,8 @@ function l3Step(dt){
         let f = 0;
         /* London dispersion: a shallow well just past contact, deeper for the
            more polarizable, since it comes from electron clouds that slosh */
-        const r0 = contact*1.12, w = 55, xD = (d - r0)/w;
-        f += fVDW*IMF.disp*Math.sqrt(EL[p.e].pol*EL[q.e].pol)*L3_KJ*2*xD/w*Math.exp(-xD*xD);
+        const r0 = contact*IMF.r0, w = IMF.w, xD = (d - r0)/w;
+        f += fVDW*IMF.disp*Math.sqrt(l3Eps(p)*l3Eps(q))*L3_KJ*2*xD/w*Math.exp(-xD*xD);
         /* dipole-dipole: Coulomb between the partial charges, 1389 kJ/mol*A per e^2 */
         if(p.q && q.q){
           const de = Math.max(d, 140);
@@ -17755,11 +17891,12 @@ function l3Step(dt){
           /* whole charges pull hard, but not harder once touching: measured from
              the contact distance, so a chloride pressed on H3O+ does not tear it */
           const dw = whole ? Math.max(d, (EL[p.e].rv + EL[q.e].rv)*0.75) : de;
-          f -= fES*(whole ? IMF.ion : IMF.coul)*138900*p.q*q.q*L3_KJ/(dw*dw)*(L3.solvent && whole ? 1/78 : 1)/(whole ? 1 + 0.6*((p.nW||0) + (q.nW||0)) : 1);
+          const oneIon = !whole && (!!(p.ion || p.fq) !== !!(q.ion || q.fq));
+          f -= fES*(whole ? IMF.ion : oneIon ? IMF.iond : IMF.coul)*138900*p.q*q.q*L3_KJ/(dw*dw)*(L3.solvent && whole ? 1/78 : 1)/(whole ? 1 + 0.6*((p.nW||0) + (q.nW||0)) : 1);
         }
         /* hydrogen bond: an H on N, O or F, lined up on a lone pair of another N, O or F */
         if(hb){
-          const xH = (d - 185)/45;
+          const xH = (d - IMF.hbR)/45;
           const k = fHB*IMF.hb*L3_KJ*hb.ang;
           f += k*2*xH/45*Math.exp(-xH*xH);
           if(s===0 && d < 260 && hb.ang > 0.45) L3.hb.push({h:hb.h, a:hb.acc, ang:hb.ang});
@@ -17871,11 +18008,16 @@ function l3Step(dt){
         pr.sort((x,y)=>x.c-y.c);
         const used = new Set(), trans = new Set(), maxT = sn === 5 ? 1 : 3;
         for(const x of pr){ if(trans.size >= maxT) break; if(!used.has(x.i) && !used.has(x.j)){ used.add(x.i); used.add(x.j); trans.add(x.i+','+x.j); } }
+        /* lone pairs take more room than bonds and squeeze the angles: SF4's two
+           equatorial bonds close from 120 to 101.6 and its axial pair bends to 173;
+           ClF3's T closes to 87.5 and 175 (measured values) */
+        const lpH = sn - ns.length, D = Math.PI/180;
         pairT = (i, j) => {
           if(sn >= 7) return null;
-          if(trans.has(i+','+j)) return Math.PI;
+          if(trans.has(i+','+j)) return sn === 5 && lpH === 1 ? 173*D : sn === 5 && lpH === 2 ? 175*D : Math.PI;
           if(sn === 6) return Math.PI/2;
-          return used.has(i) || used.has(j) ? Math.PI/2 : 2*Math.PI/3;
+          if(used.has(i) || used.has(j)) return sn === 5 && lpH ? 87.6*D : Math.PI/2;
+          return lpH === 1 ? 101.6*D : 2*Math.PI/3;
         };
       }
       /* and the bonding pairs themselves repel, which is what VSEPR is: with five
@@ -17896,10 +18038,14 @@ function l3Step(dt){
         const c = clamp((ux*vx+uy*vy+uz*vz)/(lu*lv), -0.9999, 0.9999), th = Math.acos(c);
         const sn = Math.max(0.08, Math.sqrt(1-c*c));
         let t0 = th0;
+        if(!pairT){ /* looked up once per pair of bonds, until the bonds change */
+          let pc = a._pa; if(!pc || pc.v !== L3.tv) pc = a._pa = {v:L3.tv, m:new Map()};
+          const pk = p.id < q.id ? p.id*4194304 + q.id : q.id*4194304 + p.id;
+          t0 = pc.m.get(pk); if(t0 === undefined){ t0 = l3PairAngle(a, p, q, th0); pc.m.set(pk, t0); } }
         if(pairT){ t0 = pairT(i, j);
           /* seven domains (IF7): whichever of the pentagonal bipyramid's angles is nearest */
           if(t0 == null) t0 = [72, 90, 144, 180].map(x=>x*Math.PI/180).reduce((m,x)=>Math.abs(x-th) < Math.abs(m-th) ? x : m); }
-        const k = -kTh*(th - t0)*(pairT && t0 > 3 ? 0.6 : 1);
+        const k = -kTh*(th - t0)*(pairT && t0 > 2.9 ? 0.6 : 1);
         /* d(theta)/d(p) = (c*u_hat - v_hat)/(|u| sin) and the same for q */
         const fpx = k*(c*ux/lu - vx/lv)/(lu*sn), fpy = k*(c*uy/lu - vy/lv)/(lu*sn), fpz = k*(c*uz/lu - vz/lv)/(lu*sn);
         const fqx = k*(c*vx/lv - ux/lu)/(lv*sn), fqy = k*(c*vy/lv - uy/lu)/(lv*sn), fqz = k*(c*vz/lv - uz/lu)/(lv*sn);
@@ -18838,7 +18984,7 @@ const LIB_HAND = {
     ['iron(III) ion','[Fe+3]','Fe3+'],['copper(II) ion','[Cu+2]','Cu2+'],['zinc ion','[Zn+2]','Zn2+'],['silver ion','[Ag+]','Ag+']],
   simple:[['white phosphorus','P12P3P1P23','P4'],['sulfur (S8)','S1SSSSSSS1','S8'],['helium','[He]','He'],['neon','[Ne]','Ne'],['argon','[Ar]','Ar'],['krypton','[Kr]','Kr'],['xenon','[Xe]','Xe'],['radon','[Rn]','Rn'],
     ['hydrogen telluride','[TeH2]','H2Te'],['stibine','[SbH3]','SbH3'],['carbon tetrabromide','BrC(Br)(Br)Br','CBr4']],
-  inorganic:[['dinitrogen trioxide','[O-][N+](=O)N=O','N2O3'],['dinitrogen pentoxide','[O-][N+](=O)O[N+](=O)[O-]','N2O5'],['sulfuryl chloride','ClS(Cl)(=O)=O','SO2Cl2'],['dichlorine monoxide','ClOCl','Cl2O'],['oxygen difluoride','FOF','OF2'],
+  inorganic:[['nitrogen dioxide','O=[N+][O-]','NO2'],['triiodide','I[I-]I','I3 -'],['dinitrogen trioxide','[O-][N+](=O)N=O','N2O3'],['dinitrogen pentoxide','[O-][N+](=O)O[N+](=O)[O-]','N2O5'],['sulfuryl chloride','ClS(Cl)(=O)=O','SO2Cl2'],['dichlorine monoxide','ClOCl','Cl2O'],['oxygen difluoride','FOF','OF2'],
     ['nitrosyl chloride','ClN=O','NOCl'],['iodine monochloride','ICl','ICl'],['bromine pentafluoride','FBr(F)(F)(F)F','BrF5'],['sulfur tetrafluoride','FS(F)(F)F','SF4'],['arsenic trichloride','Cl[As](Cl)Cl','AsCl3'],
     ['antimony pentachloride','Cl[Sb](Cl)(Cl)(Cl)Cl','SbCl5'],['tin(IV) chloride','Cl[Sn](Cl)(Cl)Cl','SnCl4'],['titanium tetrachloride','Cl[Ti](Cl)(Cl)Cl','TiCl4'],['phosphorous acid','[PH](=O)(O)O','H3PO3'],['chloric acid','OCl(=O)=O','HClO3'],
     ['chlorous acid','OCl=O','HClO2'],['bromic acid','OBr(=O)=O','HBrO3'],['iodic acid','OI(=O)=O','HIO3'],['periodic acid','OI(=O)(=O)=O','HIO4'],['selenic acid','O[Se](=O)(=O)O','H2SeO4'],['thiosulfuric acid','OS(=O)(=S)O','H2S2O3']]
@@ -19313,7 +19459,13 @@ function l3Template(name){
 function l3Bulk(list, quiet){
   const T = list.map(([n, k])=>[l3Template(n), k]).filter(([t, k])=>t && k > 0);
   const N = T.reduce((s, [, k])=>s + k, 0); if(!N) return 0;
-  const B = L3.box - 60, side = Math.ceil(Math.cbrt(N*1.15)), step = 2*B/side;
+  /* each grid cell must hold the biggest molecule with room to spare: if the box is too
+     small for that many, it grows to fit (molecules dealt out overlapping fly apart
+     hot enough to break their bonds) */
+  const side = Math.ceil(Math.cbrt(N*1.15));
+  const need = Math.max(...T.map(([t])=>2*Math.max(...t.P.map(p=>Math.hypot(p[0], p[1], p[2]))) + 330));
+  if(side*need > 2*(L3.box - 60)){ L3.box = L3.boxTo = Math.min(3500, Math.ceil(side*need/2 + 60)); L3.dist = L3.box*3.8; try{ renderLeft3D(); }catch(e){} }
+  const B = L3.box - 60, step = 2*B/side;
   const cells = []; for(let i=0;i<side;i++) for(let j=0;j<side;j++) for(let k=0;k<side;k++) cells.push([i, j, k]);
   for(let i=cells.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
   let ci = 0;
@@ -19855,7 +20007,11 @@ function l3Nuclear(dt){
     return true;
   });
   /* fusion: light nuclei that meet fast enough to get past their repulsion */
-  for(let i=0;i<L3.atoms.length;i++){
+  /* two nuclei closing at 2600 means at least one is itself moving at 1300 or more,
+     some twenty times thermal speed: only those few (usually none) need checking
+     against the rest, not every pair of atoms on the bench every frame */
+  const fastLight = L3.atoms.some(a=>(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz) > 1690000 && l3Z(a) <= 2);
+  if(fastLight) for(let i=0;i<L3.atoms.length;i++){
     const a = L3.atoms[i]; if(l3Z(a) > 2) continue;
     for(let j=i+1;j<L3.atoms.length;j++){
       const b = L3.atoms[j]; if(l3Z(b) > 2 || l3Z(a)*l3Z(b) > 2) continue;
