@@ -3735,7 +3735,13 @@ function chargeMark(c, x, y, r, q, col){
   const n = Math.abs(q); if(!n) return;
   c.save();
   let sx = x, h = r*0.48;
-  if(n > 1){
+  const FR = {0.5:'½', 0.333:'⅓', 0.667:'⅔', 0.25:'¼', 0.75:'¾'}, fk = Math.round(n*1000)/1000, fr = n % 1 ? FR[fk] || FR[fk.toFixed(3)*1] : null;
+  if(n % 1){
+    c.fillStyle = col; c.font = '600 '+Math.round(r*1.2)+'px "IBM Plex Mono", monospace';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(fr || n.toFixed(1), x - r*0.38, y + r*0.06);
+    sx = x + r*0.38; h = r*0.28;
+  } else if(n > 1){
     c.fillStyle = col; c.font = '600 '+Math.round(r*1.15)+'px "IBM Plex Mono", monospace';
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(String(n), x - r*0.42, y + r*0.06);
@@ -16648,16 +16654,31 @@ const l3BLKey = (a, b) => { const x = EL[a.e].sym, y = EL[b.e].sym; return x < y
    A carbon holding two double bonds (CO2, CS2, an allene) pulls both in by about 4%.
    And bonds that resonance makes equal come out equal: ozone's two, a nitro group's
    two, a carboxylate's two, though only one of each is drawn double. */
+/* the charge on atoms that resonance makes equal is shared between them:
+   ozone's ends are each half negative, nitrate's oxygens two-thirds */
+function l3ShareQ(){
+  if(L3._sqv === L3.tv && L3._sq) return L3._sq;
+  const m = new Map();
+  for(const a of L3.atoms){
+    const T = [];
+    for(const b of l3Bonds(a)){ if(b.type !== 'covalent' || b.arom || b.order > 2) continue; const o = l3Find(l3Other(b, a.id)); if(!o) continue;
+      try{ l3BondR0(b, a, o); }catch(e){} if(b._rz && l3Bonds(o).length === 1) T.push(o); }
+    if(T.length < 2) continue;
+    const tot = T.reduce((t, o)=>t + (o.fq||0), 0);
+    if(tot && T.some(o=>(o.fq||0) !== tot/T.length)) T.forEach(o=>m.set(o.id, tot/T.length));
+  }
+  L3._sq = m; L3._sqv = L3.tv; return m;
+}
 function l3BondR0(b, p, q){
   if(b._rv === L3.tv && b._r0) return b._r0;
-  const order = b.arom ? 1.5 : b.order; let r = l3Len(p, q, order);
+  const order = b.arom ? 1.5 : b.order; let r = l3Len(p, q, order); b._rz = false;
   if(b.type === 'covalent' && !b.arom && order <= 2){
     const E = (x, y) => { const ys = EL[y.e].sym; let dbl = 0, neg = 0;      /* x the centre, y one of its like neighbours */
       for(const c of l3Bonds(x)){ if(c.type !== 'covalent') continue; const o = l3Find(l3Other(c, x.id)); if(!o || EL[o.e].sym !== ys) continue;
         if(c.order === 2 && !(o.fq||0)) dbl++; else if(c.order === 1 && (o.fq||0) < 0 && l3Bonds(o).length === 1) neg++; }
       return dbl > 0 && neg > 0; };
     const mine = (x, y) => (order === 2 && !(y.fq||0)) || (order === 1 && (y.fq||0) < 0 && l3Bonds(y).length === 1);
-    if((E(p, q) && mine(p, q)) || (E(q, p) && mine(q, p))) r = L3_BL.res[l3BLKey(p, q)] || 0.3*l3Len(p, q, 1) + 0.7*l3Len(p, q, 2);
+    if((E(p, q) && mine(p, q)) || (E(q, p) && mine(q, p))){ r = L3_BL.res[l3BLKey(p, q)] || 0.3*l3Len(p, q, 1) + 0.7*l3Len(p, q, 2); b._rz = true; }
     else if(order === 2 && [p, q].some(x=>EL[x.e].sym === 'C' && l3Bonds(x).filter(c=>c.type === 'covalent' && c.order === 2).length === 2)) r *= 0.962;
     /* N2O, drawn N=N(+)=O: really closer to N#N(+)-O(-), so its N-N is nearly a triple bond */
     else if(order === 2 && [p, q].some(x=>EL[x.e].sym === 'N' && (x.fq||0) > 0 && l3Bonds(x).filter(c=>c.type === 'covalent' && c.order === 2).length === 2)) r = l3BLKey(p, q) === 'N-N' ? 112.8 : l3BLKey(p, q) === 'N-O' ? 118.4 : r;
@@ -20495,10 +20516,13 @@ function l3Draw(){
       if(L < ra + rb) continue;
       const w = Math.max(2.2, 15*(p.s+q.s)/2);
       /* an ionic contact is only the pull between two charges, not a bond: drawn thin and quiet */
-      const n = bond.arom ? 2 : bond.type==='covalent' ? bond.order : 1, gap = n>1 ? w*0.62 : 0, lw = n>1 ? w*0.52 : (bond.type==='metallic' ? w*0.4 : bond.type==='ionic' ? w*0.28 : w);
+      /* bonds that resonance makes equal (ozone, nitrate, carboxylate) are drawn the same:
+         one full line and a dashed half, as benzene's are */
+      let rz = false; if(bond.type === 'covalent' && !bond.arom && bond.order <= 2){ try{ l3BondR0(bond, A1, A2); rz = !!bond._rz; }catch(e){} }
+      const n = bond.arom || rz ? 2 : bond.type==='covalent' ? bond.order : 1, gap = n>1 ? w*0.62 : 0, lw = n>1 ? w*0.52 : (bond.type==='metallic' ? w*0.4 : bond.type==='ionic' ? w*0.28 : w);
       if(bond.type==='ionic') g.globalAlpha *= 0.55;
       for(let k=0;k<n;k++){
-        if(bond.arom && k === 1) g.setLineDash([lw*0.9, lw*0.8]);   /* the delocalised half bond */
+        if((bond.arom || rz) && k === 1) g.setLineDash([lw*0.9, lw*0.8]);   /* the delocalised half bond */
         const off = (k-(n-1)/2)*gap*1.6;
         const x0 = p.x+ux*ra+nx*off, y0 = p.y+uy*ra+ny*off, x1 = q.x-ux*rb+nx*off, y1 = q.y-uy*rb+ny*off;
         const mx = (x0+x1)/2, my = (y0+y1)/2;
@@ -20559,7 +20583,7 @@ function l3Draw(){
       /* analysis: the atoms of the row under the pointer */
       if(ANA.hl && ANA.hl.has(a.id)){ g.strokeStyle = 'rgba(194,113,28,.95)'; g.lineWidth = 2.6; g.beginPath(); g.arc(p.x, p.y, r + 4, 0, TAU); g.stroke(); }
       /* (the symbol is painted into the sprite now: see l3Sprite) */
-      const qz = (a.ion||0) + (a.fq||0);
+      const sq = l3ShareQ(), qz = (a.ion||0) + (sq.has(a.id) ? sq.get(a.id) : (a.fq||0));
       if((a.Ts||0) > 1300 && (l3Metal(a) || a.ion > 0) && L3.view !== 'esp'){
         const fc = flameRGB(EL[a.e].sym);
         if(fc){ drawFlameGlow(g, p.x, p.y, r, fc, clamp(((a.Ts||0) - 1300)/1200, 0, 1)*na, a.id); flameNotice(EL[a.e].sym); }
@@ -22211,8 +22235,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 144;
+const VERSION = 145;
 const CHANGELOG = [
+  [145, 'Resonance drawn as it really is on the 3D bench. Bonds that resonance makes equal, such as the two in ozone, the three in nitrate and the two C–O bonds of a carboxylate, are now all drawn the same way: one full line and a dashed half, the way benzene’s ring bonds already were, instead of one double and one single. The charge is shared between them too: each end of ozone shows ½− and each oxygen of nitrate ⅔−, rather than a whole charge on one atom.'],
   [144, 'A guided tour for a first visit, and the 3D bench comes first. The tour is ten short stops that point at the real controls: the bench, the elements, building by name, temperature, the ready-made reactions, the tools, the information panel, the Showcase, the Course and the flat bench. It can be skipped for now, or skipped for good; it can be replayed from the welcome card. The bench now opens in 3D, and the 2D bench sits second in the switch at the top for when it is wanted (a shared 2D link, or a bench last left in 2D, still opens flat). The page also has a tab icon and a description for link previews.'],
   [143, 'A realism pass on the 3D bench, measured against experiment, and an easier way in. Shapes: bond lengths now come from measured values for about ninety kinds of bond, and angles depend on what is attached, so H\u2082S is 92\u00b0 and PH\u2083 93\u00b0 (not water\u2019s and ammonia\u2019s angles), an alcohol 108.5\u00b0, an ether 112\u00b0, B\u2013F 131 pm (it was 148), the O\u2013O of peroxide 148; ozone\u2019s two bonds and a carboxylate\u2019s come out equal; lone pairs squeeze SF\u2084 and ClF\u2083 as they really do. Over thirty test molecules bonds are within 0.9 pm and angles within 0.4\u00b0 of the measured structures (3.7 pm and 2.8\u00b0 before). Charges: each bond\u2019s polarity is fitted to measured dipole moments (water 1.84 D against 1.85, HCl 1.10 against 1.08, HCN 2.82 against 2.98; carbon monoxide had read 4 D and is now 0.16). Forces between molecules: dispersion uses the well depths molecular-mechanics force fields settled on, with the real 1/r\u2076 tail, Coulomb between the partial charges at 0.7 of full strength, and a weaker extra hydrogen-bond term; fitted to the measured attraction of twenty-two pairs of molecules, where hydrocarbons had clung two to three times too hard and polar molecules a third as hard as they should. Molecules also rest about a tenth further apart, as they do. Still approximate: HCl and H\u2082S pairs hold at about half strength, and liquid water is close but not exact. New for students: a welcome screen with six plain starting points; a Shapes & angles display option (Display menu) that tags every atom with its VSEPR shape and its angles as measured live; and three Showcase demonstrations on shapes, polarity and why water boils at 100 \u00b0C. Fixed: building many large molecules at once could set them down overlapping, which blew them apart; nitrogen dioxide and triiodide now build. A new realism test checks all of this against the measured values.'],
   [142, 'Atoms no longer balloon when you give or take an electron. The bench keeps one ionic radius per element, for its common ion, and used it for any charge: so O\u207a (one electron taken) was drawn at O\u00b2\u207b\u2019s 140 pm, getting bigger when it should get smaller. Now that radius is used only for a charge of the same sign, adjusted a step for each charge away from the common one (O\u207b a little smaller than O\u00b2\u207b, Fe\u00b3\u207a smaller than Fe\u00b2\u207a), and otherwise a cation shrinks and an anion swells from the atom\u2019s own size. An anion is also drawn halfway towards its atom, since the atom is shown at its bonded size and the full jump (Cl 99 pm to Cl\u207b 181) looked like a balloon: Cl\u207b now draws 15% bigger than Cl, Na\u207a 40% smaller than Na. Ions in the physics (bond lengths, lattice energies) are unchanged for the common ions. The same fix applies on the 3D bench.'],
