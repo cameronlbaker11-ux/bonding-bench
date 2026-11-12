@@ -1,6 +1,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bonding Bench</title>
+<meta name="description" content="A chemistry lab where you can see the atoms: build molecules, watch their real shapes and forces in 3D, and set reactions going. All 118 elements, 22,000 molecules, a full course.">
+<meta property="og:title" content="Bonding Bench">
+<meta property="og:description" content="A chemistry lab where you can see the atoms: real molecular shapes, forces between molecules and reactions, in 3D.">
+<meta name="theme-color" content="#FAFAF8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cg fill='none' stroke='%23999' stroke-width='1.2'%3E%3Cellipse cx='13' cy='13' rx='11' ry='4.6'/%3E%3Cellipse cx='13' cy='13' rx='11' ry='4.6' transform='rotate(60 13 13)'/%3E%3Cellipse cx='13' cy='13' rx='11' ry='4.6' transform='rotate(120 13 13)'/%3E%3C/g%3E%3Ccircle cx='13' cy='13' r='2.8' fill='%2316181C'/%3E%3Ccircle cx='23.2' cy='15.6' r='2.2' fill='%232F5BEA'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Spectral:ital,wght@0,300;0,500;1,300&display=swap">
 <style>
@@ -601,6 +606,29 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .wel-tile b{font-size:14.5px;font-weight:600}
 .wel-tile span{font-size:12.5px;color:var(--muted);line-height:1.4}
 .wel-foot{margin:14px 0 0;font-size:12px;color:var(--muted)}
+/* the first-visit walkthrough */
+#walk{position:fixed;inset:0;z-index:88}
+#walk .wk-hole{position:fixed;border-radius:12px;box-shadow:0 0 0 9999px rgba(20,22,26,.52),0 0 0 2px var(--accent);transition:left .32s var(--ease),top .32s var(--ease),width .32s var(--ease),height .32s var(--ease);pointer-events:none}
+#walk .wk-hole.none{left:50%!important;top:50%!important;width:0!important;height:0!important;box-shadow:0 0 0 9999px rgba(20,22,26,.52)}
+#walk .wk-card{position:fixed;width:min(92vw,360px);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-l);padding:16px 18px 14px;transition:left .32s var(--ease),top .32s var(--ease)}
+#walk .wk-card.mid{width:min(92vw,440px);padding:22px 24px 18px}
+#walk .wk-step{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#walk h3{margin:4px 0 6px;font-family:var(--font-display);font-weight:500;font-size:21px;line-height:1.2}
+#walk .wk-card.mid h3{font-size:26px}
+#walk p{margin:0 0 12px;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+#walk .wk-row{display:flex;align-items:center;gap:8px}
+#walk .wk-dots{display:flex;flex-wrap:wrap;gap:4px;margin-right:auto;min-width:0}
+#walk .wk-go,#walk .wk-back{white-space:nowrap}
+#walk .wk-dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+#walk .wk-dots i.on{background:var(--accent)}
+#walk .wk-go{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:8px 15px;font:600 13px var(--font-ui);cursor:pointer}
+#walk .wk-go:hover{filter:brightness(1.08)}
+#walk .wk-back{background:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font:500 13px var(--font-ui);color:var(--ink-2);cursor:pointer}
+#walk .wk-skip{display:flex;gap:14px;margin-top:11px;padding-top:10px;border-top:1px solid var(--hair)}
+#walk .wk-skip button{background:none;border:0;padding:0;font:500 12px var(--font-ui);color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+#walk .wk-skip button:hover{color:var(--ink)}
+.wel-foot button{background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+#mode2d:not(.on){color:var(--muted)}
 /* the Showcase */
 .show-btn{position:relative}
 .show-btn.new::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--surface)}
@@ -1339,8 +1367,8 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
       </div>
     </div>
     <div class="seg mode-seg" id="modeSeg" role="tablist" aria-label="Bench">
-      <button type="button" id="mode2d" class="on" title="The flat bench: equipment, reactions, the whole lab">2D bench</button>
       <button type="button" id="mode3d" title="The 3D bench: molecules in real space">3D bench</button>
+      <button type="button" id="mode2d" class="on" title="The older flat bench: lab equipment and diagram-style reactions">2D</button>
     </div>
     <span class="chip" id="benchTemp">298 K</span>
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
@@ -1820,6 +1848,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     <p class="sheet-foot">Click to place &middot; drag onto the bench &middot; radii Cordero, Alvarez &amp; Shannon; Z &ge; 104 estimated</p>
   </div>
 </div>
+<div id="walk" hidden role="dialog" aria-modal="true" aria-label="Guided tour"><div class="wk-hole" id="walkHole"></div><div class="wk-card" id="walkCard"></div></div>
 <div id="welcome" hidden role="dialog" aria-modal="true" aria-label="Welcome">
   <div class="sheet">
     <div class="sheet-head">
@@ -1830,7 +1859,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     </div>
     <p class="show-intro">A chemistry lab where you can see the atoms. Build molecules, watch them take their shapes, and set reactions going. Where would you like to start?</p>
     <div class="wel-grid" id="welGrid"></div>
-    <p class="wel-foot">You can come back to any of these from the top bar: <b>Showcase</b>, <b>Course</b> and <b>Learn mode</b>.</p>
+    <p class="wel-foot">You can come back to any of these from the top bar: <b>Showcase</b>, <b>Course</b> and <b>Learn mode</b>. New here? <button type="button" id="welTour">Take the one-minute tour</button>.</p>
   </div>
 </div>
 <div id="showcase" hidden role="dialog" aria-modal="true" aria-label="Showcase">
@@ -12444,15 +12473,105 @@ function openWelcome(){
   el('welGrid').innerHTML = WELCOME.map(([ic, col, t, d], i)=>'<button type="button" class="wel-tile" data-wel="'+i+'" style="--wc:'+col+'"><i style="color:'+col+'">'+ic+'</i><b>'+t+'</b><span>'+d+'</span></button>').join('');
   el('welcome').hidden = false;
 }
-function closeWelcome(){ el('welcome').hidden = true; try{ localStorage.setItem('bondingbench.welcomed', '1'); }catch(e){} }
+function closeWelcome(quiet){ el('welcome').hidden = true; if(quiet === true) return; try{ localStorage.setItem('bondingbench.welcomed', '1'); }catch(e){} }
 function welcomeInit(){
   const w = el('welcome'); if(!w) return;
-  el('closeWelcome').onclick = closeWelcome;
+  el('closeWelcome').onclick = ()=>closeWelcome();
   w.addEventListener('click', ev=>{ const t = ev.target.closest('[data-wel]'); if(t){ closeWelcome(); try{ WELCOME[+t.dataset.wel][4](); }catch(e){ console.error(e); } return; } if(ev.target === w) closeWelcome(); });
   document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && !w.hidden) closeWelcome(); });
   let seen = false; try{ seen = !!localStorage.getItem('bondingbench.welcomed') || !!localStorage.getItem('bondingbench.showseen'); }catch(e){ seen = true; }
   /* a shared link or a lesson in progress is not a first visit */
-  if(!seen && !location.hash && !(typeof CRS !== 'undefined' && CRS.on) && !(typeof LEARN !== 'undefined' && LEARN.on)) setTimeout(openWelcome, 350);
+  let toured = false; try{ toured = !!localStorage.getItem('bondingbench.tour'); }catch(e){ toured = true; }
+  walkInit();
+  if(location.hash || (typeof CRS !== 'undefined' && CRS.on) || (typeof LEARN !== 'undefined' && LEARN.on)) return;
+  if(!toured) setTimeout(walkOpen, 500);
+  else if(!seen) setTimeout(openWelcome, 350);
+}
+/* ---------- the first-visit walkthrough ----------
+   Ten short stops that point at the real controls. It can be left for now, or
+   switched off for good; finishing it counts as switching it off. */
+const WALK = { on:false, i:0, steps:[
+  {t:'Welcome to Bonding Bench', d:'A chemistry lab where you can see the atoms. Molecules here have their measured shapes, attract each other the way real ones do, and react. This tour takes about a minute and shows where everything is.'},
+  {q:()=>el('c3d'), t:'The bench', d:'These are methane, water and ammonia, moving as they would at room temperature. Drag the background to turn the view, scroll to zoom, and drag an atom to pull it around.', pad:-14, big:true},
+  {q:()=>document.querySelector('#left3d .l3-table'), t:'Every element', d:'Click an element, then click the bench to drop an atom. Put atoms near each other and they bond according to their valence: no rules to type in.'},
+  {q:()=>document.querySelector('#left3d .l3-build'), t:'Build by name', d:'Type a name or formula, such as caffeine, aspirin or H2SO4, and press Build. More than 22,000 molecules are in the library behind this box.'},
+  {q:()=>el('l3Temp') && el('l3Temp').closest('.slider'), t:'Temperature', d:'Slide to heat or cool the bench. Liquids boil, gases condense and reactions speed up, because the molecules really do move faster.'},
+  {q:()=>document.querySelector('#left3d details[data-sec="rx"] summary'), t:'Ready-made reactions', d:'One click sets up a reaction: acid and base, a metal in acid, precipitation, combustion and more. Below it are air samples and common molecules.'},
+  {q:()=>el('l3tools'), t:'Tools', d:'Bond and cut, add or remove electrons, apply an electric field, stir, and pause. Hover over a tool to see its name and its key.'},
+  {q:()=>document.querySelector('.panel.right'), t:'What you are looking at', d:'Click any atom and this panel names the molecule and gives its shape, bond angles, polarity and the forces holding it to its neighbours.'},
+  {q:()=>el('showBtn'), t:'Showcase', d:'Thirty one-click demonstrations with a short explanation each: molecule shapes, polarity, why water boils at 100 °C, golden rain, chain reactions.'},
+  {q:()=>[el('courseBtn'), el('anaBtn'), el('learnBtn')], t:'For lessons', d:'Course is thirteen units of chemistry with tasks on the bench and questions. Analyse compares up to four compounds in depth. Learn mode is a quiet view of one reaction at a time.'},
+  {q:()=>el('modeSeg'), t:'The flat bench', d:'The original 2D bench is still here, with beakers, burners and diagram-style reactions, if you want it.'},
+  {t:'That is the tour', d:'Pick somewhere to start. You can replay this tour at any time from the welcome card, which opens from the Showcase.', last:true}
+]};
+function walkRect(st){
+  let t = null; try{ t = st.q ? st.q() : null; }catch(e){}
+  if(!t) return null;
+  const list = (Array.isArray(t) ? t : [t]).filter(Boolean); if(!list.length) return null;
+  /* bring it into view inside its own panel; the page itself never scrolls */
+  try{ let sc = list[0].parentElement; while(sc && sc !== document.body && !(sc.scrollHeight > sc.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(sc).overflowY))) sc = sc.parentElement;
+    if(sc && sc !== document.body){ const rs = sc.getBoundingClientRect(), rt = list[0].getBoundingClientRect(); if(rt.top < rs.top + 8) sc.scrollTop += rt.top - rs.top - 12; else if(rt.bottom > rs.bottom - 8) sc.scrollTop += rt.bottom - rs.bottom + 12; } }catch(e){}
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  list.forEach(n=>{ const r = n.getBoundingClientRect(); if(r.width < 2 || r.height < 2) return; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); });
+  const vw = innerWidth, vh = innerHeight;
+  if(x1 < x0 || x0 < -4 || y0 < -4 || x1 > vw + 4 || y1 > vh + 4) return null;
+  if(!st.big && (x1 - x0)*(y1 - y0) > 0.45*vw*vh) return null;
+  const p = st.pad == null ? 6 : st.pad;
+  x0 = Math.max(4, x0 - p); y0 = Math.max(4, y0 - p); x1 = Math.min(vw - 4, x1 + p); y1 = Math.min(vh - 4, y1 + p);
+  return {x:x0, y:y0, w:x1 - x0, h:y1 - y0};
+}
+function walkShow(i, dir){
+  const S = WALK.steps; dir = dir || 1;
+  /* a stop whose control is not on screen (a narrow window, say) is passed over */
+  let r = null;
+  for(; i >= 0 && i < S.length; i += dir){ r = walkRect(S[i]); if(r || !S[i].q) break; }
+  if(i < 0) i = 0; if(i >= S.length) i = S.length - 1;
+  WALK.i = i; const st = S[i], hole = el('walkHole'), card = el('walkCard'), mid = !r;
+  hole.classList.toggle('none', mid);
+  if(r){ hole.style.left = r.x+'px'; hole.style.top = r.y+'px'; hole.style.width = r.w+'px'; hole.style.height = r.h+'px'; }
+  card.classList.toggle('mid', mid);
+  card.innerHTML = '<span class="wk-step">'+(i === 0 ? 'A quick tour' : st.last ? 'Done' : 'Stop '+i+' of '+(S.length - 2))+'</span><h3>'+st.t+'</h3><p>'+st.d+'</p>'+
+    '<div class="wk-row"><span class="wk-dots">'+S.map((_, k)=>'<i'+(k === i ? ' class="on"' : '')+'></i>').join('')+'</span>'+
+    (i > 0 ? '<button type="button" class="wk-back" data-wk="back">Back</button>' : '')+
+    '<button type="button" class="wk-go" data-wk="'+(st.last ? 'done' : 'next')+'">'+(i === 0 ? 'Start the tour' : st.last ? 'Choose where to start' : 'Next')+'</button></div>'+
+    (st.last ? '' : '<div class="wk-skip"><button type="button" data-wk="later">Skip for now</button><button type="button" data-wk="never">Skip and don’t show again</button></div>');
+  const cw = card.offsetWidth, ch = card.offsetHeight, vw = innerWidth, vh = innerHeight, g = 14;
+  let x, y;
+  if(mid){ x = (vw - cw)/2; y = (vh - ch)/2; }
+  else if(r.w > vw*0.5 && r.h > vh*0.5){ x = r.x + r.w - cw - 24; y = r.y + r.h - ch - 24; }      /* a big area: sit in its corner */
+  else if(vw - (r.x + r.w) > cw + g*2){ x = r.x + r.w + g; y = r.y + r.h/2 - ch/2; }
+  else if(r.x > cw + g*2){ x = r.x - cw - g; y = r.y + r.h/2 - ch/2; }
+  else if(vh - (r.y + r.h) > ch + g*2){ x = r.x + r.w/2 - cw/2; y = r.y + r.h + g; }
+  else { x = r.x + r.w/2 - cw/2; y = r.y - ch - g; }
+  card.style.left = Math.round(Math.max(10, Math.min(vw - cw - 10, x)))+'px';
+  card.style.top = Math.round(Math.max(10, Math.min(vh - ch - 10, y)))+'px';
+  const go = card.querySelector('.wk-go'); if(go) try{ go.focus({preventScroll:true}); }catch(e){}
+}
+function walkOpen(){
+  if(WALK.on) return;
+  try{ closeWelcome(true); closeShowcase(); }catch(e){}
+  try{ if(typeof CRS !== 'undefined' && CRS.on) return; if(typeof LEARN !== 'undefined' && LEARN.on) return; if(typeof ANA !== 'undefined' && ANA.on) return; }catch(e){}
+  try{ if(!L3.on) set3D(true); }catch(e){}
+  WALK.on = true; el('walk').hidden = false; walkShow(0, 1);
+}
+function walkClose(how){
+  WALK.on = false; el('walk').hidden = true;
+  if(how !== 'later'){ try{ localStorage.setItem('bondingbench.tour', '1'); }catch(e){} }
+  let seen = false; try{ seen = !!localStorage.getItem('bondingbench.welcomed'); }catch(e){ seen = true; }
+  if(how === 'done' || !seen) openWelcome();
+}
+function walkInit(){
+  const gd = el('walk'); if(!gd) return;
+  gd.addEventListener('click', ev=>{ const b = ev.target.closest('[data-wk]'); if(!b) return; const k = b.dataset.wk;
+    if(k === 'next') walkShow(WALK.i + 1, 1); else if(k === 'back') walkShow(WALK.i - 1, -1); else walkClose(k); });
+  document.addEventListener('keydown', ev=>{ if(!WALK.on) return;
+    if(ev.key === 'Escape'){ walkClose('later'); }
+    else if(ev.key === 'ArrowRight' || ev.key === 'Enter'){ if(WALK.steps[WALK.i].last) walkClose('done'); else walkShow(WALK.i + 1, 1); }
+    else if(ev.key === 'ArrowLeft'){ walkShow(WALK.i - 1, -1); }
+    else return;
+    ev.preventDefault(); ev.stopPropagation(); }, true);
+  window.addEventListener('resize', ()=>{ if(WALK.on) walkShow(WALK.i, 1); });
+  const wt = el('welTour'); if(wt) wt.onclick = ()=>{ closeWelcome(); walkOpen(); };
 }
 function showcaseInit(){
   const b = el('showBtn'); if(!b) return;
@@ -22092,8 +22211,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 143;
+const VERSION = 144;
 const CHANGELOG = [
+  [144, 'A guided tour for a first visit, and the 3D bench comes first. The tour is ten short stops that point at the real controls: the bench, the elements, building by name, temperature, the ready-made reactions, the tools, the information panel, the Showcase, the Course and the flat bench. It can be skipped for now, or skipped for good; it can be replayed from the welcome card. The bench now opens in 3D, and the 2D bench sits second in the switch at the top for when it is wanted (a shared 2D link, or a bench last left in 2D, still opens flat). The page also has a tab icon and a description for link previews.'],
   [143, 'A realism pass on the 3D bench, measured against experiment, and an easier way in. Shapes: bond lengths now come from measured values for about ninety kinds of bond, and angles depend on what is attached, so H\u2082S is 92\u00b0 and PH\u2083 93\u00b0 (not water\u2019s and ammonia\u2019s angles), an alcohol 108.5\u00b0, an ether 112\u00b0, B\u2013F 131 pm (it was 148), the O\u2013O of peroxide 148; ozone\u2019s two bonds and a carboxylate\u2019s come out equal; lone pairs squeeze SF\u2084 and ClF\u2083 as they really do. Over thirty test molecules bonds are within 0.9 pm and angles within 0.4\u00b0 of the measured structures (3.7 pm and 2.8\u00b0 before). Charges: each bond\u2019s polarity is fitted to measured dipole moments (water 1.84 D against 1.85, HCl 1.10 against 1.08, HCN 2.82 against 2.98; carbon monoxide had read 4 D and is now 0.16). Forces between molecules: dispersion uses the well depths molecular-mechanics force fields settled on, with the real 1/r\u2076 tail, Coulomb between the partial charges at 0.7 of full strength, and a weaker extra hydrogen-bond term; fitted to the measured attraction of twenty-two pairs of molecules, where hydrocarbons had clung two to three times too hard and polar molecules a third as hard as they should. Molecules also rest about a tenth further apart, as they do. Still approximate: HCl and H\u2082S pairs hold at about half strength, and liquid water is close but not exact. New for students: a welcome screen with six plain starting points; a Shapes & angles display option (Display menu) that tags every atom with its VSEPR shape and its angles as measured live; and three Showcase demonstrations on shapes, polarity and why water boils at 100 \u00b0C. Fixed: building many large molecules at once could set them down overlapping, which blew them apart; nitrogen dioxide and triiodide now build. A new realism test checks all of this against the measured values.'],
   [142, 'Atoms no longer balloon when you give or take an electron. The bench keeps one ionic radius per element, for its common ion, and used it for any charge: so O\u207a (one electron taken) was drawn at O\u00b2\u207b\u2019s 140 pm, getting bigger when it should get smaller. Now that radius is used only for a charge of the same sign, adjusted a step for each charge away from the common one (O\u207b a little smaller than O\u00b2\u207b, Fe\u00b3\u207a smaller than Fe\u00b2\u207a), and otherwise a cation shrinks and an anion swells from the atom\u2019s own size. An anion is also drawn halfway towards its atom, since the atom is shown at its bonded size and the full jump (Cl 99 pm to Cl\u207b 181) looked like a balloon: Cl\u207b now draws 15% bigger than Cl, Na\u207a 40% smaller than Na. Ions in the physics (bond lengths, lattice energies) are unchanged for the common ions. The same fix applies on the 3D bench.'],
   [141, 'Aqua regia dissolves gold metal, not only a lone gold atom. The rule looked for chloride ions beside the gold, but in concentrated aqua regia (and on the bench, with little water) most of the hydrochloric acid stays as HCl molecules, so a lump of gold met no chloride and never dissolved; HCl now counts. You can type \u201caqua regia\u201d into Build for the 1:3 mixture of nitric and hydrochloric acid. A lump dissolves only as far as its nitric acid lasts, as in a real beaker: each surface atom needs nitrate to take its electrons. Also fixed: the radical step from 136 let NO\u2082 pull hydrogens off nitric acid and back again endlessly, using up the acid; it is now kept to lone atoms, carbon radicals and hydroxyl. Building in bulk understands formulas like HCl.'],
@@ -26377,7 +26497,8 @@ function start(data){
   el('scenes2d').onclick = ev=>{ const b = ev.target.closest('[data-scene]'); if(b) scene2D(b.dataset.scene); };
   el('build2dIn').onkeydown = ev=>{ ev.stopPropagation(); if(ev.key === 'Enter') buildCompound2D(el('build2dIn').value); };
   el('mode3d').onclick = ()=>{ if(!L3.on) set3D(true); };
-  try{ if(localStorage.getItem('bondingbench.mode') === '3d') setTimeout(()=>set3D(true), 0); }catch(e){}
+  /* the 3D bench is the way in; the flat bench opens only where it was last left, or for a shared flat bench */
+  try{ const md = localStorage.getItem('bondingbench.mode'); if(md === '3d' || (!md && !/b=/.test(location.hash||'') && !localStorage.getItem('bondingbench.rescue'))) setTimeout(()=>{ if(!CRS.on && !LEARN.on && !ANA.on) set3D(true); }, 0); }catch(e){}
   cam.x = (WORLD.w - W)/2;
   cam.y = SURFACE_Y() - H*0.72;            /* the top sits low in the opening view */
   clampCam();
