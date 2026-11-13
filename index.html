@@ -585,9 +585,9 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 
 /* ---------- overlays ---------- */
 [hidden]{display:none !important}
-#browser,#library,#showcase,#welcome,#share,#versions{position:fixed;inset:0;z-index:82;display:flex;align-items:center;justify-content:center;padding:18px}
+#browser,#library,#showcase,#welcome,#finder,#share,#versions{position:fixed;inset:0;z-index:82;display:flex;align-items:center;justify-content:center;padding:18px}
 #crash{position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;padding:18px}
-#browser::before,#library::before,#showcase::before,#welcome::before,#share::before,#versions::before,#crash::before{
+#browser::before,#library::before,#showcase::before,#welcome::before,#finder::before,#share::before,#versions::before,#crash::before{
   content:'';position:absolute;inset:0;background:rgba(250,250,248,.9);backdrop-filter:blur(8px);
 }
 #browser.fade{opacity:.07;pointer-events:none;transition:opacity .2s var(--ease)}
@@ -606,6 +606,26 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .wel-tile b{font-size:14.5px;font-weight:600}
 .wel-tile span{font-size:12.5px;color:var(--muted);line-height:1.4}
 .wel-foot{margin:14px 0 0;font-size:12px;color:var(--muted)}
+/* the feature finder, and the switches in the left panel */
+#finder{align-items:flex-start;padding-top:8vh}
+#finder .sheet{width:min(94vw,620px);max-height:82vh;display:flex;flex-direction:column;padding-bottom:10px}
+#finderQ{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font:500 15px var(--font-ui);background:var(--sunk);outline:none}
+#finderQ:focus{border-color:var(--accent);background:var(--surface)}
+#finderList{overflow:auto;margin-top:10px;min-height:120px}
+.fd-g{display:block;margin:12px 2px 5px}
+.fd-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:8px 10px;border-radius:9px;border:0;background:none;cursor:pointer}
+.fd-row:hover,.fd-row.cur{background:var(--sunk)}
+.fd-row b{display:block;font-size:13.5px;font-weight:600}
+.fd-row span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+.fd-row em{margin-left:auto;flex:none;font-style:normal;font:500 11px var(--font-ui);color:var(--accent);border:1px solid var(--line);border-radius:7px;padding:4px 8px;white-space:nowrap}
+.fd-row em.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fd-none{padding:18px 10px;color:var(--muted);font-size:13px}
+.help-btn{border-color:var(--accent)!important;color:var(--accent)!important;font-weight:600}
+.l3-show .switch{padding:5px 0}
+.l3-show .switch span{display:block;text-align:left}
+.l3-show .switch small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+@keyframes flashHere{0%,100%{box-shadow:0 0 0 0 rgba(47,91,234,0)}20%,70%{box-shadow:0 0 0 3px rgba(47,91,234,.75)}}
+.flash-here{animation:flashHere 1.6s ease 1;border-radius:8px}
 /* presenting: the bench alone, for a projector */
 body.presenting .bar{display:none}
 body.presenting .workspace{grid-template-columns:minmax(0,1fr)}
@@ -1379,6 +1399,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     </div>
     <span class="chip" id="benchTemp">298 K</span>
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
+    <button class="ghost-btn help-btn" id="helpBtn" type="button" title="Find any feature: type what you want to do">How do I&hellip;?</button>
     <button class="ghost-btn show-btn" id="showBtn" type="button" title="One-click demonstrations of everything the bench can do">Showcase</button>
     <button class="ghost-btn course-btn" id="courseBtn" type="button" title="A whole chemistry course taught on the bench: lessons, guided bench time and free bench time">Course</button>
     <button class="ghost-btn ana-btn" id="anaBtn" type="button" title="Look at one to four compounds in depth: structure, bonds, shape, electrons, polarity, acids and bases, spectra, and how they react together">Analyse</button>
@@ -1853,6 +1874,18 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     <div id="fullTable"></div>
     <div class="detail" id="detail"></div>
     <p class="sheet-foot">Click to place &middot; drag onto the bench &middot; radii Cordero, Alvarez &amp; Shannon; Z &ge; 104 estimated</p>
+  </div>
+</div>
+<div id="finder" hidden role="dialog" aria-modal="true" aria-label="Find a feature">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>How do I&hellip;?</h3>
+      <button class="close-x" id="closeFinder" type="button" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 2l9 9M11 2l-9 9"/></svg>
+      </button>
+    </div>
+    <input id="finderQ" type="search" placeholder="Type what you want: dipole, lone pairs, heat, measure an angle&hellip;" autocomplete="off" spellcheck="false" aria-label="Search the features">
+    <div id="finderList"></div>
   </div>
 </div>
 <div id="walk" hidden role="dialog" aria-modal="true" aria-label="Guided tour"><div class="wk-hole" id="walkHole"></div><div class="wk-card" id="walkCard"></div></div>
@@ -12535,13 +12568,111 @@ function welcomeInit(){
   let seen = false; try{ seen = !!localStorage.getItem('bondingbench.welcomed') || !!localStorage.getItem('bondingbench.showseen'); }catch(e){ seen = true; }
   /* a shared link or a lesson in progress is not a first visit */
   let toured = false; try{ toured = !!localStorage.getItem('bondingbench.tour'); }catch(e){ toured = true; }
-  walkInit();
+  walkInit(); finderInit();
   if(location.hash || (typeof CRS !== 'undefined' && CRS.on) || (typeof LEARN !== 'undefined' && LEARN.on)) return;
   if(!toured) setTimeout(walkOpen, 500);
   else if(!seen) setTimeout(openWelcome, 350);
 }
+/* ---------- How do I…? ----------
+   Every feature in one searchable list. Picking a row does the thing (or takes you to
+   it) and flashes the control, so next time you know where it lives. */
+const FIND = { cur:0, rows:[] };
+function findFlash(sel){ setTimeout(()=>{ try{ const n = typeof sel === 'string' ? document.querySelector(sel) : sel; if(!n) return; if(n.closest('details') && !n.closest('details').open) n.closest('details').open = true;
+  n.scrollIntoView({block:'nearest'}); scrollTo(0, 0); n.classList.remove('flash-here'); void n.offsetWidth; n.classList.add('flash-here'); setTimeout(()=>n.classList.remove('flash-here'), 1700); }catch(e){} }, 180); }
+function find3D(){ if(CRS.on || LEARN.on || ANA.on) return false; if(!L3.on) set3D(true); return true; }
+function findShow(k, msg){ if(!find3D()) return; l3ShowSet(k, true); findFlash('[data-l3show="'+k+'"]'); if(msg) say(msg, 'bench'); }
+function findTool(k){ if(!find3D()) return; const b = document.querySelector('#l3tools [data-l3tool="'+k+'"]'); if(b){ b.click(); findFlash('#l3tools [data-l3tool="'+k+'"]'); } say(L3_TIPS[k]+'.', 'bench'); }
+function findMore(k){ if(!find3D()) return; L3.menu = 'more'; l3Build(); const b = document.querySelector('#l3bar [data-l3="'+k+'"]'); if(b) b.click(); }
+function findView(k){ if(!find3D()) return; L3.view = k; l3Build(); findFlash('#l3bar [data-l3="menu-disp"]'); say(L3_VIEWS[k]+' view. Change it back under View & labels at the top of the bench.', 'bench'); }
+const FINDER = [
+  ['See on the molecules', [
+    ['Show dipole arrows', 'Which end of each molecule is negative, with the dipole moment in debye.', 'dipole dipoles polar polarity nonpolar arrow debye moment', 'Left panel → Show on the molecules', ()=>findShow('dip', 'Dipole arrows are on. Each points from the positive end to the negative end; no arrow means nonpolar.'), 'dip'],
+    ['Show partial charges (δ+ / δ−)', 'Which atoms are slightly positive or negative.', 'partial charge delta electronegativity polar', 'Left panel → Show on the molecules', ()=>findShow('q'), 'q'],
+    ['Show shapes and bond angles', 'VSEPR names (bent, tetrahedral…) and the live angles.', 'shape vsepr geometry angle bent linear tetrahedral trigonal pyramidal', 'Left panel → Show on the molecules', ()=>findShow('shape'), 'shape'],
+    ['Show lone pairs', 'The unshared electron pairs on each atom.', 'lone pair electrons unshared nonbonding lewis', 'Left panel → Show on the molecules', ()=>findShow('lp'), 'lp'],
+    ['Show hydrogen bonds', 'Dashed lines where molecules hydrogen-bond.', 'hydrogen bond hbond intermolecular forces imf', 'Left panel → Show on the molecules', ()=>findShow('hb'), 'hb'],
+    ['Label the molecules with their names', 'A name tag on every molecule.', 'name label molecule tag', 'Left panel → Show on the molecules', ()=>findShow('molnames'), 'molnames'],
+    ['Label the atoms', 'Element names on the atoms.', 'atom name label element symbol', 'Left panel → Show on the molecules', ()=>findShow('names'), 'names'],
+    ['See the charge cloud', 'Each molecule wrapped in its electron cloud: red where electrons gather, blue where they are thin.', 'electrostatic potential esp electron cloud density map charge', 'View & labels → Charge cloud', ()=>findView('esp')],
+    ['Space-filling view', 'Atoms at their real sizes, touching.', 'space filling cpk van der waals size view style', 'View & labels → Space-filling', ()=>findView('space')],
+    ['Ball-and-stick view', 'The usual view: balls for atoms, sticks for bonds.', 'ball stick view style normal default', 'View & labels → Ball & stick', ()=>findView('ball')],
+    ['What is this bond?', 'Rest the pointer on any bond for its kind, length, strength and polarity.', 'bond length energy strength order single double polar info', 'Hover over a bond on the 3D bench', ()=>{ if(find3D()) say('Rest the pointer on any bond: a card gives its kind, length, strength and polarity.', 'bench'); }],
+    ['What is this molecule?', 'Click an atom: the right-hand panel names the molecule and gives its shape, polarity and forces.', 'identify name molecule info formula mass shape panel', 'Click an atom → right panel', ()=>{ if(find3D()){ findFlash('.panel.right'); say('Click any atom: the panel on the right names its molecule and describes it.', 'bench'); } }]
+  ]],
+  ['Build', [
+    ['Build a molecule by name', 'Type caffeine, aspirin, H2SO4… and press Build.', 'build make create add molecule compound name formula type', 'Left panel → Build box', ()=>{ if(find3D()){ findFlash('#left3d .l3-build'); setTimeout(()=>{ const f = el('l3Formula'); if(f) f.focus(); }, 250); } }],
+    ['Browse the molecule library', 'More than 22,000 molecules, by family.', 'library browse list molecules drugs organic catalogue', 'Left panel → Molecules → Molecule library', ()=>{ if(find3D()) openLib(); }],
+    ['Add atoms one at a time', 'Click an element, then click the bench. Atoms near each other bond.', 'atom element place add periodic table', 'Left panel → the periodic table', ()=>{ if(find3D()){ findFlash('#left3d .l3-table'); say('Click an element, then click the bench to drop an atom.', 'bench'); } }],
+    ['Make or break a bond by hand', 'The bond tool joins two atoms you click; the break tool cuts a bond.', 'bond join connect make force', 'Tool rail → second tool', ()=>findTool('bond')],
+    ['Break a bond', 'Click a bond to cut it.', 'break cut split bond cleave', 'Tool rail → third tool', ()=>findTool('break')],
+    ['Delete an atom', 'Click an atom to remove it (or select it and press Delete).', 'delete remove erase atom', 'Tool rail → bin', ()=>findTool('remove')],
+    ['Add water', 'Twelve water molecules at once, to dissolve things in.', 'water solvent dissolve aqueous solution', '⋯ menu → Add 12 waters', ()=>findMore('water')],
+    ['Make a sample of air', 'Nitrogen, oxygen, argon and CO₂ in their real proportions.', 'air atmosphere gas nitrogen oxygen mixture', 'Left panel → Air', ()=>{ if(find3D()){ l3Push(); l3Air(250, L3.airHumid); findFlash('#left3d details[data-sec="air"] summary'); } }],
+    ['Undo', 'Step back one change.', 'undo back mistake revert', 'Left panel → Undo, or Ctrl/Cmd + Z', ()=>{ const b = document.querySelector('[data-l3undo]'); if(L3.on && b) b.click(); else undo(); }],
+    ['Clear the bench', 'Remove everything (Undo brings it back).', 'clear empty reset wipe start over', 'Top bar → Clear', ()=>el('clearBtn').click()]
+  ]],
+  ['Make things happen', [
+    ['Run a ready-made reaction', 'Acid + base, metals in water or acid, precipitation, organic reactions.', 'reaction react acid base neutralisation metal precipitate combustion redox', 'Left panel → Reactions', ()=>{ if(find3D()) findFlash('#left3d details[data-sec="rx"] summary'); }],
+    ['Heat or cool the bench', 'Slide the temperature: liquids boil, reactions speed up.', 'heat cool temperature hot cold boil freeze melt kelvin', 'Left panel → Temperature', ()=>{ if(find3D()) findFlash(el('l3Temp').closest('.slider')); }],
+    ['Stir the mixture', 'Mix moves whole molecules around so they meet new partners.', 'stir mix shake circulate', 'Top of the bench → Mix (M)', ()=>{ if(find3D()){ l3MixToggle(true); findFlash('#l3bar [data-l3="mix"]'); } }],
+    ['Slow down or speed up time', 'Drag the Speed slider.', 'speed slow fast time motion pause', 'Top of the bench → Speed', ()=>{ if(find3D()) findFlash('#l3bar input[type=range]'); }],
+    ['Pause', 'Freeze everything where it is.', 'pause stop freeze hold', 'Tool rail → pause, or Space', ()=>{ if(!paused) togglePause(); try{ l3BuildTools(); }catch(e){} }],
+    ['Step through a reaction slowly', 'Each step plays in slow motion and stops with an explanation.', 'step slow mechanism explain one at a time', 'Top of the bench → Step through', ()=>{ if(find3D()){ const b = document.querySelector('#l3bar [data-steptoggle], #l3bar [data-l3="step"]') || document.querySelector('[data-steptoggle]'); if(b) b.click(); } }],
+    ['Add energy to one spot', 'A spark: heats the atoms where you click.', 'spark energy heat ignite activate', 'Tool rail → spark', ()=>findTool('spark')],
+    ['Shine light on a molecule', 'Fire a photon: it can break a bond.', 'light photon uv lamp photochemistry radical', 'Tool rail → light', ()=>findTool('photon')],
+    ['Apply an electric field', 'Polar molecules turn to line up; ions drift.', 'electric field voltage polar align ions', 'Tool rail → field', ()=>findTool('field')],
+    ['Use a catalyst', 'Place a catalyst patch: reactions on it need less energy.', 'catalyst surface activation energy', 'Tool rail → catalyst', ()=>findTool('catalyst')],
+    ['Fire a neutron', 'Nuclear reactions: hit a nucleus with a neutron.', 'neutron nuclear fission isotope radioactive', 'Tool rail → neutron', ()=>findTool('neutron')]
+  ]],
+  ['Measure and look', [
+    ['Measure a distance or an angle', 'Click two atoms for a distance, three for an angle.', 'measure distance length angle ruler pm degrees', 'Tool rail → ruler', ()=>findTool('measure')],
+    ['Fit everything in view', 'Bring the whole bench back into the picture.', 'fit zoom view lost centre reset camera', '⋯ menu, or press F', ()=>{ if(find3D()) l3FitView(true); }],
+    ['Present full screen', 'Hide the panels and fill the screen, for a projector.', 'present fullscreen full screen projector class big', '⋯ menu → Present full screen', ()=>{ if(find3D()) presentToggle(true); }],
+    ['Save a picture', 'Download the view as an image.', 'save picture image screenshot snapshot png download export', '⋯ menu → Save a snapshot', ()=>findMore('snap')],
+    ['Share this bench as a link', 'A link that opens the bench as it is now.', 'share link send url copy', 'Top bar → Share', ()=>el('shareBtn').click()],
+    ['Keyboard shortcuts', 'Every key the bench understands.', 'keyboard shortcut keys hotkey', '⋯ menu, or press ?', ()=>toggleKeys(true)]
+  ]],
+  ['Learn', [
+    ['Watch demonstrations', 'Thirty one-click demos with explanations.', 'showcase demo demonstration example watch', 'Top bar → Showcase', ()=>openShowcase()],
+    ['Take the course', 'Thirteen units with tasks and questions.', 'course lesson unit teach class curriculum quiz', 'Top bar → Course', ()=>el('courseBtn').click()],
+    ['Compare compounds in depth', 'Analyse up to four compounds: structure, polarity, spectra, reactions.', 'analyse analyze compare spectra ir nmr acid base pka', 'Top bar → Analyse', ()=>el('anaBtn').click()],
+    ['Quiet view of one reaction', 'Learn mode: one reaction at a time, with practice questions.', 'learn mode practice questions quiz quiet', 'Top bar → Learn mode', ()=>el('learnBtn').click()],
+    ['Periodic trends and data', 'Charts of size, electronegativity, ionisation energy and more.', 'periodic table trend data electronegativity radius ionisation chart', 'Left panel (2D bench) → Trends & data', ()=>openBrowser()],
+    ['Replay the guided tour', 'The one-minute walk round the controls.', 'tour guide walkthrough help intro tutorial start', 'Welcome card → Take the tour', ()=>walkOpen()],
+    ['Use the flat 2D bench', 'Lab equipment and diagram-style reactions.', '2d flat bench beaker burner equipment lab', 'Top bar → 2D', ()=>{ if(L3.on) set3D(false); findFlash('#mode2d'); }],
+    ['What changed in each version', 'The full version history.', 'version history changelog new update', 'Under the title → version chip', ()=>el('verChip').click()]
+  ]]
+];
+function finderRender(){
+  const q = (el('finderQ').value||'').trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);
+  FIND.rows = []; let html = '';
+  FINDER.forEach(([g, list])=>{
+    const hit = list.filter(r=>{ const hay = (r[0]+' '+r[1]+' '+r[2]).toLowerCase(); return words.every(w=>hay.includes(w) || (w.length > 3 && hay.includes(w.replace(/s$/, '')))); });
+    if(!hit.length) return;
+    html += '<span class="eyebrow fd-g">'+g+'</span>';
+    hit.forEach(r=>{ const i = FIND.rows.push(r) - 1, sh = r[5] && L3_SHOWS.find(x=>x[0] === r[5]), on = sh && L3.on && sh[3]();
+      html += '<button type="button" class="fd-row'+(i === FIND.cur ? ' cur' : '')+'" data-fd="'+i+'"><div><b>'+r[0]+'</b><span>'+r[1]+'</span><span>Where: '+r[3]+'</span></div><em'+(on ? ' class="on"' : '')+'>'+(on ? 'On' : sh ? 'Turn on' : 'Go')+'</em></button>'; });
+  });
+  if(!FIND.rows.length) html = '<p class="fd-none">Nothing matches “'+q.replace(/[<&]/g, '')+'”. Try a simpler word, such as polar, heat, build or angle.</p>';
+  if(FIND.cur >= FIND.rows.length) FIND.cur = 0;
+  el('finderList').innerHTML = html;
+  const c = el('finderList').querySelector('.fd-row.cur'); if(c && words.length) c.scrollIntoView({block:'nearest'});
+}
+function openFinder(){ if(WALK.on) return; try{ closeWelcome(true); closeShowcase(); }catch(e){} el('finder').hidden = false; el('finderQ').value = ''; FIND.cur = 0; finderRender(); setTimeout(()=>{ try{ el('finderQ').focus(); }catch(e){} }, 40); }
+function closeFinder(){ el('finder').hidden = true; }
+function finderGo(i){ const r = FIND.rows[i]; if(!r) return; closeFinder(); try{ r[4](); }catch(e){ console.error(e); } }
+function finderInit(){
+  const f = el('finder'); if(!f) return;
+  el('helpBtn').onclick = openFinder; el('closeFinder').onclick = closeFinder;
+  el('finderQ').oninput = ()=>{ FIND.cur = 0; finderRender(); };
+  f.addEventListener('click', ev=>{ const b = ev.target.closest('[data-fd]'); if(b){ finderGo(+b.dataset.fd); return; } if(ev.target === f) closeFinder(); });
+  f.addEventListener('keydown', ev=>{ ev.stopPropagation();
+    if(ev.key === 'Escape'){ closeFinder(); }
+    else if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){ const n = FIND.rows.length; if(n){ FIND.cur = (FIND.cur + (ev.key === 'ArrowDown' ? 1 : n - 1)) % n; finderRender(); const c = el('finderList').querySelector('.fd-row.cur'); if(c) c.scrollIntoView({block:'nearest'}); } ev.preventDefault(); }
+    else if(ev.key === 'Enter'){ finderGo(FIND.cur); ev.preventDefault(); } });
+}
 /* ---------- the first-visit walkthrough ----------
-   Ten short stops that point at the real controls. It can be left for now, or
+   A dozen short stops that point at the real controls. It can be left for now, or
    switched off for good; finishing it counts as switching it off. */
 const WALK = { on:false, i:0, steps:[
   {t:'Welcome to Bonding Bench', d:'A chemistry lab where you can see the atoms. Molecules here have their measured shapes, attract each other the way real ones do, and react. This tour takes about a minute and shows where everything is.'},
@@ -12549,9 +12680,11 @@ const WALK = { on:false, i:0, steps:[
   {q:()=>document.querySelector('#left3d .l3-table'), t:'Every element', d:'Click an element, then click the bench to drop an atom. Put atoms near each other and they bond according to their valence: no rules to type in.'},
   {q:()=>document.querySelector('#left3d .l3-build'), t:'Build by name', d:'Type a name or formula, such as caffeine, aspirin or H2SO4, and press Build. More than 22,000 molecules are in the library behind this box.'},
   {q:()=>el('l3Temp') && el('l3Temp').closest('.slider'), t:'Temperature', d:'Slide to heat or cool the bench. Liquids boil, gases condense and reactions speed up, because the molecules really do move faster.'},
+  {q:()=>document.querySelector('#left3d details[data-sec="show"]'), t:'Show on the molecules', d:'Switch on dipole arrows, partial charges, shapes and angles, lone pairs and hydrogen bonds. Each switch says what it draws.'},
   {q:()=>document.querySelector('#left3d details[data-sec="rx"] summary'), t:'Ready-made reactions', d:'One click sets up a reaction: acid and base, a metal in acid, precipitation, combustion and more. Below it are air samples and common molecules.'},
   {q:()=>el('l3tools'), t:'Tools', d:'Bond and cut, add or remove electrons, apply an electric field, stir, and pause. Hover over a tool to see its name and its key.'},
   {q:()=>document.querySelector('.panel.right'), t:'What you are looking at', d:'Click any atom and this panel names the molecule and gives its shape, bond angles, polarity and the forces holding it to its neighbours.'},
+  {q:()=>el('helpBtn'), t:'How do I\u2026?', d:'Lost? Click here and type what you want, such as dipole, heat or measure an angle. It finds the feature, switches it on and shows you where it lives.'},
   {q:()=>el('showBtn'), t:'Showcase', d:'Thirty one-click demonstrations with a short explanation each: molecule shapes, polarity, why water boils at 100 °C, golden rain, chain reactions.'},
   {q:()=>[el('courseBtn'), el('anaBtn'), el('learnBtn')], t:'For lessons', d:'Course is thirteen units of chemistry with tasks on the bench and questions. Analyse compares up to four compounds in depth. Learn mode is a quiet view of one reaction at a time.'},
   {q:()=>el('modeSeg'), t:'The flat bench', d:'The original 2D bench is still here, with beakers, burners and diagram-style reactions, if you want it.'},
@@ -21395,6 +21528,23 @@ const SCENE_GROUPS = [
   ['Organic', ['hbr','markov','br2','ester','hydro']],
   ['Solutions', ['saltaq','agcl','pbi2','baso4','cuoh2','feoh3','caco3','hotpack','coldpack','d2o','caff']]
 ];
+/* what can be drawn on the molecules: one list, used by the left panel, the Display
+   menu and the feature finder, so a switch thrown in one place shows in the others */
+const L3_SHOWS = [
+  ['dip', 'Dipole arrows', 'which end of each molecule is negative, in debye', ()=>!!L3.showDip, v=>{ L3.showDip = v; }],
+  ['q', 'Partial charges', 'δ+ and δ− on the atoms', ()=>!!L3.showQ, v=>{ L3.showQ = v; }],
+  ['shape', 'Shapes & angles', 'bent, pyramidal, tetrahedral… with the angles', ()=>!!L3.showShape, v=>{ L3.showShape = v; }],
+  ['lp', 'Lone pairs', 'the unshared electron pairs', ()=>!!L3.showLP, v=>{ L3.showLP = v; }],
+  ['hb', 'Hydrogen bonds', 'dashed lines between molecules', ()=>!L3.hideHB, v=>{ L3.hideHB = !v; }],
+  ['molnames', 'Molecule names', 'a name tag on each molecule', ()=>!!SHOW.molnames, v=>{ SHOW.molnames = v; }],
+  ['names', 'Atom names', 'element names on the atoms', ()=>!!L3.names, v=>{ L3.names = v; }]
+];
+function l3ShowSet(k, v){
+  const it = L3_SHOWS.find(x=>x[0] === k); if(!it) return;
+  it[4](v === undefined ? !it[3]() : !!v);
+  try{ l3Build(); renderLeft3D(); renderSwitches(); }catch(e){}
+  dirty = true;
+}
 function renderLeft3D(){
   const host = el('left3d'); if(!host) return;
   /* every element, laid out as the periodic table */
@@ -21424,6 +21574,9 @@ function renderLeft3D(){
     '<div class="l3-build" style="margin-top:10px"><input id="l3Formula" type="text" placeholder="Build: caffeine, H2SO4, H+, SO4 2-…" spellcheck="false" autocomplete="off"><button type="button" data-l3build="1">Build</button><button type="button" class="ghost-sm" data-l3undo="1" title="Undo (Ctrl/Cmd + Z)">Undo</button></div>'+
     '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C</span>'+
       '<input type="range" class="temp-range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
+    '<details class="l3-sec l3-show" data-sec="show"'+(open.show === 0 ? '' : ' open')+'><summary>Show on the molecules</summary><div class="l3-sec-in">'+
+      L3_SHOWS.map(([k, t, d, get])=>'<button type="button" class="switch'+(get() ? ' on' : '')+'" role="switch" aria-checked="'+!!get()+'" data-l3show="'+k+'"><span>'+t+'<small>'+d+'</small></span><span class="track"></span></button>').join('')+
+    '</div></details>'+
     sec('rx', 'Reactions', rx, SCENES.length)+
     sec('air', 'Air', '<div class="l3-pres">'+[[250,'250 molecules'],[1000,'1,000'],[3000,'3,000']].map(([k, l])=>'<button type="button" data-l3air="'+k+'">'+l+'</button>').join('')+'</div>'+
       '<button type="button" class="switch'+(L3.airHumid ? ' on' : '')+'" role="switch" aria-checked="'+!!L3.airHumid+'" data-l3humid="1" style="margin-top:6px"><span>Humid <em>'+(L3.airHumid ? '2% water vapour' : 'dry air')+'</em></span><span class="track"></span></button>'+
@@ -21460,6 +21613,7 @@ function renderLeft3D(){
     if(b.dataset.l3air){ l3Push(); l3Air(+b.dataset.l3air, L3.airHumid); return; }
     if(b.dataset.l3trace){ l3Push(); l3AirTrace(); return; }
     if(b.dataset.l3humid){ L3.airHumid = !L3.airHumid; renderLeft3D(); return; }
+    if(b.dataset.l3show){ l3ShowSet(b.dataset.l3show); return; }
     if(b.dataset.l3scene){ l3Scene(b.dataset.l3scene); return; }
     if(b.dataset.l3vault){ const v = vault.find(x=>x.id === b.dataset.l3vault); if(v) specTo3D(v.spec, v.n); return; }
     if(b.dataset.l3keep){ l3KeepSelected(); return; }
@@ -21644,7 +21798,7 @@ function l3Build(){
   const dispMenu = L3.menu === 'disp' ? '<div class="l3-pop" data-pop="disp">'+
       '<span class="eyebrow">Style</span><div class="l3-seg">'+Object.keys(L3_VIEWS).map(k=>'<button type="button" data-l3view="'+k+'"'+((L3.view||'ball') === k ? ' class="on"' : '')+'>'+L3_VIEWS[k]+'</button>').join('')+'</div>'+
       '<span class="eyebrow">Show</span>'+
-      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+
+      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+tg('hb', !L3.hideHB, 'Hydrogen bonds')+
     '</div>' : '';
   const moreMenu = L3.menu === 'more' ? '<div class="l3-pop right" data-pop="more">'+
       '<button type="button" class="l3-item" data-l3="water">Add 12 waters</button>'+
@@ -21655,7 +21809,7 @@ function l3Build(){
       '<button type="button" class="l3-item danger" data-l3="clear">Clear the 3D bench</button>'+
     '</div>' : '';
   bar.innerHTML = '<button type="button" class="l3-exit" data-l3="send2d" title="Carry everything here down to the flat bench">Send to 2D</button>'+
-    '<span class="l3-dd"><button type="button" data-l3="menu-disp" class="'+(L3.menu === 'disp' ? 'open' : '')+'" aria-expanded="'+(L3.menu === 'disp')+'">Display ▾</button>'+dispMenu+'</span>'+
+    '<span class="l3-dd"><button type="button" data-l3="menu-disp" class="'+(L3.menu === 'disp' ? 'open' : '')+'" aria-expanded="'+(L3.menu === 'disp')+'">View &amp; labels ▾</button>'+dispMenu+'</span>'+
     '<button type="button" class="l3-step'+(STEP.on ? ' on' : '')+'" data-steptoggle="1" title="Slow reactions down and stop after each step">'+(STEP.on ? 'Stepping ✓' : 'Step through')+'</button>'+
     '<button type="button" class="l3-mix'+(L3.mix ? ' on' : '')+'" data-l3="mix" title="Stir the box: whole molecules circulate so new partners meet. Nothing is broken. (M)">'+(L3.mix ? '<i class="l3-mix-spin">⟳</i> Mixing' : 'Mix')+'</button>'+
     '<label class="l3-speed" title="How fast time runs on the 3D bench: 0.1x (slow motion) to 3x. Double-click for 1x.">Speed'+
@@ -21677,15 +21831,16 @@ function l3Build(){
     else if(b.dataset.l3 === 'send2d') sendTo2D();
     else if(b.dataset.l3 === 'clear'){ L3.menu = null; l3Clear(); l3Build(); }
     else if(b.dataset.l3 === 'mix') l3MixToggle();
-    else if(b.dataset.l3 === 'q'){ L3.showQ = !L3.showQ; l3Build(); }
+    else if(b.dataset.l3 === 'q'){ l3ShowSet('q'); }
     else if(b.dataset.l3 === 'view'){ const ks = Object.keys(L3_VIEWS); L3.view = ks[(ks.indexOf(L3.view||'ball')+1)%ks.length]; l3Build(); }
     else if(b.dataset.l3view){ L3.view = b.dataset.l3view; l3Build(); }
     else if(b.dataset.l3 === 'menu-disp' || b.dataset.l3 === 'menu-more'){ const k = b.dataset.l3.slice(5); L3.menu = L3.menu === k ? null : k; l3Build(); }
-    else if(b.dataset.l3 === 'lp'){ L3.showLP = !L3.showLP; l3Build(); }
-    else if(b.dataset.l3 === 'names'){ L3.names = !L3.names; l3Build(); }
-    else if(b.dataset.l3 === 'molnames'){ SHOW.molnames = !SHOW.molnames; l3Build(); }
-    else if(b.dataset.l3 === 'shape'){ L3.showShape = !L3.showShape; l3Build(); }
-    else if(b.dataset.l3 === 'dip'){ L3.showDip = !L3.showDip; l3Build(); if(L3.showDip) say('Each arrow points from the positive end of a molecule to its negative end, with its dipole moment in debye. No arrow means the pulls cancel: nonpolar.', 'bench'); }
+    else if(b.dataset.l3 === 'lp'){ l3ShowSet('lp'); }
+    else if(b.dataset.l3 === 'names'){ l3ShowSet('names'); }
+    else if(b.dataset.l3 === 'molnames'){ l3ShowSet('molnames'); }
+    else if(b.dataset.l3 === 'shape'){ l3ShowSet('shape'); }
+    else if(b.dataset.l3 === 'dip'){ l3ShowSet('dip'); if(L3.showDip) say('Each arrow points from the positive end of a molecule to its negative end, with its dipole moment in debye. No arrow means the pulls cancel: nonpolar.', 'bench'); }
+    else if(b.dataset.l3 === 'hb'){ l3ShowSet('hb'); }
     else if(b.dataset.l3 === 'present'){ L3.menu = null; l3Build(); presentToggle(); }
     else if(b.dataset.l3 === 'fit'){ L3.menu = null; l3Build(); l3FitView(true); }
     else if(b.dataset.l3 === 'keys'){ L3.menu = null; l3Build(); toggleKeys(true); }
@@ -22330,8 +22485,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 147;
+const VERSION = 148;
 const CHANGELOG = [
+  [148, 'Easier to find things. A new How do I\u2026? button at the top opens a searchable list of everything the bench can do: type dipole, heat or measure an angle, pick the row, and the bench does it and flashes the control so you know where it lives next time. The 3D left panel has a new section, Show on the molecules, with a labelled switch for dipole arrows, partial charges, shapes and angles, lone pairs, hydrogen bonds and names; these were tucked away in a menu before. That menu is now called View & labels. The guided tour has two more stops for these.'],
   [147, 'Three additions to the 3D bench. Dipole arrows (in the Display menu): every molecule gets an arrow from its positive end to its negative end, with its dipole moment in debye, and molecules whose pulls cancel are marked nonpolar. Bond cards: rest the pointer on a bond to see what kind it is, how long it is now and at rest, how much energy it takes to break, and how polar it is from the electronegativity difference. Present full screen (in the \u22ef menu): the panels and the top bar step aside and the bench fills the screen, for a projector.'],
   [146, 'Shared charges are easier to read: the \u00bd\u2212 and \u2154\u2212 on resonance atoms now sit in a larger pill-shaped badge with the fraction written out in full.'],
   [145, 'Resonance drawn as it really is on the 3D bench. Bonds that resonance makes equal, such as the two in ozone, the three in nitrate and the two C–O bonds of a carboxylate, are now all drawn the same way: one full line and a dashed half, the way benzene’s ring bonds already were, instead of one double and one single. The charge is shared between them too: each end of ozone shows ½− and each oxygen of nitrate ⅔−, rather than a whole charge on one atom.'],
