@@ -1395,7 +1395,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     </div>
     <div class="seg mode-seg" id="modeSeg" role="tablist" aria-label="Bench">
       <button type="button" id="mode3d" title="The 3D bench: molecules in real space">3D bench</button>
-      <button type="button" id="mode2d" class="on" title="The older flat bench: lab equipment and diagram-style reactions">2D</button>
+      <button type="button" id="mode2d" title="The older flat bench: lab equipment and diagram-style reactions">2D</button>
     </div>
     <span class="chip" id="benchTemp">298 K</span>
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
@@ -12406,7 +12406,7 @@ function showFresh3D(K){
   if(ANA.on) anaExit(); if(LEARN.on) learnMode(false); if(CRS.on) courseExit();
   if(!L3.on) set3D(true);
   stepMode(false, true);
-  L3.mix = false; L3.field = null; L3.gear = []; L3.photons && (L3.photons.length = 0); L3.showShape = false; L3.showQ = false;
+  L3.mix = false; L3.field = null; L3.gear = []; L3.photons && (L3.photons.length = 0); L3.showShape = false; L3.showQ = false; L3.showDip = false;
   if(L3.solvent){ try{ toggleMode('solvent', false); }catch(e){} }
   showK(K || 298);
   try{ l3Build(); renderLeft3D(); }catch(e){}
@@ -12453,9 +12453,9 @@ const SHOWCASE = [
     watch:'Electron pairs round an atom get as far apart as they can. Two groups: linear, 180°. Three: trigonal planar, 120°. Four: tetrahedral, 109.5°. A lone pair takes a corner too and pushes harder than a bond, so ammonia closes to 107° and water to 104.5°. The tags are measured from the simulation, not typed in. Drag to turn the view.',
     tries:[['Five and six groups: PCl₅ and SF₆', ()=>showShapes(['phosphorus pentachloride', 'sulfur hexafluoride'])], ['Lone pairs on big atoms: SF₄, ClF₃, XeF₄', ()=>showShapes(['sulfur tetrafluoride', 'chlorine trifluoride', 'xenon tetrafluoride'])],
       ['Down a group: H₂O 104.5°, H₂S 92°', ()=>showShapes(['water', 'hydrogen sulfide', 'ammonia', 'phosphine'])]]},
-  {g:'Shapes and forces', t:'Polar or not?', d:'Partial charges and an electric field show which molecules have a dipole.', go:()=>{ showEmpty3D(200, 700); L3.showQ = true; ['hydrogen chloride', 'carbon dioxide', 'water', 'methane'].forEach(n=>{ l3BuildAny(n); l3BuildAny(n); }); L3.field = {x:24000, y:0, z:0, len:200}; l3Build(); showFit(); },
-    watch:'δ− and δ+ mark where the shared electrons sit. Hydrogen chloride and water are lopsided, so the field turns them to face it. Carbon dioxide has two polar bonds, but they point opposite ways and cancel; methane’s four cancel too. Polar bonds are not enough: the shape decides whether the molecule is polar.',
-    tries:[['Flip the field', ()=>{ if(L3.field){ L3.field.x = -L3.field.x; } }], ['Switch it off', ()=>{ L3.field = null; }]]},
+  {g:'Shapes and forces', t:'Polar or not?', d:'Partial charges and an electric field show which molecules have a dipole.', go:()=>{ showEmpty3D(200, 700); L3.showQ = true; L3.showDip = true; ['hydrogen chloride', 'carbon dioxide', 'water', 'methane'].forEach(n=>{ l3BuildAny(n); l3BuildAny(n); }); L3.field = {x:24000, y:0, z:0, len:200}; l3Build(); showFit(); },
+    watch:'δ− and δ+ mark where the shared electrons sit, and each dark arrow is a molecule\u2019s dipole: it points at the negative end. Hydrogen chloride and water are lopsided, so they have arrows and the field turns them to face it. Carbon dioxide has two polar bonds, but they point opposite ways and cancel; methane’s four cancel too. Polar bonds are not enough: the shape decides whether the molecule is polar.',
+    tries:[['Flip the field', ()=>{ if(L3.field){ L3.field.x = -L3.field.x; } }], ['Switch it off', ()=>{ L3.field = null; }], ['Arrows on / off', ()=>{ l3ShowSet('dip'); }]]},
   {g:'Shapes and forces', t:'Why water boils at 100 °C', d:'Three kinds of force between molecules, weakest to strongest, at the same temperature.', go:()=>showForces('methane'),
     watch:'Every sample here is at 150 K. Methane (boils at 112 K) is held only by London forces, about 2 kJ/mol between a pair of molecules, and drifts apart as a gas. Hydrogen chloride (188 K) adds the pull between dipoles, so its molecules cling in clumps (this model gives that pull about half its real strength). Water (373 K) hydrogen-bonds, about 20 kJ/mol a pair, ten times methane, and stays locked together as ice. Dashed lines are hydrogen bonds; the readout on the right names the force and the phase.',
     tries:[['Hydrogen chloride: dipoles', ()=>showForces('hydrogen chloride')], ['Water: hydrogen bonds', ()=>showForces('water')], ['Methane again: London only', ()=>showForces('methane')]]},
@@ -20276,9 +20276,33 @@ function l3GearStep(dt){
                    : 'The power supply pushes electrons into the cathode, so a positive ion arriving there takes one and becomes a neutral atom: this is how sodium metal is made from molten salt.'});
   }
   /* a field drawn with the field tool pushes every partial charge along it */
+  /* A neutral molecule is turned as a whole: the field's pull on its partial charges is
+     applied as one push and one twist on the rigid molecule, so it lines up with the field
+     without being bent out of shape (a real laboratory field is far too weak to bend a
+     molecule). Ions, and anything charged, are simply pushed. */
   if(L3.field){
-    for(const a of A){ const q = a.q || 0; if(!q) continue; const m = l3Mass(a);
-      a.vx += q*L3.field.x/m*dt; a.vy += q*L3.field.y/m*dt; a.vz += q*L3.field.z/m*dt; }
+    const F = L3.field;
+    if(L3._fmv !== L3.tv || !L3._fm){ L3._fm = l3Molecules().filter(m=>m.length >= 2 && m.length <= 60 && !m.some(a=>a.ion || l3Metal(a)) && Math.abs(m.reduce((t, a)=>t + (a.q||0), 0)) < 0.02); L3._fmv = L3.tv; L3._fms = new Set(); L3._fm.forEach(m=>m.forEach(a=>L3._fms.add(a.id))); }
+    for(const a of A){ const q = a.q || 0; if(!q || L3._fms.has(a.id)) continue; const m = l3Mass(a);
+      a.vx += q*F.x/m*dt; a.vy += q*F.y/m*dt; a.vz += q*F.z/m*dt; }
+    for(const mol of L3._fm){
+      let M = 0, cx = 0, cy = 0, cz = 0, any = false;
+      for(const a of mol){ const m = l3Mass(a); M += m; cx += m*a.x; cy += m*a.y; cz += m*a.z; if(a.q) any = true; }
+      if(!any) continue; cx /= M; cy /= M; cz /= M;
+      let tx = 0, ty = 0, tz = 0, fx = 0, fy = 0, fz = 0, Ixx = 0, Iyy = 0, Izz = 0, Ixy = 0, Ixz = 0, Iyz = 0;
+      for(const a of mol){ const m = l3Mass(a), q = a.q||0, x = a.x - cx, y = a.y - cy, z = a.z - cz;
+        const gx = q*F.x, gy = q*F.y, gz = q*F.z; fx += gx; fy += gy; fz += gz;
+        tx += y*gz - z*gy; ty += z*gx - x*gz; tz += x*gy - y*gx;
+        Ixx += m*(y*y + z*z); Iyy += m*(x*x + z*z); Izz += m*(x*x + y*y); Ixy -= m*x*y; Ixz -= m*x*z; Iyz -= m*y*z; }
+      /* a little added to the diagonal keeps a linear molecule's tensor invertible */
+      const eps = (Ixx + Iyy + Izz)*0.02 + 1; Ixx += eps; Iyy += eps; Izz += eps;
+      const c00 = Iyy*Izz - Iyz*Iyz, c01 = Ixz*Iyz - Ixy*Izz, c02 = Ixy*Iyz - Ixz*Iyy, det = Ixx*c00 + Ixy*c01 + Ixz*c02; if(Math.abs(det) < 1e-9) continue;
+      const c11 = Ixx*Izz - Ixz*Ixz, c12 = Ixy*Ixz - Ixx*Iyz, c22 = Ixx*Iyy - Ixy*Ixy;
+      const wx = (c00*tx + c01*ty + c02*tz)/det*dt, wy = (c01*tx + c11*ty + c12*tz)/det*dt, wz = (c02*tx + c12*ty + c22*tz)/det*dt;
+      const ax = fx/M*dt, ay = fy/M*dt, az = fz/M*dt;
+      for(const a of mol){ const x = a.x - cx, y = a.y - cy, z = a.z - cz;
+        a.vx += ax + wy*z - wz*y; a.vy += ay + wz*x - wx*z; a.vz += az + wx*y - wy*x; }
+    }
   }
   l3Nuclear(dt);
   if(l3Has('anode') || l3Has('cathode')){
@@ -21075,17 +21099,19 @@ function l3Draw(){
     for(const m of L3._dm){
       let cx = 0, cy = 0, cz = 0; for(const a of m){ cx += a.x; cy += a.y; cz += a.z; } cx /= m.length; cy /= m.length; cz /= m.length;
       let mx = 0, my = 0, mz = 0; for(const a of m){ const q = a.q||0; mx += q*(a.x - cx); my += q*(a.y - cy); mz += q*(a.z - cz); }
-      const h = m[0], d0 = h._dp; if(!d0 || d0.v !== L3.tv) h._dp = {v:L3.tv, x:mx, y:my, z:mz}; else { d0.x += (mx - d0.x)*0.05; d0.y += (my - d0.y)*0.05; d0.z += (mz - d0.z)*0.05; }
-      const dv = h._dp, mu = Math.hypot(dv.x, dv.y, dv.z)/100*4.8;
+      const h = m[0], d0 = h._dp; if(!d0 || d0.v !== L3.tv) h._dp = {v:L3.tv, x:mx, y:my, z:mz, n:0}; else { const kk = d0.n < 40 ? 0.12 : 0.025; d0.x += (mx - d0.x)*kk; d0.y += (my - d0.y)*kk; d0.z += (mz - d0.z)*kk; d0.n++; }
+      const dv = h._dp, mu = Math.hypot(dv.x, dv.y, dv.z)/100*4.8; if(dv.n < 25) continue;
       const pc = l3Project({x:cx, y:cy, z:cz}, W3, H3); if((L3.dist + pc.z)/L3.dist < 0.5) continue;
       if(mu < 0.3){ if(L3._dm.length <= 12) nameTag(g, pc.x, pc.y - 26*pc.s - 14, 'nonpolar · 0 D', 1, placed); continue; }
       /* towards the negative end: against the physicist's vector */
       const len = Math.min(300, 70 + mu*70), k = len/2/(Math.hypot(dv.x, dv.y, dv.z)||1);
       const t0 = l3Project({x:cx + dv.x*k, y:cy + dv.y*k, z:cz + dv.z*k}, W3, H3), t1 = l3Project({x:cx - dv.x*k, y:cy - dv.y*k, z:cz - dv.z*k}, W3, H3);
-      const ax = t1.x - t0.x, ay = t1.y - t0.y, al = Math.hypot(ax, ay); if(al < 6){ nameTag(g, pc.x, pc.y - 20, mu.toFixed(2)+' D', 1, placed); continue; }
-      const ux = ax/al, uy = ay/al, lw = Math.max(2, 4.5*pc.s), hd = lw*3.2;
+      const ax = t1.x - t0.x, ay = t1.y - t0.y, al = Math.hypot(ax, ay); if(al < 6){ nameTag(g, pc.x, pc.y - 20, mu.toFixed(1)+' D', 1, placed); continue; }
+      const ux = ax/al, uy = ay/al, lw = Math.max(2.6, 4.5*pc.s), hd = lw*3.2;
+      /* never too small to see: zoomed far out, the arrow keeps a readable length */
+      if(al < 44){ const hl = 22; t0.x = pc.x - ux*hl; t0.y = pc.y - uy*hl; t1.x = pc.x + ux*hl; t1.y = pc.y + uy*hl; }
       g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
-      [['rgba(255,255,255,.9)', lw + 3], ['#7A48B8', lw]].forEach(([col, w])=>{
+      [['rgba(255,255,255,.92)', lw + 3.5], ['#1B1D22', lw]].forEach(([col, w])=>{
         g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
         g.beginPath(); g.moveTo(t0.x, t0.y); g.lineTo(t1.x - ux*hd*0.8, t1.y - uy*hd*0.8); g.stroke();
         /* the crossed tail: a plus sign at the positive end */
@@ -21093,7 +21119,7 @@ function l3Draw(){
         const e = w - lw; g.beginPath(); g.moveTo(t1.x + ux*e, t1.y + uy*e); g.lineTo(t1.x - ux*hd - uy*(hd*0.62 + e/2), t1.y - uy*hd + ux*(hd*0.62 + e/2)); g.lineTo(t1.x - ux*hd + uy*(hd*0.62 + e/2), t1.y - uy*hd - ux*(hd*0.62 + e/2)); g.closePath(); g.fill();
       });
       g.restore();
-      nameTag(g, t1.x + ux*14, t1.y + uy*14 + 4, mu.toFixed(2)+' D', 1, placed);
+      nameTag(g, t1.x + ux*14, t1.y + uy*14 + 4, mu.toFixed(1)+' D', 1, placed);
     }
   }
   if(L3.hover && L3.atoms.includes(L3.hover)){ const pp = l3Project(L3.hover, W3, H3), rr = Math.max(9, l3R(L3.hover, pp.s)) + 4;
@@ -21790,7 +21816,11 @@ function l3ToolClick(hit, sx, sy){
 try{ L3.speed = +localStorage.getItem('bondingbench.3dspeed') || 1; }catch(e){ L3.speed = 1; }
 L3.speed = clamp(L3.speed, 0.1, 3);
 const l3SpeedText = () => (L3.speed < 1 ? L3.speed.toFixed(2).replace(/0$/, '') : L3.speed.toFixed(1))+'\u00d7';
+function l3ShowSync(){
+  try{ document.querySelectorAll('#left3d [data-l3show]').forEach(b=>{ const it = L3_SHOWS.find(x=>x[0] === b.dataset.l3show); if(!it) return; const on = !!it[3](); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }); }catch(e){}
+}
 function l3Build(){
+  l3ShowSync();
   const bar = el('l3bar');
   /* the elements, molecules and equipment live in the left panel; the bar keeps the view controls */
   /* one row: the display settings and the odd jobs each fold into a menu */
@@ -22485,8 +22515,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 148;
+const VERSION = 149;
 const CHANGELOG = [
+  [149, 'Polish. An electric field now turns each neutral molecule as a whole instead of tugging its atoms separately, so molecules line up without being bent: in a strong field carbon dioxide used to bow and read as polar, and water was squeezed to a dipole of 2.6 D; now they read 0 and 1.9. Dipole arrows are dark with a white edge so they stand apart from field lines, keep a readable size when zoomed out, wait until a new molecule has settled, and are averaged for longer so the number holds steady. The Polar or not? demonstration now shows the arrows. The switches in the left panel follow along when a demonstration or the menu turns a label on, and every demonstration starts with a clean set of labels. The bench no longer flashes the flat view for an instant as it opens.'],
   [148, 'Easier to find things. A new How do I\u2026? button at the top opens a searchable list of everything the bench can do: type dipole, heat or measure an angle, pick the row, and the bench does it and flashes the control so you know where it lives next time. The 3D left panel has a new section, Show on the molecules, with a labelled switch for dipole arrows, partial charges, shapes and angles, lone pairs, hydrogen bonds and names; these were tucked away in a menu before. That menu is now called View & labels. The guided tour has two more stops for these.'],
   [147, 'Three additions to the 3D bench. Dipole arrows (in the Display menu): every molecule gets an arrow from its positive end to its negative end, with its dipole moment in debye, and molecules whose pulls cancel are marked nonpolar. Bond cards: rest the pointer on a bond to see what kind it is, how long it is now and at rest, how much energy it takes to break, and how polar it is from the electronegativity difference. Present full screen (in the \u22ef menu): the panels and the top bar step aside and the bench fills the screen, for a projector.'],
   [146, 'Shared charges are easier to read: the \u00bd\u2212 and \u2154\u2212 on resonance atoms now sit in a larger pill-shaped badge with the fraction written out in full.'],
@@ -26775,6 +26806,7 @@ function start(data){
   el('scenes2d').onclick = ev=>{ const b = ev.target.closest('[data-scene]'); if(b) scene2D(b.dataset.scene); };
   el('build2dIn').onkeydown = ev=>{ ev.stopPropagation(); if(ev.key === 'Enter') buildCompound2D(el('build2dIn').value); };
   el('mode3d').onclick = ()=>{ if(!L3.on) set3D(true); };
+  setTimeout(()=>{ try{ el('mode2d').classList.toggle('on', !L3.on); el('mode3d').classList.toggle('on', L3.on); }catch(e){} }, 40);
   /* the 3D bench is the way in; the flat bench opens only where it was last left, or for a shared flat bench */
   try{ const md = localStorage.getItem('bondingbench.mode'); if(md === '3d' || (!md && !/b=/.test(location.hash||'') && !localStorage.getItem('bondingbench.rescue'))) setTimeout(()=>{ if(!CRS.on && !LEARN.on && !ANA.on) set3D(true); }, 0); }catch(e){}
   cam.x = (WORLD.w - W)/2;
