@@ -860,6 +860,9 @@ body.analysing #demoCard{right:auto;left:18px}
 }
 @media (max-width:760px){
   .stats{display:none}
+  /* on a phone the bench comes first: the molecules, then the controls under them */
+  .workspace > .stage{order:-1;height:min(60vh,540px)}
+  .panel.left{border-top:1px solid var(--line)}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
@@ -950,6 +953,7 @@ body.analysing #demoCard{right:auto;left:18px}
 
 /* a tidier 3D bench: one bar, folding menus, folding sections */
 .l3-bar{flex-wrap:nowrap;left:64px;gap:5px}
+@media (max-width:1000px){.l3-bar{flex-wrap:wrap;row-gap:5px}}
 .l3-bar > button,.l3-bar .l3-dd > button{white-space:nowrap}
 .l3-dd{position:relative;display:inline-flex}
 .l3-bar .l3-dd > button.open{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -1399,7 +1403,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     </div>
     <span class="chip" id="benchTemp">298 K</span>
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
-    <button class="ghost-btn help-btn" id="helpBtn" type="button" title="Find any feature: type what you want to do">How do I&hellip;?</button>
+    <button class="ghost-btn help-btn" id="helpBtn" type="button" title="Find any feature: type what you want to do (press /)">How do I&hellip;?</button>
     <button class="ghost-btn show-btn" id="showBtn" type="button" title="One-click demonstrations of everything the bench can do">Showcase</button>
     <button class="ghost-btn course-btn" id="courseBtn" type="button" title="A whole chemistry course taught on the bench: lessons, guided bench time and free bench time">Course</button>
     <button class="ghost-btn ana-btn" id="anaBtn" type="button" title="Look at one to four compounds in depth: structure, bonds, shape, electrons, polarity, acids and bases, spectra, and how they react together">Analyse</button>
@@ -12664,6 +12668,8 @@ function finderGo(i){ const r = FIND.rows[i]; if(!r) return; closeFinder(); try{
 function finderInit(){
   const f = el('finder'); if(!f) return;
   el('helpBtn').onclick = openFinder; el('closeFinder').onclick = closeFinder;
+  /* the slash key opens it from anywhere, as long as nothing is being typed */
+  document.addEventListener('keydown', ev=>{ if(ev.key === '/' && !ev.metaKey && !ev.ctrlKey && !ev.altKey && el('finder').hidden && !/INPUT|TEXTAREA|SELECT/.test((ev.target||{}).tagName||'') && !(ev.target||{}).isContentEditable){ ev.preventDefault(); openFinder(); } });
   el('finderQ').oninput = ()=>{ FIND.cur = 0; finderRender(); };
   f.addEventListener('click', ev=>{ const b = ev.target.closest('[data-fd]'); if(b){ finderGo(+b.dataset.fd); return; } if(ev.target === f) closeFinder(); });
   f.addEventListener('keydown', ev=>{ ev.stopPropagation();
@@ -22515,8 +22521,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 149;
+const VERSION = 150;
 const CHANGELOG = [
+  [150, 'More polish, mostly for phones and small windows. On a phone the bench now comes first with the controls under it; before, the molecules sat two screens down, below the whole left panel. The row of controls above the 3D bench wraps on a narrow screen, so Speed and the \u22ef menu are no longer cut off. Pressing / opens How do I\u2026? from anywhere.'],
   [149, 'Polish. An electric field now turns each neutral molecule as a whole instead of tugging its atoms separately, so molecules line up without being bent: in a strong field carbon dioxide used to bow and read as polar, and water was squeezed to a dipole of 2.6 D; now they read 0 and 1.9. Dipole arrows are dark with a white edge so they stand apart from field lines, keep a readable size when zoomed out, wait until a new molecule has settled, and are averaged for longer so the number holds steady. The Polar or not? demonstration now shows the arrows. The switches in the left panel follow along when a demonstration or the menu turns a label on, and every demonstration starts with a clean set of labels. The bench no longer flashes the flat view for an instant as it opens.'],
   [148, 'Easier to find things. A new How do I\u2026? button at the top opens a searchable list of everything the bench can do: type dipole, heat or measure an angle, pick the row, and the bench does it and flashes the control so you know where it lives next time. The 3D left panel has a new section, Show on the molecules, with a labelled switch for dipole arrows, partial charges, shapes and angles, lone pairs, hydrogen bonds and names; these were tucked away in a menu before. That menu is now called View & labels. The guided tour has two more stops for these.'],
   [147, 'Three additions to the 3D bench. Dipole arrows (in the Display menu): every molecule gets an arrow from its positive end to its negative end, with its dipole moment in debye, and molecules whose pulls cancel are marked nonpolar. Bond cards: rest the pointer on a bond to see what kind it is, how long it is now and at rest, how much energy it takes to break, and how polar it is from the electronegativity difference. Present full screen (in the \u22ef menu): the panels and the top bar step aside and the bench fills the screen, for a projector.'],
