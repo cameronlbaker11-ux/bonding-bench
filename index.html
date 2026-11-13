@@ -606,6 +606,13 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .wel-tile b{font-size:14.5px;font-weight:600}
 .wel-tile span{font-size:12.5px;color:var(--muted);line-height:1.4}
 .wel-foot{margin:14px 0 0;font-size:12px;color:var(--muted)}
+/* presenting: the bench alone, for a projector */
+body.presenting .bar{display:none}
+body.presenting .workspace{grid-template-columns:minmax(0,1fr)}
+body.presenting .workspace > .panel,body.presenting .workspace > .gutter{display:none}
+body.presenting .workspace > .stage{grid-column:1 / -1;grid-row:1;min-height:100vh}
+#presentExit{position:fixed;top:12px;right:14px;z-index:60;background:var(--ink);color:#fff;border:0;border-radius:9px;padding:8px 13px;font:600 12.5px var(--font-ui);cursor:pointer;opacity:.55;transition:opacity .15s}
+#presentExit:hover{opacity:1}
 /* the first-visit walkthrough */
 #walk{position:fixed;inset:0;z-index:88}
 #walk .wk-hole{position:fixed;border-radius:12px;box-shadow:0 0 0 9999px rgba(20,22,26,.52),0 0 0 2px var(--accent);transition:left .32s var(--ease),top .32s var(--ease),width .32s var(--ease),height .32s var(--ease);pointer-events:none}
@@ -6179,6 +6186,46 @@ function atomTipInfo(a, bench){
   if(a.A && a.A !== Math.round(e.mass)) rows.push(['Isotope', e.sym+'-'+a.A]);
   return {head:'<i style="background:'+e.col+'">'+e.sym+'</i><span><b>'+e.name+'</b><small>'+(sp && sp.n > 1 ? (sp.name ? capFirst(sp.name)+' · ' : '')+sp.f : 'on its own')+'</small></span>', rows};
 }
+/* the card for a bond on the 3D bench: what kind it is, how long, how strong, how polar */
+function bondTip(b, cx, cy){
+  const t = el('atomTip'), p = l3Find(b.a), q = l3Find(b.b); if(!t || !p || !q) return;
+  const ep = EL[p.e], eq = EL[q.e], len = Math.hypot(p.x-q.x, p.y-q.y, p.z-q.z);
+  let rz = false, r0 = 0; if(b.type === 'covalent'){ try{ r0 = l3BondR0(b, p, q); rz = !!b._rz; }catch(e){} }
+  const key = 'bond'+b.id+'|'+b.order+b.type+(b.arom ? 'a' : '')+(rz ? 'r' : '')+'|'+Math.round(len/2);
+  if(t._key !== key){
+    const dash = b.arom || rz ? '≈' : b.type === 'ionic' ? '··' : b.order === 3 ? '≡' : b.order === 2 ? '=' : '–';
+    const kind = b.type === 'metallic' ? 'Metallic: the electrons are shared by the whole piece of metal'
+      : b.type === 'ionic' ? 'Ionic: opposite charges pulling on each other'
+      : b.type === 'dative' ? 'Coordinate: both electrons came from one atom'
+      : b.arom ? 'Aromatic: one and a half bonds, shared round the ring'
+      : rz ? 'Resonance: between a single and a double bond'
+      : (b.order === 3 ? 'Triple' : b.order === 2 ? 'Double' : 'Single')+' covalent: '+b.order+' shared pair'+(b.order > 1 ? 's' : '');
+    const rows = [['Kind', kind], ['Length', Math.round(len)+' pm now'+(r0 ? ' · '+(Math.round(r0*10)/10)+' pm at rest' : '')]];
+    if(b.energy) rows.push(['Strength', Math.round(b.energy)+' kJ/mol to break']);
+    if(ep.en && eq.en && b.type !== 'metallic'){ const d = Math.abs(ep.en - eq.en), neg = ep.en > eq.en ? ep : eq;
+      rows.push(['Polarity', 'ΔEN '+d.toFixed(2)+': '+(b.type === 'ionic' ? 'electrons handed over to '+neg.sym : d < 0.4 ? 'nonpolar, shared evenly' : 'polar, pulled towards '+neg.sym)]); }
+    t.innerHTML = '<div class="at-head"><b>'+ep.sym+dash+eq.sym+' bond</b></div><dl>'+rows.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('')+'</dl>'; t._key = key;
+  }
+  t.hidden = false;
+  const w = t.offsetWidth || 220, h = t.offsetHeight || 120;
+  t.style.left = Math.round(Math.min(window.innerWidth - w - 8, cx + 16))+'px';
+  t.style.top = Math.round(cy + 18 + h > window.innerHeight - 8 ? cy - h - 12 : cy + 18)+'px';
+}
+/* ---------- presenting ----------
+   For a projector: the side panels and the top bar go, the bench fills the screen. */
+function presentToggle(force){
+  const on = force === undefined ? !document.body.classList.contains('presenting') : !!force;
+  document.body.classList.toggle('presenting', on);
+  let x = el('presentExit');
+  if(on && !x){ x = document.createElement('button'); x.id = 'presentExit'; x.type = 'button'; x.textContent = 'Exit full screen'; x.onclick = ()=>presentToggle(false); document.body.appendChild(x); }
+  if(x) x.hidden = !on;
+  try{ if(on && !document.fullscreenElement && document.documentElement.requestFullscreen){ const pr = document.documentElement.requestFullscreen(); if(pr && pr.catch) pr.catch(()=>{}); }
+       else if(!on && document.fullscreenElement && document.exitFullscreen){ const pr = document.exitFullscreen(); if(pr && pr.catch) pr.catch(()=>{}); } }catch(e){}
+  setTimeout(()=>{ try{ window.dispatchEvent(new Event('resize')); if(L3.on) l3FitView(true); }catch(e){} }, 120);
+  if(on) say('Presenting: the bench fills the screen. Press Esc, or Exit full screen, to bring the panels back.', 'bench');
+}
+document.addEventListener('fullscreenchange', ()=>{ if(!document.fullscreenElement && document.body.classList.contains('presenting')) presentToggle(false); });
+document.addEventListener('keydown', ev=>{ if(ev.key === 'Escape' && document.body.classList.contains('presenting') && !document.fullscreenElement) presentToggle(false); });
 function atomTip(a, cx, cy, bench){
   const t = el('atomTip'); if(!t) return;
   if(!a){ t.hidden = true; t._key = ''; return; }
@@ -20886,6 +20933,36 @@ function l3Draw(){
       nameTag(g, pp.x, pp.y + l3R(a, pp.s) + 15, txt, 1, placed); shown++;
     }
   }
+  /* Dipole arrows: each molecule's net dipole, drawn the chemist's way, a crossed tail at
+     the positive end and the head at the negative end, with its size in debye. The vector
+     is averaged over a second or so, so thermal wobble does not make it flicker. */
+  if(L3.showDip && L3.atoms.length){
+    if(L3._dmv !== L3.tv || !L3._dm){ L3._dm = l3Molecules().filter(m=>m.length >= 2 && m.length <= 80 && !m.some(a=>a.ion || l3Metal(a)) && Math.abs(m.reduce((t, a)=>t + (a.fq||0), 0)) < 0.01).slice(0, 60); L3._dmv = L3.tv; }
+    const placed = [];
+    for(const m of L3._dm){
+      let cx = 0, cy = 0, cz = 0; for(const a of m){ cx += a.x; cy += a.y; cz += a.z; } cx /= m.length; cy /= m.length; cz /= m.length;
+      let mx = 0, my = 0, mz = 0; for(const a of m){ const q = a.q||0; mx += q*(a.x - cx); my += q*(a.y - cy); mz += q*(a.z - cz); }
+      const h = m[0], d0 = h._dp; if(!d0 || d0.v !== L3.tv) h._dp = {v:L3.tv, x:mx, y:my, z:mz}; else { d0.x += (mx - d0.x)*0.05; d0.y += (my - d0.y)*0.05; d0.z += (mz - d0.z)*0.05; }
+      const dv = h._dp, mu = Math.hypot(dv.x, dv.y, dv.z)/100*4.8;
+      const pc = l3Project({x:cx, y:cy, z:cz}, W3, H3); if((L3.dist + pc.z)/L3.dist < 0.5) continue;
+      if(mu < 0.3){ if(L3._dm.length <= 12) nameTag(g, pc.x, pc.y - 26*pc.s - 14, 'nonpolar · 0 D', 1, placed); continue; }
+      /* towards the negative end: against the physicist's vector */
+      const len = Math.min(300, 70 + mu*70), k = len/2/(Math.hypot(dv.x, dv.y, dv.z)||1);
+      const t0 = l3Project({x:cx + dv.x*k, y:cy + dv.y*k, z:cz + dv.z*k}, W3, H3), t1 = l3Project({x:cx - dv.x*k, y:cy - dv.y*k, z:cz - dv.z*k}, W3, H3);
+      const ax = t1.x - t0.x, ay = t1.y - t0.y, al = Math.hypot(ax, ay); if(al < 6){ nameTag(g, pc.x, pc.y - 20, mu.toFixed(2)+' D', 1, placed); continue; }
+      const ux = ax/al, uy = ay/al, lw = Math.max(2, 4.5*pc.s), hd = lw*3.2;
+      g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+      [['rgba(255,255,255,.9)', lw + 3], ['#7A48B8', lw]].forEach(([col, w])=>{
+        g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
+        g.beginPath(); g.moveTo(t0.x, t0.y); g.lineTo(t1.x - ux*hd*0.8, t1.y - uy*hd*0.8); g.stroke();
+        /* the crossed tail: a plus sign at the positive end */
+        const kx = t0.x + ux*hd*0.9, ky = t0.y + uy*hd*0.9; g.beginPath(); g.moveTo(kx - uy*hd*0.7, ky + ux*hd*0.7); g.lineTo(kx + uy*hd*0.7, ky - ux*hd*0.7); g.stroke();
+        const e = w - lw; g.beginPath(); g.moveTo(t1.x + ux*e, t1.y + uy*e); g.lineTo(t1.x - ux*hd - uy*(hd*0.62 + e/2), t1.y - uy*hd + ux*(hd*0.62 + e/2)); g.lineTo(t1.x - ux*hd + uy*(hd*0.62 + e/2), t1.y - uy*hd - ux*(hd*0.62 + e/2)); g.closePath(); g.fill();
+      });
+      g.restore();
+      nameTag(g, t1.x + ux*14, t1.y + uy*14 + 4, mu.toFixed(2)+' D', 1, placed);
+    }
+  }
   if(L3.hover && L3.atoms.includes(L3.hover)){ const pp = l3Project(L3.hover, W3, H3), rr = Math.max(9, l3R(L3.hover, pp.s)) + 4;
     g.save(); g.strokeStyle = 'rgba(47,91,234,.75)'; g.lineWidth = 1.8; g.beginPath(); g.arc(pp.x, pp.y, rr, 0, TAU); g.stroke();
     g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1; g.beginPath(); g.arc(pp.x, pp.y, rr + 1.6, 0, TAU); g.stroke(); g.restore(); }
@@ -21567,13 +21644,14 @@ function l3Build(){
   const dispMenu = L3.menu === 'disp' ? '<div class="l3-pop" data-pop="disp">'+
       '<span class="eyebrow">Style</span><div class="l3-seg">'+Object.keys(L3_VIEWS).map(k=>'<button type="button" data-l3view="'+k+'"'+((L3.view||'ball') === k ? ' class="on"' : '')+'>'+L3_VIEWS[k]+'</button>').join('')+'</div>'+
       '<span class="eyebrow">Show</span>'+
-      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+
+      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+
     '</div>' : '';
   const moreMenu = L3.menu === 'more' ? '<div class="l3-pop right" data-pop="more">'+
       '<button type="button" class="l3-item" data-l3="water">Add 12 waters</button>'+
       '<button type="button" class="l3-item" data-l3="fit">Fit everything in view <kbd>F</kbd></button>'+
       '<button type="button" class="l3-item" data-l3="keys">Keyboard shortcuts <kbd>?</kbd></button>'+
       '<button type="button" class="l3-item" data-l3="snap">Save a snapshot</button>'+
+      '<button type="button" class="l3-item" data-l3="present">Present full screen</button>'+
       '<button type="button" class="l3-item danger" data-l3="clear">Clear the 3D bench</button>'+
     '</div>' : '';
   bar.innerHTML = '<button type="button" class="l3-exit" data-l3="send2d" title="Carry everything here down to the flat bench">Send to 2D</button>'+
@@ -21607,6 +21685,8 @@ function l3Build(){
     else if(b.dataset.l3 === 'names'){ L3.names = !L3.names; l3Build(); }
     else if(b.dataset.l3 === 'molnames'){ SHOW.molnames = !SHOW.molnames; l3Build(); }
     else if(b.dataset.l3 === 'shape'){ L3.showShape = !L3.showShape; l3Build(); }
+    else if(b.dataset.l3 === 'dip'){ L3.showDip = !L3.showDip; l3Build(); if(L3.showDip) say('Each arrow points from the positive end of a molecule to its negative end, with its dipole moment in debye. No arrow means the pulls cancel: nonpolar.', 'bench'); }
+    else if(b.dataset.l3 === 'present'){ L3.menu = null; l3Build(); presentToggle(); }
     else if(b.dataset.l3 === 'fit'){ L3.menu = null; l3Build(); l3FitView(true); }
     else if(b.dataset.l3 === 'keys'){ L3.menu = null; l3Build(); toggleKeys(true); }
     else if(b.dataset.l3 === 'snap'){ L3.menu = null; l3Build();
@@ -21696,6 +21776,8 @@ function l3Build(){
     if(L3.drag || ev.buttons){ if(L3.hover){ L3.hover = null; atomTip(null); } return; }
     const r = cv3.getBoundingClientRect(), hit = pick(ev.clientX-r.left, ev.clientY-r.top), a = hit ? hit.atom : null;
     if(a !== L3.hover){ L3.hover = a; }
+    /* nothing under the pointer but a bond: say what kind of bond it is */
+    if(!a && (L3.tool === 'move' || L3.tool === 'break')){ const bd = l3BondAt(ev.clientX-r.left, ev.clientY-r.top); if(bd){ bondTip(bd, ev.clientX, ev.clientY); return; } }
     atomTip(a, ev.clientX, ev.clientY, '3D');
   });
   cv3.addEventListener('pointerleave', ()=>{ L3.hover = null; atomTip(null); });
@@ -22248,8 +22330,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 146;
+const VERSION = 147;
 const CHANGELOG = [
+  [147, 'Three additions to the 3D bench. Dipole arrows (in the Display menu): every molecule gets an arrow from its positive end to its negative end, with its dipole moment in debye, and molecules whose pulls cancel are marked nonpolar. Bond cards: rest the pointer on a bond to see what kind it is, how long it is now and at rest, how much energy it takes to break, and how polar it is from the electronegativity difference. Present full screen (in the \u22ef menu): the panels and the top bar step aside and the bench fills the screen, for a projector.'],
   [146, 'Shared charges are easier to read: the \u00bd\u2212 and \u2154\u2212 on resonance atoms now sit in a larger pill-shaped badge with the fraction written out in full.'],
   [145, 'Resonance drawn as it really is on the 3D bench. Bonds that resonance makes equal, such as the two in ozone, the three in nitrate and the two C–O bonds of a carboxylate, are now all drawn the same way: one full line and a dashed half, the way benzene’s ring bonds already were, instead of one double and one single. The charge is shared between them too: each end of ozone shows ½− and each oxygen of nitrate ⅔−, rather than a whole charge on one atom.'],
   [144, 'A guided tour for a first visit, and the 3D bench comes first. The tour is ten short stops that point at the real controls: the bench, the elements, building by name, temperature, the ready-made reactions, the tools, the information panel, the Showcase, the Course and the flat bench. It can be skipped for now, or skipped for good; it can be replayed from the welcome card. The bench now opens in 3D, and the 2D bench sits second in the switch at the top for when it is wanted (a shared 2D link, or a bench last left in 2D, still opens flat). The page also has a tab icon and a description for link previews.'],
