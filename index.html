@@ -647,6 +647,13 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 /* the top bar reads as three groups: help, things to learn from, and housekeeping */
 #showBtn,#shareBtn{margin-left:12px;position:relative}
 #showBtn::before,#shareBtn::before{content:'';position:absolute;left:-10px;top:7px;bottom:7px;width:1px;background:var(--line);pointer-events:none}
+/* meter readouts on the 3D equipment cards */
+.l3-read{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-top:8px}
+.l3-read > b{font-family:var(--font-mono);font-size:17px;font-weight:500}
+.l3-read > span{flex-basis:100%;font-size:11px;color:var(--muted);line-height:1.4}
+.l3-read > span.l3-read3{flex:1 1 0;flex-basis:0;display:flex;flex-direction:column;gap:1px;background:var(--sunk);border-radius:8px;padding:6px 8px}
+.l3-read3 i{font-style:normal;font-family:var(--font-mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.l3-read3 b{font-family:var(--font-mono);font-size:14px;font-weight:500;color:var(--ink)}
 /* presenting: the bench alone, for a projector */
 body.presenting .bar{display:none}
 body.presenting .workspace{grid-template-columns:minmax(0,1fr)}
@@ -12677,6 +12684,11 @@ const FINDER = [
     ['Copy a molecule', 'Click any atom to make another of its molecule.', 'copy duplicate clone another more same', 'Tool rail \u2192 Copy', ()=>findTool('copy')],
     ['Pin an atom in place', 'Holds an atom still while everything else moves.', 'pin hold fix anchor still freeze atom', 'Tool rail \u2192 Pin', ()=>findTool('pin')],
     ['Cool one spot', 'Take energy away from the atoms where you click.', 'cool cold chill slow energy remove', 'Tool rail \u2192 Cool', ()=>findTool('cool')],
+    ['Heat from below with a burner', 'A flame under the box: the bottom gets hot, and heat spreads upward.', 'burner bunsen flame heat boil equipment', 'Left panel \u2192 Equipment \u2192 Burner', ()=>{ if(find3D()){ l3AddGear('burner'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
+    ['Condense vapour with a condenser', 'A cold plate across the top turns vapour back to liquid.', 'condenser cool condense distil distillation reflux equipment', 'Left panel \u2192 Equipment \u2192 Condenser', ()=>{ if(find3D()){ l3AddGear('condenser'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
+    ['Read the temperature', 'A thermometer for the top, middle and bottom of the box.', 'thermometer temperature measure read kelvin equipment', 'Left panel \u2192 Equipment \u2192 Thermometer', ()=>{ if(find3D()){ l3AddGear('thermo'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
+    ['Weigh what is on the bench', 'A balance: the total mass, which no reaction changes.', 'balance mass weigh weight conservation scale equipment', 'Left panel \u2192 Equipment \u2192 Balance', ()=>{ if(find3D()){ l3AddGear('balance'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
+    ['Measure pH', 'A pH meter that counts hydronium and hydroxide in the water.', 'ph meter acid base acidic basic alkaline measure equipment', 'Left panel \u2192 Equipment \u2192 pH meter', ()=>{ if(find3D()){ l3AddGear('phmeter'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
     ['Fire a neutron', 'Nuclear reactions: hit a nucleus with a neutron.', 'neutron nuclear fission isotope radioactive', 'Tool rail → neutron', ()=>findTool('neutron')]
   ]],
   ['Measure and look', [
@@ -16882,6 +16894,9 @@ const L3_BL = {
    electronegativity difference, used before, gave dimethyl ether twice its real
    dipole and hydrogen cyanide half. Bonds not listed use that rule scaled: less for
    a single bond between two heavy atoms, whose charge is spread over a longer bond. */
+/* how much of a + and a \u2212 formal charge on two like atoms cancel. Not all of it: ozone's
+   middle oxygen really is positive and its ends negative (0.53 D) */
+const L3_LIKE = 0.84;
 const L3_BQ = {
   1:{'H-O':0.33,'H-N':0.27,'F-H':0.41,'Cl-H':0.18,'Br-H':0.12,'H-I':0.05,'H-S':0.11,'C-H':0.08,'C-O':0.15,'C-N':0.10,'C-F':0.21,'C-Cl':0.15,'Br-C':0.13,'C-I':0.10,'C-S':0.05,
     'N-O':0.07,'B-F':0.30,'O-Si':0.30,'F-S':0.20,'Cl-P':0.12,'F-P':0.25,'H-Si':0.05,'H-P':0.02,'O-S':0.20,'O-P':0.25,'F-N':0.08,'F-Xe':0.25,'Cl-Si':0.2,'F-Si':0.3},
@@ -16904,12 +16919,13 @@ const l3BLKey = (a, b) => { const x = EL[a.e].sym, y = EL[b.e].sym; return x < y
    ozone's ends are each half negative, nitrate's oxygens two-thirds */
 function l3ShareQ(){
   if(L3._sqv === L3.tv && L3._sq) return L3._sq;
-  const m = new Map();
+  const m = new Map(); m.groups = [];
   for(const a of L3.atoms){
     const T = [];
     for(const b of l3Bonds(a)){ if(b.type !== 'covalent' || b.arom || b.order > 2) continue; const o = l3Find(l3Other(b, a.id)); if(!o) continue;
       try{ l3BondR0(b, a, o); }catch(e){} if(b._rz && l3Bonds(o).length === 1) T.push(o); }
     if(T.length < 2) continue;
+    m.groups.push(T);
     const tot = T.reduce((t, o)=>t + (o.fq||0), 0);
     if(tot && T.some(o=>(o.fq||0) !== tot/T.length)) T.forEach(o=>m.set(o.id, tot/T.length));
   }
@@ -18113,11 +18129,14 @@ function l3Step(dt){
        O=O+-O- in ozone, a nitro group) are bookkeeping, not real charges: the
        shared electrons sit between them. They cancel, wholly between like atoms
        and mostly between unlike ones, which is why CO's dipole is 0.1 D, not 4. */
-    if((p.fq||0)*(q.fq||0) < 0 && p._fl > 0 && q._fl > 0){ const amt = Math.min(p._fl, q._fl)*(p.e === q.e ? 1 : 0.7), sg = p.fq > 0 ? 1 : -1;
+    if((p.fq||0)*(q.fq||0) < 0 && p._fl > 0 && q._fl > 0){ const amt = Math.min(p._fl, q._fl)*(p.e === q.e ? L3_LIKE : 0.7), sg = p.fq > 0 ? 1 : -1;
       p.q -= sg*amt; q.q += sg*amt; p._fl -= amt; q._fl -= amt; }
     const dq = l3BondDq(b, p, q);
     p.q += dq; q.q -= dq;
   }
+  /* atoms that resonance makes equal carry equal charge: ozone's two ends, a nitro
+     group's two oxygens, nitrate's three. Without this one end held the whole minus */
+  try{ for(const T of l3ShareQ().groups){ const m = T.reduce((t, a)=>t + a.q, 0)/T.length; T.forEach(a=>{ a.q = m; }); } }catch(e){}
   L3.nb = nb; L3.hb = [];
   l3MarkSites();
   /* the waters on the bench, for screening ions */
@@ -18528,16 +18547,20 @@ function l3Step(dt){
     }
     /* move, with a Langevin bath at the bench's temperature, inside the box */
     const B = L3.box;
+    const zHot = l3Has('burner') ? 22000*L3.burnK/298 : 0, zCold = l3Has('condenser') ? 22000*L3.condK/298 : 0;
     for(const a of A){
       if(L3.drag && L3.drag.atom === a) continue;
       /* a freshly built molecule is held tight to the bath for a moment while
          it folds, so the strain of its rough starting shape is not heat */
       /* while mixing, the bath flows (see l3MixFlow) and grips a little harder so the molecules follow it */
       const fl = mixFlow && mixFlow.get(a.id), gm = (a.cool > 0 ? gamma*10 : fl ? Math.max(gamma, 3) : gamma)*(mts ? 1.6 : 1);
-      const m = l3Mass(a), sig = Math.sqrt(2*gm*kT/(m*h)), ux = fl ? fl.x : 0, uy = fl ? fl.y : 0, uz = fl ? fl.z : 0;
-      a.vx += (a.fx/m - gm*(a.vx - ux) + sig*gaussQ())*h;
-      a.vy += (a.fy/m + gy - gm*(a.vy - uy) + sig*gaussQ())*h;          /* gravity pulls toward the floor */
-      a.vz += (a.fz/m - gm*(a.vz - uz) + sig*gaussQ())*h;
+      /* by the burner or the condenser the bath is at that temperature instead, and grips harder */
+      let kTa = kT, gma = gm;
+      if(zHot && a.y > B - 170){ kTa = zHot; gma = Math.max(gm, 5); } else if(zCold && a.y < -B + 170){ kTa = zCold; gma = Math.max(gm, 5); }
+      const m = l3Mass(a), sig = Math.sqrt(2*gma*kTa/(m*h)), ux = fl ? fl.x : 0, uy = fl ? fl.y : 0, uz = fl ? fl.z : 0;
+      a.vx += (a.fx/m - gma*(a.vx - ux) + sig*gaussQ())*h;
+      a.vy += (a.fy/m + gy - gma*(a.vy - uy) + sig*gaussQ())*h;          /* gravity pulls toward the floor */
+      a.vz += (a.fz/m - gma*(a.vz - uz) + sig*gaussQ())*h;
       const v = Math.hypot(a.vx, a.vy, a.vz);
       if(v > 3000){ a.vx *= 3000/v; a.vy *= 3000/v; a.vz *= 3000/v; }
       a.x += a.vx*h; a.y += a.vy*h; a.z += a.vz*h;
@@ -20527,9 +20550,54 @@ function l3Nuclear(dt){
     }
   }
 }
+/* ---------- more equipment for the 3D bench ----------
+   A burner under the floor and a condenser across the top set up a hot bottom and a
+   cold top, which is all a distillation is. The three meters only read: temperature at
+   three heights, the mass of everything on the bench, and a rough pH. */
+const L3_GEAR = ['burner','condenser','thermo','balance','phmeter','anode','cathode','lamp'];
+const L3_GEAR_NOTE = {burner:'Heats whatever is near the floor of the box', condenser:'Chills whatever reaches the top of the box', thermo:'Reads the temperature at the top, middle and bottom',
+  balance:'Weighs everything on the bench', phmeter:'Estimates pH from the hydronium and hydroxide ions in the water', anode:'The positive plate, on the left wall', cathode:'The negative plate, on the right wall', lamp:'Shines light of a wavelength you choose'};
+const L3_GEAR_SAY = {
+  burner:'Burner lit under the box: atoms near the floor are heated to the flame temperature. Add a condenser to cool the top.',
+  condenser:'Condenser across the top of the box: whatever reaches it is chilled, so vapour turns back to liquid and falls.',
+  thermo:'Thermometer in: it reads the top, middle and bottom of the box, so you can see heat spread.',
+  balance:'Balance in: it weighs everything on the bench. Watch it through a reaction: the mass does not change.',
+  phmeter:'pH meter in: it counts hydronium and hydroxide ions among the water molecules. It needs water on the bench.'};
+const l3GearName = k => k === 'phmeter' ? 'pH meter' : (GEAR[k] ? GEAR[k].name : k);
+L3.burnK = 1200; L3.condK = 273;
+function l3GearRead(kind){
+  const A = L3.atoms;
+  if(kind === 'balance'){
+    if(!A.length) return '<b>0 u</b><span>nothing on the bench</span>';
+    const m = A.reduce((t, a)=>t + l3Mass(a), 0);
+    return '<b>'+(m >= 1000 ? Math.round(m).toLocaleString() : m.toFixed(1))+' u</b><span>'+A.length+' atom'+(A.length === 1 ? '' : 's')+' · the same before and after any reaction</span>';
+  }
+  if(kind === 'thermo'){
+    if(!A.length) return '<b>–</b><span>nothing to measure</span>';
+    const B = L3.box, z = [[0,0],[0,0],[0,0]];
+    for(const a of A){ const i = a.y < -B/3 ? 0 : a.y > B/3 ? 2 : 1; z[i][0] += l3Mass(a)*(a.vx*a.vx + a.vy*a.vy + a.vz*a.vz)/3/22000*298; z[i][1]++; }
+    /* averaged over a few readings: one atom's speed jumps about */
+    const R = L3._thr || (L3._thr = [null, null, null]);
+    const row = z.map((v, i)=>{ if(!v[1]){ R[i] = null; return '–'; } const t = v[0]/v[1]; R[i] = R[i] == null ? t : R[i] + (t - R[i])*0.3; return Math.round(R[i])+' K'; });
+    return '<span class="l3-read3"><i>Top</i><b>'+row[0]+'</b></span><span class="l3-read3"><i>Middle</i><b>'+row[1]+'</b></span><span class="l3-read3"><i>Bottom</i><b>'+row[2]+'</b></span>';
+  }
+  if(kind === 'phmeter'){
+    let w = 0, h3 = 0, oh = 0;
+    for(const a of A){ if(EL[a.e].sym !== 'O') continue; const bs = l3Bonds(a); if(!bs.length || !bs.every(b=>{ const o = l3Find(l3Other(b, a.id)); return o && EL[o.e].sym === 'H' && b.type !== 'ionic'; })) continue;
+      const q = (a.fq||0) + (a.ion||0); if(bs.length === 3 && q > 0) h3++; else if(bs.length === 1 && q < 0) oh++; else if(bs.length === 2) w++; }
+    const n = w + h3 + oh; if(n < 4) return '<b>–</b><span>needs water on the bench to read</span>';
+    const net = h3 - oh;
+    if(!net) return '<b>pH 7</b><span>neutral: '+(h3 ? h3+' H₃O⁺ and '+oh+' OH⁻ balance' : 'no H₃O⁺ or OH⁻')+' among '+n+' waters</span>';
+    const c = Math.abs(net)/n*55.5, p = clamp(-Math.log10(c), -1, 7), pH = net > 0 ? p : 14 - p;
+    return '<b style="color:'+(net > 0 ? '#C0503A' : '#2F5BEA')+'">pH '+pH.toFixed(1)+'</b><span>'+(net > 0 ? 'acidic: '+net+' H₃O⁺' : 'basic: '+(-net)+' OH⁻')+' among '+n+' waters. A rough reading: a sample this small cannot show a pH between about 2 and 12.</span>';
+  }
+  return '';
+}
+setInterval(()=>{ try{ if(!L3.on) return; document.querySelectorAll('#left3d [data-l3read]').forEach(n=>{ const h = l3GearRead(n.dataset.l3read); if(n._h !== h){ n.innerHTML = h; n._h = h; } }); }catch(e){} }, 600);
 function l3AddGear(kind){
   if(L3.gear.some(g=>g.kind===kind)) return;
   L3.gear.push({kind, on:true});
+  if(L3_GEAR_SAY[kind]){ say(L3_GEAR_SAY[kind], 'bench'); renderLeft3D(); L3.dirty = true; return; }
   say(kind==='lamp' ? 'Lamp over the box at '+L3.nm+' nm \u2014 '+Math.round(photonEnergy(L3.nm))+' kJ/mol a photon. Any bond weaker than that can be broken by one.'
     : (kind==='anode' ? 'Anode (+) on the left wall.' : 'Cathode (\u2212) on the right wall.')+' Partial charges feel the field between them.','bench');
   renderLeft3D(); L3.dirty = true;
@@ -21014,6 +21082,16 @@ function l3Draw(){
     const mid = P3({x, y:0, z:0});
     g.fillStyle = 'rgba('+rgb+',.9)'; g.font = '600 '+Math.round(22*mid.s*2.2)+'px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(sign, mid.x, mid.y);
+  });
+  [['burner', B, '232,120,40', 'burner'], ['condenser', -B, '70,140,225', 'condenser']].forEach(([k, yy, rgb, word])=>{
+    const g0 = L3.gear.find(gg=>gg.kind===k); if(!g0) return;
+    const pts = [[-B,yy,-B],[B,yy,-B],[B,yy,B],[-B,yy,B]].map(([px,py,pz])=>P3({x:px,y:py,z:pz}));
+    g.save(); g.fillStyle = 'rgba('+rgb+','+(g0.on ? 0.2 : 0.05)+')'; g.strokeStyle = 'rgba('+rgb+','+(g0.on ? 0.8 : 0.3)+')'; g.lineWidth = 1.8;
+    g.beginPath(); pts.forEach((pp,i)=>i?g.lineTo(pp.x,pp.y):g.moveTo(pp.x,pp.y)); g.closePath(); g.fill(); g.stroke();
+    const mid = P3({x:0, y:yy, z:0});
+    g.fillStyle = 'rgba('+rgb+','+(g0.on ? 0.95 : 0.45)+')'; g.font = '600 '+Math.max(10, Math.round(11*mid.s*2.2))+'px Archivo, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(word+(g0.on ? ' · '+(k === 'burner' ? L3.burnK : L3.condK)+' K' : ' · off'), mid.x, mid.y);
+    g.restore();
   });
   const lampG = L3.gear.find(gg=>gg.kind==='lamp');
   if(lampG){
@@ -21644,7 +21722,7 @@ function l3ShowSet(k, v){
   dirty = true;
 }
 const L3_SEC_HINT = {show:'arrows, charges, shapes and labels', rx:'ready-made reactions to watch', air:'a sample of real air', mol:'common molecules and the library',
-  vault:'compounds you have kept', crys:'salt crystals and metal lattices', box:'box size, piston and pressure', gear:'lab equipment for the bench', nuc:'isotopes, decay and fission'};
+  vault:'compounds you have kept', crys:'salt crystals and metal lattices', box:'box size, piston and pressure', gear:'burner, condenser, meters, electrodes, lamp', nuc:'isotopes, decay and fission'};
 try{ const tm = localStorage.getItem('bondingbench.l3table'); if(tm === 'common' || tm === 'all') L3.tmode = tm; }catch(e){}
 /* dragging the panel narrower or wider swaps the table over, unless a view has been chosen */
 function l3TableAuto(){ try{ if(!L3.on || L3.tmode) return; const h = el('left3d'), w = h && h.clientWidth; if(w && (w < 300) !== !!L3._tnarrow) renderLeft3D(); }catch(e){} }
@@ -21652,11 +21730,19 @@ function renderLeft3D(){
   const host = el('left3d'); if(!host) return;
   /* every element, laid out as the periodic table */
   const table = EL.map(e=>'<button type="button" data-l3add="'+e.sym+'" style="color:'+e.col+';grid-column:'+e.gcol+';grid-row:'+e.row+';--cc:'+(CAT_COL[e.cat]||'#9AA0A8')+'" aria-label="'+e.name+'">'+e.sym+'</button>').join('');
-  const gearRow = ['anode','cathode','lamp'].map(k=>'<button type="button" data-l3gear="'+k+'"'+(L3.gear.some(g=>g.kind===k)?' disabled':'')+'>'+
-    (gearIcon(k) ? '<img src="'+gearIcon(k)+'" alt="">' : '')+GEAR[k].name+'</button>').join('');
+  const gearRow = L3_GEAR.map(k=>'<button type="button" data-l3gear="'+k+'"'+(L3.gear.some(g=>g.kind===k)?' disabled':'')+' title="'+L3_GEAR_NOTE[k]+'">'+
+    (GEAR[k] && gearIcon(k) ? '<img src="'+gearIcon(k)+'" alt="">' : '')+l3GearName(k)+'</button>').join('');
   const cards = L3.gear.map(g=>{
-    const name = GEAR[g.kind].name;
-    const ctl = g.kind==='lamp'
+    const name = l3GearName(g.kind);
+    const ctl = g.kind==='burner'
+      ? '<div class="slider"><label>Flame</label><span class="val">'+L3.burnK+' K</span><input type="range" data-l3v="burnK" min="350" max="2500" step="50" value="'+L3.burnK+'">'+
+        '<span class="note">heats whatever is near the floor of the box</span></div>'
+      : g.kind==='condenser'
+      ? '<div class="slider"><label>Coolant</label><span class="val">'+L3.condK+' K</span><input type="range" data-l3v="condK" min="80" max="290" step="5" value="'+L3.condK+'">'+
+        '<span class="note">chills whatever reaches the top of the box</span></div>'
+      : g.kind==='thermo' || g.kind==='balance' || g.kind==='phmeter'
+      ? '<div class="l3-read" data-l3read="'+g.kind+'">'+l3GearRead(g.kind)+'</div>'
+      : g.kind==='lamp'
       ? '<div class="slider"><label>Wavelength</label><span class="val">'+L3.nm+' nm</span><input type="range" data-l3v="nm" min="100" max="760" step="5" value="'+L3.nm+'">'+
         '<span class="note">'+Math.round(photonEnergy(L3.nm))+' kJ/mol a photon \u2014 breaks any bond weaker than that</span></div>'
       : '<div class="slider"><label>Voltage</label><span class="val">'+L3.volts+' V</span><input type="range" data-l3v="volts" min="0" max="200" step="5" value="'+L3.volts+'">'+
@@ -21772,7 +21858,7 @@ function renderLeft3D(){
       L3[inp.dataset.l3v] = +inp.value;
       inp.style.setProperty('--pct', ((inp.value-inp.min)/(inp.max-inp.min)*100)+'%');
       const card = inp.closest('.slider');
-      card.querySelector('.val').textContent = inp.value+(inp.dataset.l3v==='nm'?' nm':' V');
+      card.querySelector('.val').textContent = inp.value+(inp.dataset.l3v==='nm'?' nm':/K$/.test(inp.dataset.l3v)?' K':' V');
       if(inp.dataset.l3v==='nm') card.querySelector('.note').textContent = Math.round(photonEnergy(+inp.value))+' kJ/mol a photon \u2014 breaks any bond weaker than that';
     };
     inp.onchange = ()=>renderLeft3D();
@@ -22663,8 +22749,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 157;
+const VERSION = 158;
 const CHANGELOG = [
+  [158, 'More equipment on the 3D bench, under Equipment in the left panel. A burner heats whatever is near the floor of the box to a flame temperature you set, and a condenser chills whatever reaches the top, so together they give a hot bottom and a cold top: liquid boils off below and condenses above. A thermometer reads the top, middle and bottom of the box. A balance weighs everything on the bench, to show that mass is the same before and after a reaction. A pH meter counts the hydronium and hydroxide ions in the water for a rough pH. Ozone is polar now, as it really is (0.53 D): its middle oxygen carries a small positive charge and its two ends share the negative one, where before every atom read zero. Atoms that resonance makes equal now carry equal charges, so a nitro group\u2019s two oxygens and nitrate\u2019s three match, and nitrous oxide\u2019s dipole came down from 0.8 D to 0.1 D (measured 0.16).'],
   [157, 'Six more tools on the 3D bench. Add H fills an atom\u2019s empty bonds with hydrogens. Add e\u207b and Take e\u207b make ions by clicking an atom. Copy makes another of whatever molecule you click. Pin holds an atom still while everything else moves (drag it to move the pin, click again to free it). Cool takes energy away where you click, the opposite of Spark, which is now labelled Heat. The tool rail is two columns wide to fit them.'],
   [156, 'A periodic table that works in a narrow panel. When the left panel is squeezed, the 3D bench now shows the common elements (the main groups and sixteen everyday metals) in large, readable buttons instead of all 118 in cells too small to read; All 118 is one click away, and the choice is remembered. In the full table the symbols now scale with the panel instead of overflowing their cells, and a small cell grows under the pointer so the one about to be clicked can be read.'],
   [155, 'The Study tab, tidied. Each of its pages (Atom, Light, Lab, Rates, Nuclear, Physics) now says in a line what it is for. The Atom page is no longer a stack of empty cards when nothing is selected: it shows the first atom on the bench and says which, and clicking any atom switches to that one. Empty charts say why they are empty in readable type. The catalyst patch tool is gone from the tool rails on both benches; the course lesson on catalysts still has its own.'],
