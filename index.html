@@ -12471,7 +12471,8 @@ function showFresh3D(K){
   if(ANA.on) anaExit(); if(LEARN.on) learnMode(false); if(CRS.on) courseExit();
   if(!L3.on) set3D(true);
   stepMode(false, true);
-  L3.mix = false; L3.field = null; L3.gear = []; L3.photons && (L3.photons.length = 0); L3.showShape = false; L3.showQ = false; L3.showDip = false;
+  L3.mix = false; L3.field = null; L3.gear = []; L3.photons && (L3.photons.length = 0); L3.showShape = false; L3.showQ = false; L3.showDip = false; L3.showGroups = false; L3.showOx = false; L3.focus = null;
+  try{ if(P.gravity) setSlider('gravity', 0); }catch(e){}
   if(L3.solvent){ try{ toggleMode('solvent', false); }catch(e){} }
   showK(K || 298);
   try{ l3Build(); renderLeft3D(); }catch(e){}
@@ -12521,6 +12522,9 @@ const SHOWCASE = [
   {g:'Shapes and forces', t:'Polar or not?', d:'Partial charges and an electric field show which molecules have a dipole.', go:()=>{ showEmpty3D(200, 700); L3.showQ = true; L3.showDip = true; ['hydrogen chloride', 'carbon dioxide', 'water', 'methane'].forEach(n=>{ l3BuildAny(n); l3BuildAny(n); }); L3.field = {x:24000, y:0, z:0, len:200}; l3Build(); showFit(); },
     watch:'δ− and δ+ mark where the shared electrons sit, and each dark arrow is a molecule\u2019s dipole: it points at the negative end. Hydrogen chloride and water are lopsided, so they have arrows and the field turns them to face it. Carbon dioxide has two polar bonds, but they point opposite ways and cancel; methane’s four cancel too. Polar bonds are not enough: the shape decides whether the molecule is polar.',
     tries:[['Flip the field', ()=>{ if(L3.field){ L3.field.x = -L3.field.x; } }], ['Switch it off', ()=>{ L3.field = null; }], ['Arrows on / off', ()=>{ l3ShowSet('dip'); }]]},
+  {g:'Shapes and forces', t:'Functional groups', d:'Six organic molecules with their groups named: alcohol, acid, ester, ketone, amine, ring.', go:()=>{ showEmpty3D(60, 620); ['ethanol','acetic acid','ethyl acetate','acetone','methylamine','benzaldehyde'].forEach(n=>l3BuildAny(n)); L3.showGroups = true; l3Build(); renderLeft3D(); showFit(); },
+    watch:'A functional group is the part of a molecule that decides how it reacts. Ethanol\u2019s O\u2013H makes it an alcohol; acetic acid\u2019s COOH makes it an acid; ethyl acetate is an ester, acetone a ketone, methylamine an amine. Benzaldehyde has two: an aldehyde and a benzene ring. Drag to turn the view.',
+    tries:[['Show oxidation numbers too', ()=>l3ShowSet('ox', true)], ['Focus on one', ()=>{ l3SetTool('focus'); }]]},
   {g:'Shapes and forces', t:'Why water boils at 100 °C', d:'Three kinds of force between molecules, weakest to strongest, at the same temperature.', go:()=>showForces('methane'),
     watch:'Every sample here is at 150 K. Methane (boils at 112 K) is held only by London forces, about 2 kJ/mol between a pair of molecules, and drifts apart as a gas. Hydrogen chloride (188 K) adds the pull between dipoles, so its molecules cling in clumps (this model gives that pull about half its real strength). Water (373 K) hydrogen-bonds, about 20 kJ/mol a pair, ten times methane, and stays locked together as ice. Dashed lines are hydrogen bonds; the readout on the right names the force and the phase.',
     tries:[['Hydrogen chloride: dipoles', ()=>showForces('hydrogen chloride')], ['Water: hydrogen bonds', ()=>showForces('water')], ['Methane again: London only', ()=>showForces('methane')]]},
@@ -12528,6 +12532,12 @@ const SHOWCASE = [
   {g:'Matter and energy', t:'Melt ice', d:'Warm a cluster of frozen water and watch the hydrogen bonds let go.', go:()=>{ showEmpty3D(150); l3Crystal('ice'); showFit(); },
     watch:'At 150 K the waters sit locked in a hydrogen-bonded network (Weak-force lines show the bonds). Warm it past 273 K and they start to slide; past 373 K they fly apart as steam.',
     tries:[['Warm it to 290 K', ()=>showK(290)], ['Boil it at 420 K', ()=>showK(420)], ['Freeze it again', ()=>showK(150)]]},
+  {g:'Matter and energy', t:'Boil and condense', d:'A burner under the box and a condenser across the top: water boils, rises and comes back down.', go:()=>{ showEmpty3D(300, 540); setSlider('gravity', 35); l3Bulk([['water', 70]], true); L3.burnK = 950; L3.condK = 190; ['burner','condenser','thermo'].forEach(k=>l3AddGear(k)); L3.open.gear = 1; renderLeft3D(); showFit(); },
+    watch:'Gravity holds the liquid on the floor, where the burner heats it. Molecules that gain enough energy break their hydrogen bonds and fly up as vapour; at the cold top they slow, stick together again and fall back. The thermometer in the Equipment section shows the hot bottom and the cold top.',
+    tries:[['Hotter flame', ()=>{ L3.burnK = 1600; renderLeft3D(); }], ['Condenser off', ()=>{ const g = L3.gear.find(x=>x.kind==='condenser'); if(g) g.on = false; renderLeft3D(); }], ['Burner off', ()=>{ const g = L3.gear.find(x=>x.kind==='burner'); if(g) g.on = false; renderLeft3D(); }]]},
+  {g:'Matter and energy', t:'Mass is conserved', d:'Acid meets base on a balance: molecules change, the mass does not.', go:()=>{ showScene('neutral'); l3AddGear('balance'); L3.open.gear = 1; renderLeft3D(); },
+    watch:'The balance in the Equipment section weighs every atom on the bench. Watch it while the protons move: hydronium and hydroxide become water, but no atom is made or lost, so the reading never changes. That is the law of conservation of mass.',
+    tries:[['Speed it up: stir', ()=>l3MixToggle(true)], ['Heat it to 400 K', ()=>showK(400)]]},
   {g:'Matter and energy', t:'A metal crystal', d:'Copper atoms in their real face-centred cubic packing, at the real spacing.', go:()=>{ showFresh3D(298); L3.metalSym = 'Cu'; l3Crystal('metal'); },
     watch:'Each copper atom has twelve neighbours, held by a sea of shared electrons rather than bonds to any one of them. Heat it far enough and the lattice melts.',
     tries:[['Melt it at 1600 K', ()=>showK(1600)], ['Iron instead (body-centred)', ()=>{ showFresh3D(298); L3.metalSym = 'Fe'; l3Crystal('metal'); }]]},
@@ -12620,7 +12630,7 @@ const WELCOME = [
   ['≋', '#8A5BB0', 'Forces between molecules', 'Why water boils at 100 °C and methane at −162.', ()=>showDemo(SHOWCASE.findIndex(x=>x.t.startsWith('Why water boils')))],
   ['✎', '#2F5BEA', 'Build your own', 'Type a name like caffeine, or click atoms together.', ()=>{ if(!L3.on) set3D(true); setTimeout(()=>{ const f = el('l3Formula'); if(f) f.focus(); }, 60); say('Type a name, a formula or click an element on the left, then press Build.', 'bench'); }],
   ['▤', '#A98411', 'Take the course', 'Thirteen units of chemistry with things to do on the bench.', ()=>{ const b = el('courseBtn'); if(b) b.click(); }],
-  ['★', '#6B7A8A', 'Everything it can do', 'The full Showcase: 30 demonstrations, with a guided tour.', ()=>openShowcase()]
+  ['★', '#6B7A8A', 'Everything it can do', 'The full Showcase: 33 demonstrations, with a guided tour.', ()=>openShowcase()]
 ];
 function openWelcome(){
   el('welGrid').innerHTML = WELCOME.map(([ic, col, t, d], i)=>'<button type="button" class="wel-tile" data-wel="'+i+'" style="--wc:'+col+'"><i style="color:'+col+'">'+ic+'</i><b>'+t+'</b><span>'+d+'</span></button>').join('');
@@ -12701,6 +12711,8 @@ const FINDER = [
     ['Focus on one molecule', 'Fade everything else so one molecule stands out.', 'focus isolate highlight one molecule hide others spotlight', 'Tool rail \u2192 Focus', ()=>findTool('focus')],
     ['Label the functional groups', 'Alcohol, carboxylic acid, ester, amine and more, named on the molecules.', 'functional group alcohol acid ester ketone aldehyde amine amide ether organic label', 'Left panel \u2192 Show on the molecules', ()=>findShow('groups'), 'groups'],
     ['Turn the view slowly', 'The bench rotates by itself: good on a projector.', 'spin rotate turn auto turntable present', '\u22ef menu \u2192 Turn the view slowly', ()=>{ if(find3D()){ L3.spin = true; l3Build(); } }],
+    ['Show oxidation numbers', 'The oxidation state of every atom, worked out from its bonds.', 'oxidation number state redox electron counting', 'Left panel \u2192 Show on the molecules', ()=>findShow('ox'), 'ox'],
+    ['Delete a whole molecule', 'With the Delete tool, double-click any atom of it.', 'delete remove whole molecule erase', 'Tool rail \u2192 Delete, double-click', ()=>findTool('remove')],
     ['Fire a neutron', 'Nuclear reactions: hit a nucleus with a neutron.', 'neutron nuclear fission isotope radioactive', 'Tool rail → neutron', ()=>findTool('neutron')]
   ]],
   ['Measure and look', [
@@ -12712,7 +12724,7 @@ const FINDER = [
     ['Keyboard shortcuts', 'Every key the bench understands.', 'keyboard shortcut keys hotkey', '⋯ menu, or press ?', ()=>toggleKeys(true)]
   ]],
   ['Learn', [
-    ['Watch demonstrations', 'Thirty one-click demos with explanations.', 'showcase demo demonstration example watch', 'Top bar → Showcase', ()=>openShowcase()],
+    ['Watch demonstrations', 'Thirty-three one-click demos with explanations.', 'showcase demo demonstration example watch', 'Top bar → Showcase', ()=>openShowcase()],
     ['Take the course', 'Thirteen units with tasks and questions.', 'course lesson unit teach class curriculum quiz', 'Top bar → Course', ()=>el('courseBtn').click()],
     ['Compare compounds in depth', 'Analyse up to four compounds: structure, polarity, spectra, reactions.', 'analyse analyze compare spectra ir nmr acid base pka', 'Top bar → Analyse', ()=>el('anaBtn').click()],
     ['Quiet view of one reaction', 'Learn mode: one reaction at a time, with practice questions.', 'learn mode practice questions quiz quiet', 'Top bar → Learn mode', ()=>el('learnBtn').click()],
@@ -12766,7 +12778,7 @@ const WALK = { on:false, i:0, steps:[
   {q:()=>el('l3tools'), t:'Tools', d:'Each tool has its name under it: bond and break, delete, measure, shine light, apply an electric field. Hover over one for a fuller description and its key.'},
   {q:()=>document.querySelector('.panel.right'), t:'What you are looking at', d:'Click any atom and this panel names the molecule and gives its shape, bond angles, polarity and the forces holding it to its neighbours.'},
   {q:()=>el('helpBtn'), t:'How do I\u2026?', d:'Lost? Click here and type what you want, such as dipole, heat or measure an angle. It finds the feature, switches it on and shows you where it lives.'},
-  {q:()=>el('showBtn'), t:'Showcase', d:'Thirty one-click demonstrations with a short explanation each: molecule shapes, polarity, why water boils at 100 °C, golden rain, chain reactions.'},
+  {q:()=>el('showBtn'), t:'Showcase', d:'Thirty-three one-click demonstrations with a short explanation each: molecule shapes, polarity, why water boils at 100 °C, golden rain, chain reactions.'},
   {q:()=>[el('courseBtn'), el('anaBtn'), el('learnBtn')], t:'For lessons', d:'Course is thirteen units of chemistry with tasks on the bench and questions. Analyse compares up to four compounds in depth. Learn mode is a quiet view of one reaction at a time.'},
   {q:()=>el('modeSeg'), t:'The flat bench', d:'The original 2D bench is still here, with beakers, burners and diagram-style reactions, if you want it.'},
   {t:'That is the tour', d:'Pick somewhere to start. You can replay this tour at any time from the welcome card, which opens from the Showcase.', last:true}
@@ -21307,6 +21319,24 @@ function l3Draw(){
       const pp = l3Project(a, W3, H3); if((L3.dist + pp.z)/L3.dist < 0.5) continue;
       nameTag(g, pp.x, pp.y - l3R(a, pp.s) - 13, name, 1, placed, col); }
   }
+  /* Oxidation numbers: every bond's electrons given to the more electronegative atom
+     (shared evenly between like atoms), plus any charge of its own. Shown above each atom */
+  if(L3.showOx && L3.atoms.length){
+    if(L3._oxv !== L3.tv || !L3._ox){ L3._ox = new Map(); for(const a of L3.atoms){ let n = a.ion || 0; const ea = EL[a.e].en || 0;
+        for(const b of l3Bonds(a)){ if(b.type === 'metallic') continue; const o = l3Find(l3Other(b, a.id)); if(!o || o.e === a.e) continue; const eo = EL[o.e].en || 0; if(b.type === 'ionic') continue; const ord = b.arom ? 1.5 : (b.order || 1);
+          if(eo > ea) n += ord; else if(eo < ea) n -= ord; }
+        if(l3Bonds(a).some(b=>b.type === 'ionic') || a.ion) n = a.ion || a.charge || n;
+        L3._ox.set(a.id, n); }
+      L3._oxv = L3.tv; }
+    let shown = 0;
+    for(const a of L3.atoms){ if(shown > 160) break; if(L3.focus && !L3.focus.has(a.id)) continue;
+      const n = L3._ox.get(a.id); if(n == null) continue;
+      const pp = l3Project(a, W3, H3); if((L3.dist + pp.z)/L3.dist < 0.5) continue;
+      const r = l3R(a, pp.s), txt = n === 0 ? '0' : (n > 0 ? '+' : '−')+Math.abs(Math.round(n*2)/2);
+      g.save(); g.font = '700 '+Math.round(clamp(r*0.75, 10, 14))+'px Archivo, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.95)'; g.strokeText(txt, pp.x - r*0.9, pp.y - r*0.9);
+      g.fillStyle = n > 0 ? '#B0442F' : n < 0 ? '#2A5FB5' : '#5B6168'; g.fillText(txt, pp.x - r*0.9, pp.y - r*0.9); g.restore(); shown++; }
+  }
   if(L3.showDip && L3.atoms.length){
     if(L3._dmv !== L3.tv || !L3._dm){ L3._dm = l3Molecules().filter(m=>m.length >= 2 && m.length <= 80 && !m.some(a=>a.ion || l3Metal(a)) && Math.abs(m.reduce((t, a)=>t + (a.fq||0), 0)) < 0.01).slice(0, 60); L3._dmv = L3.tv; }
     const placed = [];
@@ -21780,6 +21810,7 @@ const L3_SHOWS = [
   ['hb', 'Hydrogen bonds', 'dashed lines between molecules', ()=>!L3.hideHB, v=>{ L3.hideHB = !v; }],
   ['molnames', 'Molecule names', 'a name tag on each molecule', ()=>!!SHOW.molnames, v=>{ SHOW.molnames = v; }],
   ['groups', 'Functional groups', 'alcohol, acid, ester, amine\u2026 labelled', ()=>!!L3.showGroups, v=>{ L3.showGroups = v; }],
+  ['ox', 'Oxidation numbers', 'the charge each atom would have if bonds were ionic', ()=>!!L3.showOx, v=>{ L3.showOx = v; }],
   ['names', 'Atom names', 'element names on the atoms', ()=>!!L3.names, v=>{ L3.names = v; }]
 ];
 function l3ShowSet(k, v){
@@ -21960,7 +21991,7 @@ const L3_TIPS = {focus:'Fade everything but one molecule: click it; click empty 
   addh:'Fill an atom\u2019s empty bonds with hydrogens: click an atom, double-click to fill the whole molecule', eplus:'Give an atom an electron: click it', eminus:'Take an electron off an atom: click it',
   copy:'Copy a whole molecule: click any atom in it', pin:'Pin an atom in place: click it, click again to free it', cool:'Take energy away where you click (click empty space to cool everything)',
   move:'Move atoms, turn the view', bond:'Force a bond: click two atoms', break:'Break a bond: click it',
-  remove:'Remove an atom', spark:'Add energy where you click', measure:'Measure: two atoms for a distance, three for an angle',
+  remove:'Remove an atom: click it; double-click to remove its whole molecule', spark:'Add energy where you click', measure:'Measure: two atoms for a distance, three for an angle',
   photon:'Shine a light: one photon at the lamp\u2019s wavelength', field:'Electric field: drag its direction; click, or press 8 again, to switch it off',
   neutron:'Fire a neutron at an atom', catalyst:'Catalyst patch: click to place, click it again to lift'};
 /* the rail in groups; the specialist tools fold away under More tools */
@@ -22179,7 +22210,7 @@ function l3Build(){
   const dispMenu = L3.menu === 'disp' ? '<div class="l3-pop" data-pop="disp">'+
       '<span class="eyebrow">Style</span><div class="l3-seg">'+Object.keys(L3_VIEWS).map(k=>'<button type="button" data-l3view="'+k+'"'+((L3.view||'ball') === k ? ' class="on"' : '')+'>'+L3_VIEWS[k]+'</button>').join('')+'</div>'+
       '<span class="eyebrow">Show</span>'+
-      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+tg('groups', L3.showGroups, 'Functional groups')+tg('hb', !L3.hideHB, 'Hydrogen bonds')+
+      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+tg('groups', L3.showGroups, 'Functional groups')+tg('ox', L3.showOx, 'Oxidation numbers')+tg('hb', !L3.hideHB, 'Hydrogen bonds')+
     '</div>' : '';
   const moreMenu = L3.menu === 'more' ? '<div class="l3-pop right" data-pop="more">'+
       '<button type="button" class="l3-item" data-l3="water">Add 12 waters</button>'+
@@ -22225,6 +22256,7 @@ function l3Build(){
     else if(b.dataset.l3 === 'dip'){ l3ShowSet('dip'); if(L3.showDip) say('Each arrow points from the positive end of a molecule to its negative end, with its dipole moment in debye. No arrow means the pulls cancel: nonpolar.', 'bench'); }
     else if(b.dataset.l3 === 'hb'){ l3ShowSet('hb'); }
     else if(b.dataset.l3 === 'groups'){ l3ShowSet('groups'); }
+    else if(b.dataset.l3 === 'ox'){ l3ShowSet('ox'); }
     else if(b.dataset.l3 === 'spin'){ L3.menu = null; L3.spin = !L3.spin; l3Build(); say(L3.spin ? 'Turning slowly. Drag the view, or choose Stop turning, to stop.' : 'Stopped turning.', 'bench'); }
     else if(b.dataset.l3 === 'present'){ L3.menu = null; l3Build(); presentToggle(); }
     else if(b.dataset.l3 === 'fit'){ L3.menu = null; l3Build(); l3FitView(true); }
@@ -22309,6 +22341,9 @@ function l3Build(){
   cv3.addEventListener('dblclick', ev=>{
     const r = cv3.getBoundingClientRect(), hit = pick(ev.clientX-r.left, ev.clientY-r.top);
     if(L3.tool === 'addh'){ if(hit){ L3._addhAll = true; l3ToolClick(hit, 0, 0); } return; }
+    if(L3.tool === 'remove'){ if(hit){ const mol = l3Molecules().find(m=>m.includes(hit.atom)) || [hit.atom]; l3Push(); const ids = new Set(mol.map(x=>x.id));
+      L3.bonds = L3.bonds.filter(b=>!ids.has(b.a) && !ids.has(b.b)); L3.atoms = L3.atoms.filter(x=>!ids.has(x.id)); if(L3.sel && ids.has(L3.sel.id)) L3.sel = null; L3.dirty = true; L3.bv = (L3.bv||0) + 1;
+      say('Removed the whole molecule: '+mol.length+' atom'+(mol.length === 1 ? '' : 's')+'. Undo brings it back.', 'bench'); } return; }
     if(L3.tool !== 'move') return;
     if(hit){ const a = hit.atom, t = {x:a.x, y:a.y, z:a.z}; l3CamTo(t, Math.max(l3MinDist(t), Math.min(L3.dist, 1300)), true); say('Looking at the '+EL[a.e].name.toLowerCase()+'. Double-click empty space, or press F, to see everything.','bench', true); }
     else l3FitView(true);
@@ -22873,8 +22908,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 161;
+const VERSION = 162;
 const CHANGELOG = [
+  [162, 'Oxidation numbers can be shown on every atom (under Show on the molecules): each bond\u2019s electrons go to the more electronegative atom, so the carbon in methane reads \u22124 and in carbon dioxide +4. The Delete tool removes a whole molecule on a double-click. Three new Showcase demonstrations: Boil and condense (a burner, a condenser and a thermometer on a box of water), Mass is conserved (a balance under acid meeting base) and Functional groups (six organic molecules with their groups named). Every demonstration now starts with gravity off and the new labels cleared.'],
   [161, 'Three additions to the 3D bench. Focus (a new tool, under Look) fades everything except the molecule you click and brings the camera to it; click empty space to see everything again. Functional groups (under Show on the molecules) names each group where it sits: alcohol, phenol, ether, aldehyde, ketone, carboxylic acid, carboxylate, ester, amide, amine, nitrile, nitro, thiol, halide, alkene, alkyne and benzene ring. Turn the view slowly (in the \u22ef menu) rotates the bench by itself for a projector, and stops as soon as you drag.'],
   [160, 'The descriptions of the 3D tools were cut off at the edge of the tool rail; they now float beside it in full.'],
   [159, 'Add H fills a whole molecule when you double-click any of its atoms (a single click still fills just that atom). The 3D tool rail is tidier: the tools sit in labelled groups (Build, Charge, Energy, Look) and the specialist ones, Pin, Light, Electric field and Neutron, fold away under More tools; picking one by its number key opens the group. Pause spans the width at the bottom.'],
