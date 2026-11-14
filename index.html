@@ -12589,7 +12589,7 @@ function findFlash(sel){ setTimeout(()=>{ try{ const n = typeof sel === 'string'
   n.scrollIntoView({block:'nearest'}); scrollTo(0, 0); n.classList.remove('flash-here'); void n.offsetWidth; n.classList.add('flash-here'); setTimeout(()=>n.classList.remove('flash-here'), 1700); }catch(e){} }, 180); }
 function find3D(){ if(CRS.on || LEARN.on || ANA.on){ say('That lives on the open bench. Leave '+(CRS.on ? 'the course' : ANA.on ? 'Analyse' : 'Learn mode')+' first (Exit, top right), then try again.', 'bench'); return false; } if(!L3.on) set3D(true); return true; }
 function findShow(k, msg){ if(!find3D()) return; l3ShowSet(k, true); findFlash('[data-l3show="'+k+'"]'); if(msg) say(msg, 'bench'); }
-function findTool(k){ if(!find3D()) return; const b = document.querySelector('#l3tools [data-l3tool="'+k+'"]'); if(b){ b.click(); findFlash('#l3tools [data-l3tool="'+k+'"]'); } say(L3_TIPS[k]+'.', 'bench'); }
+function findTool(k){ if(!find3D()) return; const b = document.querySelector('#l3tools [data-l3tool="'+k+'"]'); if(b){ b.click(); findFlash('#l3tools [data-l3tool="'+k+'"]'); } }
 function findMore(k){ if(!find3D()) return; L3.menu = 'more'; l3Build(); const b = document.querySelector('#l3bar [data-l3="'+k+'"]'); if(b) b.click(); }
 function findView(k){ if(!find3D()) return; L3.view = k; l3Build(); findFlash('#l3bar [data-l3="menu-disp"]'); say(L3_VIEWS[k]+' view. Change it back under View & labels at the top of the bench.', 'bench'); }
 const FINDER = [
@@ -21715,6 +21715,7 @@ function l3PanelMode(on){
 /* ---------- the tool rail for the 3D bench ----------
    The same tools as the flat bench where they make sense in three dimensions. */
 const L3_TOOLS = ['move','bond','break','remove','spark','measure','photon','field','neutron','catalyst'];
+const L3_TOOL_NAMES = {move:'Move', bond:'Bond', break:'Break', remove:'Delete', spark:'Spark', measure:'Measure', photon:'Light', field:'Electric field', neutron:'Neutron', catalyst:'Catalyst'};
 const L3_TIPS = {move:'Move atoms, turn the view', bond:'Force a bond: click two atoms', break:'Break a bond: click it',
   remove:'Remove an atom', spark:'Add energy where you click', measure:'Measure: two atoms for a distance, three for an angle',
   photon:'Shine a light: one photon at the lamp\u2019s wavelength', field:'Electric field: drag its direction; click, or press 8 again, to switch it off',
@@ -21738,6 +21739,8 @@ function l3BuildTools(){
 function l3SetTool(k){
   /* choosing the field tool again while a field is on switches it off */
   if(k === 'field' && L3.tool === 'field' && L3.field){ L3.field = null; say('Field off.','field'); }
+  /* picking a tool says what it does: the icons alone do not */
+  if(k !== L3.tool && L3.on){ const nm = L3_TOOL_NAMES[k]; if(nm) say(k === 'move' ? 'Move tool: drag an atom to move it, drag the background to turn the view.' : nm+' tool. '+L3_TIPS[k]+'. Press 1 to go back to moving.', 'bench'); }
   L3.tool = k; L3.pend = null; if(k !== 'measure') L3.measure = [];
   l3Canvas().style.cursor = k==='move' ? 'grab' : 'crosshair';
   l3BuildTools(); L3.dirty = true;
@@ -22527,8 +22530,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 151;
+const VERSION = 152;
 const CHANGELOG = [
+  [152, 'Picking a tool on the 3D bench now says what it does and how to get back to moving, since the icons alone do not.'],
   [151, 'Small things put right. On a phone, messages now sit along the bottom of the bench instead of across the tool rail. A window made narrow and then wide again gives the side panels back their chosen width. An empty bench says the right thing for where you are: in Analyse it points to the panel on the right, in Learn mode to the topic list, and on the open bench to How do I\u2026?. Asking How do I\u2026? for something that lives on the open bench while in the course, Analyse or Learn mode now says so instead of doing nothing.'],
   [150, 'More polish, mostly for phones and small windows. On a phone the bench now comes first with the controls under it; before, the molecules sat two screens down, below the whole left panel. The row of controls above the 3D bench wraps on a narrow screen, so Speed and the \u22ef menu are no longer cut off. Pressing / opens How do I\u2026? from anywhere.'],
   [149, 'Polish. An electric field now turns each neutral molecule as a whole instead of tugging its atoms separately, so molecules line up without being bent: in a strong field carbon dioxide used to bow and read as polar, and water was squeezed to a dipole of 2.6 D; now they read 0 and 1.9. Dipole arrows are dark with a white edge so they stand apart from field lines, keep a readable size when zoomed out, wait until a new molecule has settled, and are averaged for longer so the number holds steady. The Polar or not? demonstration now shows the arrows. The switches in the left panel follow along when a demonstration or the menu turns a label on, and every demonstration starts with a clean set of labels. The bench no longer flashes the flat view for an instant as it opens.'],
