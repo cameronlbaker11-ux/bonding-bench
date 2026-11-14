@@ -545,6 +545,12 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .l3-row em{grid-column:1 / -1;font-style:normal;font-family:var(--font-mono);font-size:9.5px;color:var(--muted);letter-spacing:.04em}
 .l3-tip{position:absolute;left:12px;bottom:14px;font-family:var(--font-mono);font-size:9px;color:var(--faint);max-width:50%}
 .l3-tools{top:52px;max-height:calc(100% - 90px);z-index:2}
+.l3-tools .tool small{display:none}
+@media (min-width:761px){
+  .l3-tools .tool{width:54px;height:41px;flex-direction:column;gap:2px}
+  .l3-tools .tool small{display:block;font:500 9px var(--font-ui);letter-spacing:.01em;line-height:1;color:inherit;opacity:.85}
+  .l3-tools .tool.on small{opacity:1}
+}
 .cam-btn.l3-go{background:var(--ink);color:#fff;border-color:var(--ink)}
 .hud .kind{font-family:var(--font-mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;opacity:.55;border-right:1px solid rgba(255,255,255,.2);padding-right:9px;white-space:nowrap}
 .stats{display:flex;gap:11px;font-family:var(--font-mono);font-size:9.5px;color:var(--faint);letter-spacing:.05em;white-space:nowrap}
@@ -626,6 +632,9 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .l3-show .switch small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
 @keyframes flashHere{0%,100%{box-shadow:0 0 0 0 rgba(47,91,234,0)}20%,70%{box-shadow:0 0 0 3px rgba(47,91,234,.75)}}
 .flash-here{animation:flashHere 1.6s ease 1;border-radius:8px}
+/* the top bar reads as three groups: help, things to learn from, and housekeeping */
+#showBtn,#shareBtn{margin-left:12px;position:relative}
+#showBtn::before,#shareBtn::before{content:'';position:absolute;left:-10px;top:7px;bottom:7px;width:1px;background:var(--line);pointer-events:none}
 /* presenting: the bench alone, for a projector */
 body.presenting .bar{display:none}
 body.presenting .workspace{grid-template-columns:minmax(0,1fr)}
@@ -979,12 +988,15 @@ body.analysing #demoCard{right:auto;left:18px}
 .l3-tip{transition:opacity .6s}
 .l3-tip.gone{opacity:0;pointer-events:none}
 .l3-sec{border-top:1px solid var(--hair);margin-top:12px}
-.l3-sec > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 2px 8px;font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);user-select:none}
+.l3-sec > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 6px 9px;margin:0 -6px;border-radius:8px;font-family:var(--font-ui);font-size:13.5px;font-weight:600;color:var(--ink);user-select:none}
+.l3-sec > summary .sec-t{display:block;min-width:0}
+.l3-sec > summary small{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:1px}
+.l3-sec[open] > summary{color:var(--accent)}
 .l3-sec > summary::-webkit-details-marker{display:none}
 .l3-sec > summary::after{content:'\203A';margin-left:auto;font-size:14px;letter-spacing:0;transition:transform .18s var(--ease);color:var(--faint)}
 .l3-sec[open] > summary::after{transform:rotate(90deg)}
-.l3-sec > summary em{font-style:normal;color:var(--faint);letter-spacing:.04em}
-.l3-sec > summary:hover{color:var(--ink)}
+.l3-sec > summary em{font-style:normal;font-weight:400;font-size:11px;color:var(--faint);margin-left:6px}
+.l3-sec > summary:hover{background:var(--sunk)}
 .l3-sec-in{padding:0 0 4px}
 .l3-grp{display:block;font-size:10.5px;color:var(--faint);margin:8px 0 4px}
 .l3-grp:first-child{margin-top:0}
@@ -1378,7 +1390,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
 .l3-grp[class*="rg"]::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gc);margin-right:6px;vertical-align:1px}
 .l3-pres.sm[class*="rg"] button{background:color-mix(in srgb, var(--gc) 7%, var(--sunk));transition:background .15s, box-shadow .15s, transform .15s var(--ease)}
 .l3-pres.sm[class*="rg"] button:hover{background:color-mix(in srgb, var(--gc) 15%, var(--sunk));box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--gc) 30%, transparent);transform:translateY(-1px)}
-.l3-sec > summary{padding:8px 2px 6px}
+.l3-sec > summary{padding:9px 6px 8px}
 .p3-tiles{gap:6px}.p3-tiles div{padding:7px 9px;border-radius:9px}.p3-tiles b{font-size:14.5px}
 .slider .note{line-height:1.35}
 .l3-charts{padding:6px 7px 3px;margin-bottom:8px}.l3-charts canvas{height:118px}
@@ -12696,8 +12708,8 @@ const WALK = { on:false, i:0, steps:[
   {q:()=>document.querySelector('#left3d .l3-build'), t:'Build by name', d:'Type a name or formula, such as caffeine, aspirin or H2SO4, and press Build. More than 22,000 molecules are in the library behind this box.'},
   {q:()=>el('l3Temp') && el('l3Temp').closest('.slider'), t:'Temperature', d:'Slide to heat or cool the bench. Liquids boil, gases condense and reactions speed up, because the molecules really do move faster.'},
   {q:()=>document.querySelector('#left3d details[data-sec="show"]'), t:'Show on the molecules', d:'Switch on dipole arrows, partial charges, shapes and angles, lone pairs and hydrogen bonds. Each switch says what it draws.'},
-  {q:()=>document.querySelector('#left3d details[data-sec="rx"] summary'), t:'Ready-made reactions', d:'One click sets up a reaction: acid and base, a metal in acid, precipitation, combustion and more. Below it are air samples and common molecules.'},
-  {q:()=>el('l3tools'), t:'Tools', d:'Bond and cut, add or remove electrons, apply an electric field, stir, and pause. Hover over a tool to see its name and its key.'},
+  {q:()=>document.querySelector('#left3d details[data-sec="rx"] summary'), t:'Ready-made reactions', d:'Open this for one-click reactions: acid and base, a metal in acid, precipitation, combustion and more. The sections below it hold air samples, common molecules, crystals and equipment.'},
+  {q:()=>el('l3tools'), t:'Tools', d:'Each tool has its name under it: bond and break, delete, measure, shine light, apply an electric field. Hover over one for a fuller description and its key.'},
   {q:()=>document.querySelector('.panel.right'), t:'What you are looking at', d:'Click any atom and this panel names the molecule and gives its shape, bond angles, polarity and the forces holding it to its neighbours.'},
   {q:()=>el('helpBtn'), t:'How do I\u2026?', d:'Lost? Click here and type what you want, such as dipole, heat or measure an angle. It finds the feature, switches it on and shows you where it lives.'},
   {q:()=>el('showBtn'), t:'Showcase', d:'Thirty one-click demonstrations with a short explanation each: molecule shapes, polarity, why water boils at 100 °C, golden rain, chain reactions.'},
@@ -21588,6 +21600,8 @@ function l3ShowSet(k, v){
   try{ l3Build(); renderLeft3D(); renderSwitches(); }catch(e){}
   dirty = true;
 }
+const L3_SEC_HINT = {show:'arrows, charges, shapes and labels', rx:'ready-made reactions to watch', air:'a sample of real air', mol:'common molecules and the library',
+  vault:'compounds you have kept', crys:'salt crystals and metal lattices', box:'box size, piston and pressure', gear:'lab equipment for the bench', nuc:'isotopes, decay and fission'};
 function renderLeft3D(){
   const host = el('left3d'); if(!host) return;
   /* every element, laid out as the periodic table */
@@ -21607,8 +21621,8 @@ function renderLeft3D(){
   }).join('');
   /* the few things wanted all the time stay open; the rest fold away, and stay
      the way you left them */
-  const open = L3.open || (L3.open = (()=>{ try{ return JSON.parse(localStorage.getItem('bondingbench.l3open')||'null') || {rx:1}; }catch(e){ return {rx:1}; } })());
-  const sec = (k, title, inner, n) => '<details class="l3-sec" data-sec="'+k+'"'+(open[k] ? ' open' : '')+'><summary>'+title+(n ? '<em>'+n+'</em>' : '')+'</summary><div class="l3-sec-in">'+inner+'</div></details>';
+  const open = L3.open || (L3.open = (()=>{ try{ return JSON.parse(localStorage.getItem('bondingbench.l3open')||'null') || {}; }catch(e){ return {}; } })());
+  const sec = (k, title, inner, n) => '<details class="l3-sec" data-sec="'+k+'"'+(open[k] ? ' open' : '')+'><summary><span class="sec-t">'+title+(n ? '<em>'+n+'</em>' : '')+(L3_SEC_HINT[k] ? '<small>'+L3_SEC_HINT[k]+'</small>' : '')+'</span></summary><div class="l3-sec-in">'+inner+'</div></details>';
   const grouped = new Set(), groups = SCENE_GROUPS.map(([t, ks])=>{ ks.forEach(k=>grouped.add(k)); return [t, ks.map(k=>SCENES.find(x=>x.k === k)).filter(Boolean)]; });
   const rest = SCENES.filter(x=>!grouped.has(x.k)); if(rest.length) groups.push(['Other', rest]);
   const rx = groups.map(([t, list], gi)=>'<span class="l3-grp rg'+gi+'">'+t+'</span><div class="l3-pres sm rg'+gi+'">'+list.map(sc=>'<button type="button" data-l3scene="'+sc.k+'" title="'+sc.note+'">'+sc.label+'</button>').join('')+'</div>').join('');
@@ -21617,7 +21631,7 @@ function renderLeft3D(){
     '<div class="l3-build" style="margin-top:10px"><input id="l3Formula" type="text" placeholder="Build: caffeine, H2SO4, H+, SO4 2-…" spellcheck="false" autocomplete="off"><button type="button" data-l3build="1">Build</button><button type="button" class="ghost-sm" data-l3undo="1" title="Undo (Ctrl/Cmd + Z)">Undo</button></div>'+
     '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C</span>'+
       '<input type="range" class="temp-range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
-    '<details class="l3-sec l3-show" data-sec="show"'+(open.show === 0 ? '' : ' open')+'><summary>Show on the molecules</summary><div class="l3-sec-in">'+
+    '<details class="l3-sec l3-show" data-sec="show"'+(open.show === 0 ? '' : ' open')+'><summary><span class="sec-t">Show on the molecules<small>'+L3_SEC_HINT.show+'</small></span></summary><div class="l3-sec-in">'+
       L3_SHOWS.map(([k, t, d, get])=>'<button type="button" class="switch'+(get() ? ' on' : '')+'" role="switch" aria-checked="'+!!get()+'" data-l3show="'+k+'"><span>'+t+'<small>'+d+'</small></span><span class="track"></span></button>').join('')+
     '</div></details>'+
     sec('rx', 'Reactions', rx, SCENES.length)+
@@ -21729,11 +21743,11 @@ function l3BuildTools(){
   const wrap = el('l3tools'); if(!wrap) return;
   wrap.innerHTML = L3_TOOLS.map((k, i)=>{
     const t = TOOLS.find(x=>x.k===k);
-    return '<button type="button" class="tool'+(L3.tool===k?' on':'')+'" data-l3tool="'+k+'" aria-label="'+L3_TIPS[k]+'">'+
+    return '<button type="button" class="tool'+(L3.tool===k?' on':'')+'" data-l3tool="'+k+'" aria-label="'+L3_TOOL_NAMES[k]+': '+L3_TIPS[k]+'">'+
       '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'+
       (k==='move' ? '<path d="M3 2.5 12.4 7 8.6 8.6 7 12.4z" fill="currentColor" stroke="none"/>' : t.svg)+
-      '</svg><span class="tip">'+L3_TIPS[k]+'<kbd>'+((i+1)%10)+'</kbd></span></button>';
-  }).join('')+'<div class="rule"></div><button type="button" class="tool'+(paused?' on':'')+'" data-l3tool="pause" aria-label="Pause">'+pauseIcon()+
+      '</svg><small>'+L3_TOOL_NAMES[k]+'</small><span class="tip">'+L3_TIPS[k]+'<kbd>'+((i+1)%10)+'</kbd></span></button>';
+  }).join('')+'<div class="rule"></div><button type="button" class="tool'+(paused?' on':'')+'" data-l3tool="pause" aria-label="Pause">'+pauseIcon()+'<small>'+(paused?'Resume':'Pause')+'</small>'+
     '<span class="tip">'+(paused?'Resume':'Pause')+'<kbd>space</kbd></span></button>';
   wrap.onclick = ev=>{
     const b = ev.target.closest('[data-l3tool]'); if(!b) return;
@@ -21856,9 +21870,10 @@ function l3Build(){
       '<button type="button" class="l3-item" data-l3="keys">Keyboard shortcuts <kbd>?</kbd></button>'+
       '<button type="button" class="l3-item" data-l3="snap">Save a snapshot</button>'+
       '<button type="button" class="l3-item" data-l3="present">Present full screen</button>'+
+      '<button type="button" class="l3-item" data-l3="send2d">Send this to the 2D bench</button>'+
       '<button type="button" class="l3-item danger" data-l3="clear">Clear the 3D bench</button>'+
     '</div>' : '';
-  bar.innerHTML = '<button type="button" class="l3-exit" data-l3="send2d" title="Carry everything here down to the flat bench">Send to 2D</button>'+
+  bar.innerHTML = 
     '<span class="l3-dd"><button type="button" data-l3="menu-disp" class="'+(L3.menu === 'disp' ? 'open' : '')+'" aria-expanded="'+(L3.menu === 'disp')+'">View &amp; labels ▾</button>'+dispMenu+'</span>'+
     '<button type="button" class="l3-step'+(STEP.on ? ' on' : '')+'" data-steptoggle="1" title="Slow reactions down and stop after each step">'+(STEP.on ? 'Stepping ✓' : 'Step through')+'</button>'+
     '<button type="button" class="l3-mix'+(L3.mix ? ' on' : '')+'" data-l3="mix" title="Stir the box: whole molecules circulate so new partners meet. Nothing is broken. (M)">'+(L3.mix ? '<i class="l3-mix-spin">⟳</i> Mixing' : 'Mix')+'</button>'+
@@ -22535,8 +22550,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 153;
+const VERSION = 154;
 const CHANGELOG = [
+  [154, 'Easier to find your way round on a computer. Every tool on the 3D bench now has its name under its icon. The left panel reads as a menu: each section has a plain title and a line saying what is in it (Reactions: ready-made reactions to watch; Box and pressure; Equipment\u2026), and on a first visit they start folded so the whole list fits on one screen. Send to 2D has moved off the row above the bench into the \u22ef menu, and the buttons along the top are set in three groups: help, things to learn from, and Share and Clear.'],
   [153, 'On a phone, a Showcase demonstration now lifts the molecules clear of its explanation card instead of leaving them behind it, and the card is shorter. The force-strength sliders in the Forces tab read against the calibrated setting, so the bench as it comes says 1.00\u00d7 \u00b7 as measured, where it used to say 1.20\u00d7 and look as if something had been turned up.'],
   [152, 'Picking a tool on the 3D bench now says what it does and how to get back to moving, since the icons alone do not.'],
   [151, 'Small things put right. On a phone, messages now sit along the bottom of the bench instead of across the tool rail. A window made narrow and then wide again gives the side panels back their chosen width. An empty bench says the right thing for where you are: in Analyse it points to the panel on the right, in Learn mode to the topic list, and on the open bench to How do I\u2026?. Asking How do I\u2026? for something that lives on the open bench while in the course, Analyse or Learn mode now says so instead of doing nothing.'],
