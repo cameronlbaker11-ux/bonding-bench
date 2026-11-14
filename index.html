@@ -557,6 +557,8 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .l3-tools{top:52px;max-height:calc(100% - 90px);z-index:2}
 .l3-tools .tool small{display:none}
 @media (min-width:761px){
+  .l3-tools{display:grid;grid-template-columns:repeat(2,54px);gap:2px;max-height:none}
+  .l3-tools .rule{grid-column:1 / -1}
   .l3-tools .tool{width:54px;height:41px;flex-direction:column;gap:2px}
   .l3-tools .tool small{display:block;font:500 9px var(--font-ui);letter-spacing:.01em;line-height:1;color:inherit;opacity:.85}
   .l3-tools .tool.on small{opacity:1}
@@ -6198,7 +6200,7 @@ function wireCardToggles(host, rerender){
 /* ---------- keyboard shortcuts ----------
    Press ? for the sheet (or open it from either bench's more menu). */
 const KEYS = [
-  ['Both benches', [['1 \u2013 0','the tools: move, bond, break, remove, energy, measure, light, field, neutron'],['Space','pause or play'],['\u2318/Ctrl Z','undo'],['N','next step, while stepping through'],['Esc','leave Learn mode, close this'],['?','this sheet']]],
+  ['Both benches', [['1 \u2013 0','the first ten tools on the 3D rail, in order (on the 2D bench: move, bond, break, remove, energy, measure, light, field, neutron)'],['Space','pause or play'],['\u2318/Ctrl Z','undo'],['N','next step, while stepping through'],['Esc','leave Learn mode, close this'],['?','this sheet']]],
   ['3D bench', [['Drag','turn the view (on an atom: move it)'],['Scroll','zoom'],['Double-click','look at an atom (empty space: see everything)'],['F','fit everything in view'],['M','mix: stir the box without breaking anything'],['Delete','remove the selected atom'],['Shift-click','add five of an element']]],
   ['Flat bench', [['[ and ]','turn the selection'],['+ and \u2212','give or take an electron (selected atom)'],['\u2318/Ctrl C, X, V, D','copy, cut, paste, duplicate'],['\u2318/Ctrl A','select everything'],['Delete','remove the selection']]]
 ];
@@ -12670,6 +12672,11 @@ const FINDER = [
     ['Add energy to one spot', 'A spark: heats the atoms where you click.', 'spark energy heat ignite activate', 'Tool rail → spark', ()=>findTool('spark')],
     ['Shine light on a molecule', 'Fire a photon: it can break a bond.', 'light photon uv lamp photochemistry radical', 'Tool rail → light', ()=>findTool('photon')],
     ['Apply an electric field', 'Polar molecules turn to line up; ions drift.', 'electric field voltage polar align ions', 'Tool rail → field', ()=>findTool('field')],
+    ['Add hydrogens to an atom', 'Fills an atom\u2019s empty bonds with H: carbon becomes CH\u2084.', 'hydrogen add fill valence saturate complete', 'Tool rail \u2192 Add H', ()=>findTool('addh')],
+    ['Make an ion: add or remove an electron', 'Click an atom to give it an electron, or take one away.', 'ion electron charge ionise cation anion add remove', 'Tool rail \u2192 Add e\u207b / Take e\u207b', ()=>findTool('eplus')],
+    ['Copy a molecule', 'Click any atom to make another of its molecule.', 'copy duplicate clone another more same', 'Tool rail \u2192 Copy', ()=>findTool('copy')],
+    ['Pin an atom in place', 'Holds an atom still while everything else moves.', 'pin hold fix anchor still freeze atom', 'Tool rail \u2192 Pin', ()=>findTool('pin')],
+    ['Cool one spot', 'Take energy away from the atoms where you click.', 'cool cold chill slow energy remove', 'Tool rail \u2192 Cool', ()=>findTool('cool')],
     ['Fire a neutron', 'Nuclear reactions: hit a nucleus with a neutron.', 'neutron nuclear fission isotope radioactive', 'Tool rail → neutron', ()=>findTool('neutron')]
   ]],
   ['Measure and look', [
@@ -18036,9 +18043,12 @@ function l3MixToggle(on){
   say(L3.mix ? 'Mixing: the molecules are stirred round the box whole, so new partners keep meeting. Nothing is broken and no heat is added. Press Mix or M again to stop.' : 'Mixing stopped.', 'bench');
   l3Build();
 }
+function l3Pins(){ for(const a of L3.atoms){ if(!a.pin) continue; if(L3.drag && L3.drag.atom === a){ a.pin.x = a.x; a.pin.y = a.y; a.pin.z = a.z; } else { a.x = a.pin.x; a.y = a.pin.y; a.z = a.pin.z; } a.vx = a.vy = a.vz = 0; } }
 function l3Step(dt){
   const A = L3.atoms;
   if(!A.length || !(dt > 0)) return;
+  /* a pinned atom stays where it was pinned; dragging it carries the pin along */
+  l3Pins();
   /* the topology version: changes only when a bond, its order or a charge really
      changes (a cheap fingerprint each frame), so what depends only on those (rest
      lengths, bond charges, target angles) is worked out once and kept */
@@ -20889,6 +20899,7 @@ function l3Draw(){
         chargeMark(g, bx, by, br, qz, ic);
         }
       }
+      if(a.pin){ const pr = Math.max(3.5, r*0.2); g.save(); g.fillStyle = '#14161A'; g.strokeStyle = '#fff'; g.lineWidth = 1.4; g.beginPath(); g.arc(p.x, p.y - r - pr*0.2, pr, 0, TAU); g.fill(); g.stroke(); g.strokeStyle = '#14161A'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(p.x, p.y - r + pr*0.8); g.lineTo(p.x, p.y - r*0.35); g.stroke(); g.restore(); }
     }
   }
   g.globalAlpha = 1;
@@ -21781,20 +21792,30 @@ function l3PanelMode(on){
 }
 /* ---------- the tool rail for the 3D bench ----------
    The same tools as the flat bench where they make sense in three dimensions. */
-const L3_TOOLS = ['move','bond','break','remove','spark','measure','photon','field','neutron'];
-const L3_TOOL_NAMES = {move:'Move', bond:'Bond', break:'Break', remove:'Delete', spark:'Spark', measure:'Measure', photon:'Light', field:'Electric field', neutron:'Neutron', catalyst:'Catalyst'};
-const L3_TIPS = {move:'Move atoms, turn the view', bond:'Force a bond: click two atoms', break:'Break a bond: click it',
+const L3_TOOLS = ['move','bond','break','remove','addh','eplus','eminus','copy','pin','spark','cool','measure','photon','field','neutron'];
+const L3_SVG = {
+  addh:'<circle cx="5.2" cy="8.6" r="3.4"/><path d="M8.2 6.8l2.2-1.6"/><circle cx="11.6" cy="4.2" r="1.6"/>',
+  eplus:'<circle cx="7.5" cy="7.5" r="5.2"/><path d="M5 7.5h5M7.5 5v5"/>',
+  eminus:'<circle cx="7.5" cy="7.5" r="5.2"/><path d="M5 7.5h5"/>',
+  copy:'<rect x="2.4" y="2.4" width="7.2" height="7.2" rx="1.6"/><path d="M5.6 12.6h5.4a1.6 1.6 0 0 0 1.6-1.6V5.6"/>',
+  pin:'<path d="M7.5 13.4V9.2"/><circle cx="7.5" cy="5.4" r="3.4"/><circle cx="7.5" cy="5.4" r="0.9" fill="currentColor" stroke="none"/>',
+  cool:'<path d="M7.5 1.8v11.4M2.6 4.6l9.8 5.8M12.4 4.6 2.6 10.4"/><path d="M5.9 2.9l1.6 1.4 1.6-1.4M5.9 12.1l1.6-1.4 1.6 1.4"/>'
+};
+const L3_TOOL_NAMES = {addh:'Add H', eplus:'Add e\u207b', eminus:'Take e\u207b', copy:'Copy', pin:'Pin', cool:'Cool', move:'Move', bond:'Bond', break:'Break', remove:'Delete', spark:'Heat', measure:'Measure', photon:'Light', field:'Electric field', neutron:'Neutron', catalyst:'Catalyst'};
+const L3_TIPS = {addh:'Fill an atom\u2019s empty bonds with hydrogens: click the atom', eplus:'Give an atom an electron: click it', eminus:'Take an electron off an atom: click it',
+  copy:'Copy a whole molecule: click any atom in it', pin:'Pin an atom in place: click it, click again to free it', cool:'Take energy away where you click (click empty space to cool everything)',
+  move:'Move atoms, turn the view', bond:'Force a bond: click two atoms', break:'Break a bond: click it',
   remove:'Remove an atom', spark:'Add energy where you click', measure:'Measure: two atoms for a distance, three for an angle',
   photon:'Shine a light: one photon at the lamp\u2019s wavelength', field:'Electric field: drag its direction; click, or press 8 again, to switch it off',
   neutron:'Fire a neutron at an atom', catalyst:'Catalyst patch: click to place, click it again to lift'};
 function l3BuildTools(){
   const wrap = el('l3tools'); if(!wrap) return;
   wrap.innerHTML = L3_TOOLS.map((k, i)=>{
-    const t = TOOLS.find(x=>x.k===k);
+    const t = TOOLS.find(x=>x.k===k) || {svg:L3_SVG[k]};
     return '<button type="button" class="tool'+(L3.tool===k?' on':'')+'" data-l3tool="'+k+'" aria-label="'+L3_TOOL_NAMES[k]+': '+L3_TIPS[k]+'">'+
       '<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'+
       (k==='move' ? '<path d="M3 2.5 12.4 7 8.6 8.6 7 12.4z" fill="currentColor" stroke="none"/>' : t.svg)+
-      '</svg><small>'+L3_TOOL_NAMES[k]+'</small><span class="tip">'+L3_TIPS[k]+'<kbd>'+((i+1)%10)+'</kbd></span></button>';
+      '</svg><small>'+L3_TOOL_NAMES[k]+'</small><span class="tip">'+L3_TIPS[k]+(i < 10 ? '<kbd>'+((i+1)%10)+'</kbd>' : '')+'</span></button>';
   }).join('')+'<div class="rule"></div><button type="button" class="tool'+(paused?' on':'')+'" data-l3tool="pause" aria-label="Pause">'+pauseIcon()+'<small>'+(paused?'Resume':'Pause')+'</small>'+
     '<span class="tip">'+(paused?'Resume':'Pause')+'<kbd>space</kbd></span></button>';
   wrap.onclick = ev=>{
@@ -21856,6 +21877,50 @@ function l3ToolClick(hit, sx, sy){
     if(b.type==='covalent' && b.order > 1){ const e0 = b.energy; b.order--; L3.bv = (L3.bv||0) + 1; b.energy = bondEnthalpy(EL[p.e].sym, EL[q.e].sym, b.order); l3Note(e0-b.energy, 'lost a pi bond', p, q); }
     else l3Break(b, 'broken by hand');
     say('Broke it: '+Math.round(b.energy)+' kJ/mol put in.','bond');
+  } else if(k === 'addh' && a){
+    /* hydrogens on every empty bond; the angle forces then spread them into shape */
+    const n = Math.min(4, l3Free(a)); if(n < 1 || l3Metal(a) || a.ion){ say(EL[a.e].name+' has no empty bonds to fill.', 'note'); return; }
+    for(let i=0;i<n;i++){
+      let ux = 0, uy = 0, uz = 0;
+      l3Bonds(a).forEach(b=>{ const o = l3Find(l3Other(b, a.id)); if(!o) return; const d = Math.hypot(o.x-a.x, o.y-a.y, o.z-a.z)||1; ux -= (o.x-a.x)/d; uy -= (o.y-a.y)/d; uz -= (o.z-a.z)/d; });
+      ux += (Math.random()-0.5)*0.9; uy += (Math.random()-0.5)*0.9; uz += (Math.random()-0.5)*0.9;
+      const d = Math.hypot(ux, uy, uz)||1, h = l3Add('H', a.x + ux/d*105, a.y + uy/d*105, a.z + uz/d*105);
+      if(h){ h.vx = a.vx; h.vy = a.vy; h.vz = a.vz; l3Bond(a, h, 1); }
+    }
+    say('Added '+n+' hydrogen'+(n === 1 ? '' : 's')+' to the '+EL[a.e].name.toLowerCase()+'.', 'bond');
+  } else if((k === 'eplus' || k === 'eminus') && a){
+    const dir = k === 'eplus' ? 1 : -1, id = a.id;
+    try{ in3DWorld(()=>{ const p2 = findAtom(id); if(p2) changeElectrons(p2, dir); }); }catch(e){ console.error(e); }
+    const z = (a.ion||0) + (a.fq||0);
+    say(EL[a.e].name+(dir > 0 ? ' gained' : ' lost')+' an electron: now '+(z ? EL[a.e].sym+chargeSup(z) : 'neutral')+'.', 'ion');
+  } else if(k === 'copy' && a){
+    const mol = l3Molecules().find(m=>m.includes(a)); if(!mol) return;
+    if(mol.length > 400){ say('That is too big to copy in one go.', 'note'); return; }
+    if(L3.atoms.length + mol.length > 9000){ say('The bench is full.', 'note'); return; }
+    let cx = 0, cy = 0, cz = 0; mol.forEach(x=>{ cx += x.x; cy += x.y; cz += x.z; }); cx /= mol.length; cy /= mol.length; cz /= mol.length;
+    const rad = Math.max(...mol.map(x=>Math.hypot(x.x-cx, x.y-cy, x.z-cz))) + 190, lim = L3.box - 80;
+    /* somewhere close by with room for it */
+    let ox = 0, oy = 0, oz = 0, best = -1;
+    for(let t=0;t<30;t++){ const th = Math.random()*TAU, ph = Math.acos(2*Math.random()-1), R = rad*2 + t*12, x = Math.sin(ph)*Math.cos(th)*R, y = Math.sin(ph)*Math.sin(th)*R, z = Math.cos(ph)*R;
+      if(Math.abs(cx+x) > lim || Math.abs(cy+y) > lim || Math.abs(cz+z) > lim) continue;
+      let gap = 1e9; for(const o of L3.atoms){ const d = Math.hypot(o.x-cx-x, o.y-cy-y, o.z-cz-z); if(d < gap) gap = d; }
+      if(gap > best){ best = gap; ox = x; oy = y; oz = z; } if(gap > rad + 150) break; }
+    if(best < 0){ ox = rad*1.4; }
+    const map = new Map(), ids = new Set(mol.map(x=>x.id));
+    mol.forEach(x=>{ const c = {}; for(const key in x){ if(key[0] !== '_' && key !== 'pin') c[key] = x[key]; } c.id = L3.seq++; c.x += ox; c.y += oy; c.z += oz; c.fx = c.fy = c.fz = 0; L3.atoms.push(c); map.set(x.id, c.id); });
+    L3.bonds.filter(b=>ids.has(b.a) && ids.has(b.b)).forEach(b=>{ const c = {}; for(const key in b){ if(key[0] !== '_') c[key] = b[key]; } c.id = L3.seq++; c.a = map.get(b.a); c.b = map.get(b.b); if(b.dat) c.dat = map.get(b.dat) || 0; L3.bonds.push(c); });
+    L3.dirty = true; L3.bv = (L3.bv||0) + 1;
+    say('Copied: '+mol.length+' atom'+(mol.length === 1 ? '' : 's')+'.', 'bench');
+  } else if(k === 'pin' && a){
+    if(a.pin){ a.pin = null; say(EL[a.e].name+' freed.', 'bench'); }
+    else { a.pin = {x:a.x, y:a.y, z:a.z}; a.vx = a.vy = a.vz = 0; say(EL[a.e].name+' pinned in place. Click it again with Pin to free it; dragging it moves the pin.', 'bench'); }
+    L3.dirty = true;
+  } else if(k === 'cool'){
+    const centre = a || null;
+    const near = centre ? L3.atoms.filter(x=>Math.hypot(x.x-centre.x, x.y-centre.y, x.z-centre.z) < 260) : L3.atoms;
+    near.forEach(x=>{ x.vx *= 0.25; x.vy *= 0.25; x.vz *= 0.25; });
+    if(centre) L3.flashes.push({x:centre.x, y:centre.y, z:centre.z, t:0, hot:false});
+    say('Energy taken from '+near.length+' atom'+(near.length===1?'':'s')+(centre ? '' : ': the whole bench')+'. The thermostat warms them back to the set temperature.', 'energy');
   } else if(k === 'spark'){
     const centre = a || null;
     const near = centre ? L3.atoms.filter(x=>Math.hypot(x.x-centre.x, x.y-centre.y, x.z-centre.z) < 260) : L3.atoms;
@@ -22000,7 +22065,7 @@ function l3Build(){
     const hit = pick(sx, sy);
     cv3.setPointerCapture(ev.pointerId);
     if(L3.tool === 'field'){ L3.drag = {x:sx, y:sy, fieldFrom:{x:sx, y:sy}, s:(hit?hit.s:0.5)}; return; }
-    if(L3.tool !== 'move' && (hit || L3.tool==='break' || L3.tool==='spark' || L3.tool==='measure' || L3.tool==='bond')){
+    if(L3.tool !== 'move' && (hit || L3.tool==='break' || L3.tool==='spark' || L3.tool==='cool' || L3.tool==='measure' || L3.tool==='bond')){
       l3ToolClick(hit, sx, sy);
       if(!hit || L3.tool !== 'move'){ L3.drag = {x:sx, y:sy, tool:true}; return; }
     }
@@ -22598,8 +22663,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 156;
+const VERSION = 157;
 const CHANGELOG = [
+  [157, 'Six more tools on the 3D bench. Add H fills an atom\u2019s empty bonds with hydrogens. Add e\u207b and Take e\u207b make ions by clicking an atom. Copy makes another of whatever molecule you click. Pin holds an atom still while everything else moves (drag it to move the pin, click again to free it). Cool takes energy away where you click, the opposite of Spark, which is now labelled Heat. The tool rail is two columns wide to fit them.'],
   [156, 'A periodic table that works in a narrow panel. When the left panel is squeezed, the 3D bench now shows the common elements (the main groups and sixteen everyday metals) in large, readable buttons instead of all 118 in cells too small to read; All 118 is one click away, and the choice is remembered. In the full table the symbols now scale with the panel instead of overflowing their cells, and a small cell grows under the pointer so the one about to be clicked can be read.'],
   [155, 'The Study tab, tidied. Each of its pages (Atom, Light, Lab, Rates, Nuclear, Physics) now says in a line what it is for. The Atom page is no longer a stack of empty cards when nothing is selected: it shows the first atom on the bench and says which, and clicking any atom switches to that one. Empty charts say why they are empty in readable type. The catalyst patch tool is gone from the tool rails on both benches; the course lesson on catalysts still has its own.'],
   [154, 'Easier to find your way round on a computer. Every tool on the 3D bench now has its name under its icon. The left panel reads as a menu: each section has a plain title and a line saying what is in it (Reactions: ready-made reactions to watch; Box and pressure; Equipment\u2026), and on a first visit they start folded so the whole list fits on one screen. Send to 2D has moved off the row above the bench into the \u22ef menu, and the buttons along the top are set in three groups: help, things to learn from, and Share and Clear.'],
@@ -22819,7 +22885,7 @@ function frameBody(now){
     /* the 3D bench's own speed, 0.1x to 3x; at 3x a frame is cut into more steps so it stays steady */
     /* step through slows it further, and holds it still after each reaction step */
     stepTick(now);
-    if(!paused && !STEP.hold && !learnHeld() && !(ANA.on && ANA.held)){ const sp = (L3.speed || 1)*stepRate(now), n = sp > 1.5 ? 2 : 1; for(let i=0;i<n;i++) l3Step(dt*sp/n); }
+    if(!paused && !STEP.hold && !learnHeld() && !(ANA.on && ANA.held)){ const sp = (L3.speed || 1)*stepRate(now), n = sp > 1.5 ? 2 : 1; for(let i=0;i<n;i++) l3Step(dt*sp/n); l3Pins(); }
     if(LEARN.on && now - (renderLearnDock._t||0) > 1000){ renderLearnDock._t = now; renderLearnDock(); }
     l3Draw();
     if(dirty && now - lastPanel > 140){ dirty=false; lastPanel = now; renderPanel(); }
