@@ -556,6 +556,9 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .l3-tip{position:absolute;left:12px;bottom:14px;font-family:var(--font-mono);font-size:9px;color:var(--faint);max-width:50%}
 .l3-tools{top:52px;max-height:calc(100% - 90px);z-index:2}
 .l3-tools .tool small{display:none}
+.l3-tools .tool .tip{display:none}
+#toolTip{position:fixed;z-index:40;max-width:240px;background:var(--ink);color:#fff;padding:6px 10px;border-radius:8px;font-size:11.5px;line-height:1.4;pointer-events:none;box-shadow:var(--shadow-m)}
+#toolTip kbd{font-family:var(--font-mono);font-size:9px;opacity:.6;margin-left:6px;white-space:nowrap}
 .l3-tools .tg-head{display:block;font-family:var(--font-mono);font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:6px 3px 1px}
 .l3-tools .tg-head:first-child{padding-top:1px}
 .l3-tools .tg-more{display:block;margin:4px 0 0;padding:5px 4px;border:0;border-radius:7px;background:none;font:500 10px var(--font-ui);color:var(--muted);cursor:pointer;text-align:center}
@@ -21922,6 +21925,15 @@ function l3BuildTools(){
     '<button type="button" class="tg-more" data-l3more="1" aria-expanded="'+more+'">'+(more ? 'Fewer tools \u25b4' : 'More tools \u25be')+'</button>'+
     '<div class="rule"></div><button type="button" class="tool tool-pause'+(paused?' on':'')+'" data-l3tool="pause" aria-label="Pause">'+pauseIcon()+'<small>'+(paused?'Resume':'Pause')+'</small>'+
     '<span class="tip">'+(paused?'Resume':'Pause')+'<kbd>space</kbd></span></button>';
+  /* the descriptions float outside the rail: inside it they were clipped by its edge */
+  if(!wrap._tip){ wrap._tip = true;
+    const ft = document.createElement('div'); ft.id = 'toolTip'; ft.hidden = true; document.body.appendChild(ft);
+    wrap.addEventListener('mouseover', ev=>{ const b = ev.target.closest('.tool'); const t = b && b.querySelector('.tip'); if(!t){ ft.hidden = true; return; }
+      ft.innerHTML = t.innerHTML; ft.hidden = false; const r = b.getBoundingClientRect(), h = ft.offsetHeight;
+      ft.style.left = Math.round(wrap.getBoundingClientRect().right + 8)+'px'; ft.style.top = Math.round(Math.min(window.innerHeight - h - 8, r.top + r.height/2 - h/2))+'px'; });
+    wrap.addEventListener('mouseleave', ()=>{ ft.hidden = true; });
+    wrap.addEventListener('click', ()=>{ ft.hidden = true; });
+  }
   wrap.onclick = ev=>{
     if(ev.target.closest('[data-l3more]')){ L3.toolsMore = !more; try{ localStorage.setItem('bondingbench.toolsmore', L3.toolsMore ? '1' : '0'); }catch(e){} l3BuildTools(); return; }
     const b = ev.target.closest('[data-l3tool]'); if(!b) return;
@@ -22790,8 +22802,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 159;
+const VERSION = 160;
 const CHANGELOG = [
+  [160, 'The descriptions of the 3D tools were cut off at the edge of the tool rail; they now float beside it in full.'],
   [159, 'Add H fills a whole molecule when you double-click any of its atoms (a single click still fills just that atom). The 3D tool rail is tidier: the tools sit in labelled groups (Build, Charge, Energy, Look) and the specialist ones, Pin, Light, Electric field and Neutron, fold away under More tools; picking one by its number key opens the group. Pause spans the width at the bottom.'],
   [158, 'More equipment on the 3D bench, under Equipment in the left panel. A burner heats whatever is near the floor of the box to a flame temperature you set, and a condenser chills whatever reaches the top, so together they give a hot bottom and a cold top: liquid boils off below and condenses above. A thermometer reads the top, middle and bottom of the box. A balance weighs everything on the bench, to show that mass is the same before and after a reaction. A pH meter counts the hydronium and hydroxide ions in the water for a rough pH. Ozone is polar now, as it really is (0.53 D): its middle oxygen carries a small positive charge and its two ends share the negative one, where before every atom read zero. Atoms that resonance makes equal now carry equal charges, so a nitro group\u2019s two oxygens and nitrate\u2019s three match, and nitrous oxide\u2019s dipole came down from 0.8 D to 0.1 D (measured 0.16).'],
   [157, 'Six more tools on the 3D bench. Add H fills an atom\u2019s empty bonds with hydrogens. Add e\u207b and Take e\u207b make ions by clicking an atom. Copy makes another of whatever molecule you click. Pin holds an atom still while everything else moves (drag it to move the pin, click again to free it). Cool takes energy away where you click, the opposite of Spark, which is now labelled Heat. The tool rail is two columns wide to fit them.'],
