@@ -6237,14 +6237,14 @@ document.addEventListener('click', ev=>{ const k = el('keysSheet'); if(!k || k.h
    With Molecule names on, each molecule carries a small tag above it: its
    name if the bench knows one, else its formula. Tags that would overlap
    one already drawn are left out, so a crowded bench stays readable. */
-function nameTag(g, x, y, text, sc, placed){
+function nameTag(g, x, y, text, sc, placed, col){
   g.save(); g.font = '600 '+(11*sc)+'px Archivo, system-ui, sans-serif';
   const w = g.measureText(text).width + 12*sc, h = 17*sc, x0 = x - w/2, y0 = y - h;
   if(placed.some(r=>x0 < r[2] && x0 + w > r[0] && y0 < r[3] && y0 + h > r[1])){ g.restore(); return; }
   placed.push([x0, y0, x0 + w, y0 + h]);
-  g.fillStyle = 'rgba(255,255,255,.88)'; g.strokeStyle = 'rgba(20,20,19,.12)'; g.lineWidth = sc;
+  g.fillStyle = 'rgba(255,255,255,.9)'; g.strokeStyle = col || 'rgba(20,20,19,.12)'; g.lineWidth = col ? 1.4*sc : sc;
   g.beginPath(); if(g.roundRect) g.roundRect(x0, y0, w, h, 8*sc); else g.rect(x0, y0, w, h); g.fill(); g.stroke();
-  g.fillStyle = '#2A2C30'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y0 + h/2 + 0.5*sc);
+  g.fillStyle = col || '#2A2C30'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y0 + h/2 + 0.5*sc);
   g.restore();
 }
 function l3MolLabel(list){
@@ -12698,6 +12698,9 @@ const FINDER = [
     ['Read the temperature', 'A thermometer for the top, middle and bottom of the box.', 'thermometer temperature measure read kelvin equipment', 'Left panel \u2192 Equipment \u2192 Thermometer', ()=>{ if(find3D()){ l3AddGear('thermo'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
     ['Weigh what is on the bench', 'A balance: the total mass, which no reaction changes.', 'balance mass weigh weight conservation scale equipment', 'Left panel \u2192 Equipment \u2192 Balance', ()=>{ if(find3D()){ l3AddGear('balance'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
     ['Measure pH', 'A pH meter that counts hydronium and hydroxide in the water.', 'ph meter acid base acidic basic alkaline measure equipment', 'Left panel \u2192 Equipment \u2192 pH meter', ()=>{ if(find3D()){ l3AddGear('phmeter'); findFlash('#left3d details[data-sec="gear"] summary'); } }],
+    ['Focus on one molecule', 'Fade everything else so one molecule stands out.', 'focus isolate highlight one molecule hide others spotlight', 'Tool rail \u2192 Focus', ()=>findTool('focus')],
+    ['Label the functional groups', 'Alcohol, carboxylic acid, ester, amine and more, named on the molecules.', 'functional group alcohol acid ester ketone aldehyde amine amide ether organic label', 'Left panel \u2192 Show on the molecules', ()=>findShow('groups'), 'groups'],
+    ['Turn the view slowly', 'The bench rotates by itself: good on a projector.', 'spin rotate turn auto turntable present', '\u22ef menu \u2192 Turn the view slowly', ()=>{ if(find3D()){ L3.spin = true; l3Build(); } }],
     ['Fire a neutron', 'Nuclear reactions: hit a nucleus with a neutron.', 'neutron nuclear fission isotope radioactive', 'Tool rail → neutron', ()=>findTool('neutron')]
   ]],
   ['Measure and look', [
@@ -18068,6 +18071,49 @@ function l3MixToggle(on){
   say(L3.mix ? 'Mixing: the molecules are stirred round the box whole, so new partners keep meeting. Nothing is broken and no heat is added. Press Mix or M again to stop.' : 'Mixing stopped.', 'bench');
   l3Build();
 }
+function l3FuncGroups(){
+  const out = [], S = a => EL[a.e].sym, cov = a => l3Bonds(a).filter(b=>b.type === 'covalent' || b.type === 'dative').map(b=>({b, o:l3Find(l3Other(b, a.id))})).filter(x=>x.o);
+  const seenRing = new Set();
+  for(const a of L3.atoms){
+    if(out.length > 80) break;
+    const s = S(a), n = cov(a);
+    if(s === 'C'){
+      const dO = n.find(x=>x.b.order === 2 && S(x.o) === 'O' && cov(x.o).length === 1), sO = n.filter(x=>x.b.order === 1 && S(x.o) === 'O'), N1 = n.find(x=>x.b.order === 1 && S(x.o) === 'N');
+      const cs = n.filter(x=>S(x.o) === 'C').length, hs = n.filter(x=>S(x.o) === 'H').length;
+      if(dO){
+        const oh = sO.find(x=>cov(x.o).some(y=>S(y.o) === 'H')), oc = sO.find(x=>cov(x.o).some(y=>y.o !== a && S(y.o) === 'C')), om = sO.find(x=>(x.o.fq||0) < 0 && cov(x.o).length === 1);
+        if(oh) out.push([a, 'carboxylic acid', '#C0503A']);
+        else if(om) out.push([a, 'carboxylate', '#C0503A']);
+        else if(oc) out.push([a, 'ester', '#B5651D']);
+        else if(N1) out.push([a, 'amide', '#2F5BEA']);
+        else if(hs >= 1) out.push([a, 'aldehyde', '#B5651D']);
+        else if(cs >= 2) out.push([a, 'ketone', '#B5651D']);
+        continue;
+      }
+      if(n.some(x=>x.b.order === 3 && S(x.o) === 'N')){ out.push([a, 'nitrile', '#2F5BEA']); continue; }
+      const X = n.find(x=>x.b.order === 1 && /^(F|Cl|Br|I)$/.test(S(x.o)));
+      if(X && !n.some(x=>x.b.arom)) out.push([X.o, 'halide', '#2A7A78']);
+      for(const x of n){ if(x.o.id < a.id || S(x.o) !== 'C') continue;
+        if(x.b.order === 2 && !x.b.arom) out.push([a, 'alkene C=C', '#6B7A8A']);
+        if(x.b.order === 3) out.push([a, 'alkyne C≡C', '#6B7A8A']); }
+      if(n.some(x=>x.b.arom)){ const ring = [a]; let cur = a, prev = null; for(let i=0;i<6;i++){ const nx = cov(cur).find(y=>y.b.arom && y.o !== prev && !ring.includes(y.o)); if(!nx) break; prev = cur; cur = nx.o; ring.push(cur); }
+        const key = ring.map(x=>x.id).sort((p, q)=>p-q).join(','); if(ring.length >= 6 && !seenRing.has(key)){ seenRing.add(key); out.push([a, 'benzene ring', '#8A5BB0']); } }
+    } else if(s === 'O'){
+      if(n.length === 2 && n.every(x=>x.b.order === 1)){
+        const hC = n.filter(x=>S(x.o) === 'C'), hH = n.filter(x=>S(x.o) === 'H');
+        const carbonyl = c => cov(c).some(y=>y.b.order === 2 && S(y.o) === 'O');
+        if(hC.length === 1 && hH.length === 1 && !carbonyl(hC[0].o)) out.push([a, cov(hC[0].o).some(y=>y.b.arom) ? 'phenol' : 'alcohol', '#C0503A']);
+        else if(hC.length === 2 && !hC.some(x=>carbonyl(x.o))) out.push([a, 'ether', '#B5651D']);
+      }
+    } else if(s === 'N'){
+      const cs = n.filter(x=>S(x.o) === 'C' && x.b.order === 1), amideC = cs.some(x=>cov(x.o).some(y=>y.b.order === 2 && S(y.o) === 'O'));
+      if(cs.length && !amideC && n.every(x=>x.b.order === 1) && !(a.fq > 0)) out.push([a, 'amine', '#2F5BEA']);
+      else if((a.fq||0) > 0 && n.filter(x=>S(x.o) === 'O').length === 2) out.push([a, 'nitro', '#2F5BEA']);
+    } else if(s === 'S' && n.length === 2 && n.some(x=>S(x.o) === 'H') && n.some(x=>S(x.o) === 'C')) out.push([a, 'thiol', '#A98411']);
+  }
+  return out;
+}
+function l3FocusTidy(){ if(L3.focus && !L3.atoms.some(a=>L3.focus.has(a.id))) L3.focus = null; }
 function l3Pins(){ for(const a of L3.atoms){ if(!a.pin) continue; if(L3.drag && L3.drag.atom === a){ a.pin.x = a.x; a.pin.y = a.y; a.pin.z = a.z; } else { a.x = a.pin.x; a.y = a.pin.y; a.z = a.pin.z; } a.vx = a.vy = a.vz = 0; } }
 function l3Step(dt){
   const A = L3.atoms;
@@ -20840,7 +20886,9 @@ function l3Draw(){
     [p, q].forEach(s0=>{ if(!s0.asite) return; const st = [s0], seen = new Set([s0.id]); while(st.length){ const y = st.pop(); y._ppt = x.col; for(const bb of l3Bonds(y)){ if(bb.type !== 'covalent') continue; const o = l3Find(l3Other(bb, y.id)); if(o && !seen.has(o.id)){ seen.add(o.id); st.push(o); } } } }); }
   for(const it of items){
     if(it.bond && it.bond.type === 'metallic') continue;   /* drawn above, all at once */
-    const na = it.bond || it.hbond ? Math.min(nearA(it.p.z), nearA(it.q.z)) : nearA(it.p.z);
+    let na = it.bond || it.hbond ? Math.min(nearA(it.p.z), nearA(it.q.z)) : nearA(it.p.z);
+    /* Focus: everything outside the chosen molecule is faded right back */
+    if(L3.focus){ const inF = it.bond ? L3.focus.has(it.bond.a) : it.hbond ? (L3.focus.has(it.hbond.h.id) || L3.focus.has(it.hbond.acc.id)) : it.atom ? L3.focus.has(it.atom.id) : true; if(!inF) na *= 0.12; }
     if(na <= 0) continue;
     g.globalAlpha = na;
     if(it.hbond){
@@ -21250,6 +21298,15 @@ function l3Draw(){
   /* Dipole arrows: each molecule's net dipole, drawn the chemist's way, a crossed tail at
      the positive end and the head at the negative end, with its size in debye. The vector
      is averaged over a second or so, so thermal wobble does not make it flicker. */
+  /* Functional groups: each named where it sits, worked out from the bonds each time
+     they change (alcohol, carboxylic acid, ester, ketone, amine and the rest) */
+  if(L3.showGroups && L3.atoms.length){
+    if(L3._fgv !== L3.tv || !L3._fg){ L3._fg = l3FuncGroups(); L3._fgv = L3.tv; }
+    const placed = [];
+    for(const [a, name, col] of L3._fg){ if(!L3.atoms.includes(a)) continue; if(L3.focus && !L3.focus.has(a.id)) continue;
+      const pp = l3Project(a, W3, H3); if((L3.dist + pp.z)/L3.dist < 0.5) continue;
+      nameTag(g, pp.x, pp.y - l3R(a, pp.s) - 13, name, 1, placed, col); }
+  }
   if(L3.showDip && L3.atoms.length){
     if(L3._dmv !== L3.tv || !L3._dm){ L3._dm = l3Molecules().filter(m=>m.length >= 2 && m.length <= 80 && !m.some(a=>a.ion || l3Metal(a)) && Math.abs(m.reduce((t, a)=>t + (a.fq||0), 0)) < 0.01).slice(0, 60); L3._dmv = L3.tv; }
     const placed = [];
@@ -21722,6 +21779,7 @@ const L3_SHOWS = [
   ['lp', 'Lone pairs', 'the unshared electron pairs', ()=>!!L3.showLP, v=>{ L3.showLP = v; }],
   ['hb', 'Hydrogen bonds', 'dashed lines between molecules', ()=>!L3.hideHB, v=>{ L3.hideHB = !v; }],
   ['molnames', 'Molecule names', 'a name tag on each molecule', ()=>!!SHOW.molnames, v=>{ SHOW.molnames = v; }],
+  ['groups', 'Functional groups', 'alcohol, acid, ester, amine\u2026 labelled', ()=>!!L3.showGroups, v=>{ L3.showGroups = v; }],
   ['names', 'Atom names', 'element names on the atoms', ()=>!!L3.names, v=>{ L3.names = v; }]
 ];
 function l3ShowSet(k, v){
@@ -21887,24 +21945,26 @@ function l3PanelMode(on){
 }
 /* ---------- the tool rail for the 3D bench ----------
    The same tools as the flat bench where they make sense in three dimensions. */
-const L3_TOOLS = ['move','bond','break','remove','addh','eplus','eminus','copy','pin','spark','cool','measure','photon','field','neutron'];
+const L3_TOOLS = ['move','bond','break','remove','addh','eplus','eminus','copy','pin','spark','cool','measure','focus','photon','field','neutron'];
 const L3_SVG = {
   addh:'<circle cx="5.2" cy="8.6" r="3.4"/><path d="M8.2 6.8l2.2-1.6"/><circle cx="11.6" cy="4.2" r="1.6"/>',
   eplus:'<circle cx="7.5" cy="7.5" r="5.2"/><path d="M5 7.5h5M7.5 5v5"/>',
   eminus:'<circle cx="7.5" cy="7.5" r="5.2"/><path d="M5 7.5h5"/>',
   copy:'<rect x="2.4" y="2.4" width="7.2" height="7.2" rx="1.6"/><path d="M5.6 12.6h5.4a1.6 1.6 0 0 0 1.6-1.6V5.6"/>',
   pin:'<path d="M7.5 13.4V9.2"/><circle cx="7.5" cy="5.4" r="3.4"/><circle cx="7.5" cy="5.4" r="0.9" fill="currentColor" stroke="none"/>',
+  focus:'<circle cx="7.5" cy="7.5" r="2.4"/><path d="M2 5V2h3M10 2h3v3M13 10v3h-3M5 13H2v-3"/>',
   cool:'<path d="M7.5 1.8v11.4M2.6 4.6l9.8 5.8M12.4 4.6 2.6 10.4"/><path d="M5.9 2.9l1.6 1.4 1.6-1.4M5.9 12.1l1.6-1.4 1.6 1.4"/>'
 };
-const L3_TOOL_NAMES = {addh:'Add H', eplus:'Add e\u207b', eminus:'Take e\u207b', copy:'Copy', pin:'Pin', cool:'Cool', move:'Move', bond:'Bond', break:'Break', remove:'Delete', spark:'Heat', measure:'Measure', photon:'Light', field:'Electric field', neutron:'Neutron', catalyst:'Catalyst'};
-const L3_TIPS = {addh:'Fill an atom\u2019s empty bonds with hydrogens: click an atom, double-click to fill the whole molecule', eplus:'Give an atom an electron: click it', eminus:'Take an electron off an atom: click it',
+const L3_TOOL_NAMES = {focus:'Focus', addh:'Add H', eplus:'Add e\u207b', eminus:'Take e\u207b', copy:'Copy', pin:'Pin', cool:'Cool', move:'Move', bond:'Bond', break:'Break', remove:'Delete', spark:'Heat', measure:'Measure', photon:'Light', field:'Electric field', neutron:'Neutron', catalyst:'Catalyst'};
+const L3_TIPS = {focus:'Fade everything but one molecule: click it; click empty space to see everything again',
+  addh:'Fill an atom\u2019s empty bonds with hydrogens: click an atom, double-click to fill the whole molecule', eplus:'Give an atom an electron: click it', eminus:'Take an electron off an atom: click it',
   copy:'Copy a whole molecule: click any atom in it', pin:'Pin an atom in place: click it, click again to free it', cool:'Take energy away where you click (click empty space to cool everything)',
   move:'Move atoms, turn the view', bond:'Force a bond: click two atoms', break:'Break a bond: click it',
   remove:'Remove an atom', spark:'Add energy where you click', measure:'Measure: two atoms for a distance, three for an angle',
   photon:'Shine a light: one photon at the lamp\u2019s wavelength', field:'Electric field: drag its direction; click, or press 8 again, to switch it off',
   neutron:'Fire a neutron at an atom', catalyst:'Catalyst patch: click to place, click it again to lift'};
 /* the rail in groups; the specialist tools fold away under More tools */
-const L3_TOOL_GROUPS = [['Build', ['move','bond','break','remove','addh','copy']], ['Charge', ['eplus','eminus']], ['Energy', ['spark','cool']], ['Look', ['measure']],
+const L3_TOOL_GROUPS = [['Build', ['move','bond','break','remove','addh','copy']], ['Charge', ['eplus','eminus']], ['Energy', ['spark','cool']], ['Look', ['measure','focus']],
   ['More', ['pin','photon','field','neutron']]];
 const L3_TOOLS_MORE = ['pin','photon','field','neutron'];
 try{ L3.toolsMore = localStorage.getItem('bondingbench.toolsmore') === '1'; }catch(e){}
@@ -22052,6 +22112,13 @@ function l3ToolClick(hit, sx, sy){
     if(a.pin){ a.pin = null; say(EL[a.e].name+' freed.', 'bench'); }
     else { a.pin = {x:a.x, y:a.y, z:a.z}; a.vx = a.vy = a.vz = 0; say(EL[a.e].name+' pinned in place. Click it again with Pin to free it; dragging it moves the pin.', 'bench'); }
     L3.dirty = true;
+  } else if(k === 'focus'){
+    if(!a){ L3.focus = null; say('Showing everything again.', 'bench'); L3.dirty = true; return; }
+    const mol = l3Molecules().find(m=>m.includes(a)) || [a];
+    L3.focus = new Set(mol.map(x=>x.id));
+    const t = {x:mol.reduce((s2,x)=>s2+x.x,0)/mol.length, y:mol.reduce((s2,x)=>s2+x.y,0)/mol.length, z:mol.reduce((s2,x)=>s2+x.z,0)/mol.length};
+    try{ l3CamTo(t, Math.max(l3MinDist(t), Math.min(L3.dist, 1100)), true); }catch(e){}
+    say('Focused on one molecule. Click another to switch, or empty space to see everything.', 'bench'); L3.dirty = true;
   } else if(k === 'cool'){
     const centre = a || null;
     const near = centre ? L3.atoms.filter(x=>Math.hypot(x.x-centre.x, x.y-centre.y, x.z-centre.z) < 260) : L3.atoms;
@@ -22112,7 +22179,7 @@ function l3Build(){
   const dispMenu = L3.menu === 'disp' ? '<div class="l3-pop" data-pop="disp">'+
       '<span class="eyebrow">Style</span><div class="l3-seg">'+Object.keys(L3_VIEWS).map(k=>'<button type="button" data-l3view="'+k+'"'+((L3.view||'ball') === k ? ' class="on"' : '')+'>'+L3_VIEWS[k]+'</button>').join('')+'</div>'+
       '<span class="eyebrow">Show</span>'+
-      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+tg('hb', !L3.hideHB, 'Hydrogen bonds')+
+      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+tg('groups', L3.showGroups, 'Functional groups')+tg('hb', !L3.hideHB, 'Hydrogen bonds')+
     '</div>' : '';
   const moreMenu = L3.menu === 'more' ? '<div class="l3-pop right" data-pop="more">'+
       '<button type="button" class="l3-item" data-l3="water">Add 12 waters</button>'+
@@ -22120,6 +22187,7 @@ function l3Build(){
       '<button type="button" class="l3-item" data-l3="keys">Keyboard shortcuts <kbd>?</kbd></button>'+
       '<button type="button" class="l3-item" data-l3="snap">Save a snapshot</button>'+
       '<button type="button" class="l3-item" data-l3="present">Present full screen</button>'+
+      '<button type="button" class="l3-item" data-l3="spin">'+(L3.spin ? 'Stop turning' : 'Turn the view slowly')+'</button>'+
       '<button type="button" class="l3-item" data-l3="send2d">Send this to the 2D bench</button>'+
       '<button type="button" class="l3-item danger" data-l3="clear">Clear the 3D bench</button>'+
     '</div>' : '';
@@ -22156,6 +22224,8 @@ function l3Build(){
     else if(b.dataset.l3 === 'shape'){ l3ShowSet('shape'); }
     else if(b.dataset.l3 === 'dip'){ l3ShowSet('dip'); if(L3.showDip) say('Each arrow points from the positive end of a molecule to its negative end, with its dipole moment in debye. No arrow means the pulls cancel: nonpolar.', 'bench'); }
     else if(b.dataset.l3 === 'hb'){ l3ShowSet('hb'); }
+    else if(b.dataset.l3 === 'groups'){ l3ShowSet('groups'); }
+    else if(b.dataset.l3 === 'spin'){ L3.menu = null; L3.spin = !L3.spin; l3Build(); say(L3.spin ? 'Turning slowly. Drag the view, or choose Stop turning, to stop.' : 'Stopped turning.', 'bench'); }
     else if(b.dataset.l3 === 'present'){ L3.menu = null; l3Build(); presentToggle(); }
     else if(b.dataset.l3 === 'fit'){ L3.menu = null; l3Build(); l3FitView(true); }
     else if(b.dataset.l3 === 'keys'){ L3.menu = null; l3Build(); toggleKeys(true); }
@@ -22202,7 +22272,7 @@ function l3Build(){
     const hit = pick(sx, sy);
     cv3.setPointerCapture(ev.pointerId);
     if(L3.tool === 'field'){ L3.drag = {x:sx, y:sy, fieldFrom:{x:sx, y:sy}, s:(hit?hit.s:0.5)}; return; }
-    if(L3.tool !== 'move' && (hit || L3.tool==='break' || L3.tool==='spark' || L3.tool==='cool' || L3.tool==='measure' || L3.tool==='bond')){
+    if(L3.tool !== 'move' && (hit || L3.tool==='break' || L3.tool==='spark' || L3.tool==='cool' || L3.tool==='focus' || L3.tool==='measure' || L3.tool==='bond')){
       l3ToolClick(hit, sx, sy);
       if(!hit || L3.tool !== 'move'){ L3.drag = {x:sx, y:sy, tool:true}; return; }
     }
@@ -22220,6 +22290,7 @@ function l3Build(){
         L3.field = {x:m.x/n2*E, y:m.y/n2*E, z:m.z/n2*E, len}; L3.drag.aimed = true; }
       return;
     }
+    if(L3.spin){ L3.spin = false; try{ l3Build(); }catch(e){} }
     if(L3.drag.tool && L3.tool !== 'move' && L3.tool !== 'measure'){ L3.yaw += dx*0.008; L3.pitch = clamp(L3.pitch + dy*0.008, -1.45, 1.45); return; }
     if(L3.drag.atom){
       const m = l3Unproject(dx, dy, L3.drag.s), a = L3.drag.atom, B = L3.box;
@@ -22802,8 +22873,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 160;
+const VERSION = 161;
 const CHANGELOG = [
+  [161, 'Three additions to the 3D bench. Focus (a new tool, under Look) fades everything except the molecule you click and brings the camera to it; click empty space to see everything again. Functional groups (under Show on the molecules) names each group where it sits: alcohol, phenol, ether, aldehyde, ketone, carboxylic acid, carboxylate, ester, amide, amine, nitrile, nitro, thiol, halide, alkene, alkyne and benzene ring. Turn the view slowly (in the \u22ef menu) rotates the bench by itself for a projector, and stops as soon as you drag.'],
   [160, 'The descriptions of the 3D tools were cut off at the edge of the tool rail; they now float beside it in full.'],
   [159, 'Add H fills a whole molecule when you double-click any of its atoms (a single click still fills just that atom). The 3D tool rail is tidier: the tools sit in labelled groups (Build, Charge, Energy, Look) and the specialist ones, Pin, Light, Electric field and Neutron, fold away under More tools; picking one by its number key opens the group. Pause spans the width at the bottom.'],
   [158, 'More equipment on the 3D bench, under Equipment in the left panel. A burner heats whatever is near the floor of the box to a flame temperature you set, and a condenser chills whatever reaches the top, so together they give a hot bottom and a cold top: liquid boils off below and condenses above. A thermometer reads the top, middle and bottom of the box. A balance weighs everything on the bench, to show that mass is the same before and after a reaction. A pH meter counts the hydronium and hydroxide ions in the water for a rough pH. Ozone is polar now, as it really is (0.53 D): its middle oxygen carries a small positive charge and its two ends share the negative one, where before every atom read zero. Atoms that resonance makes equal now carry equal charges, so a nitro group\u2019s two oxygens and nitrate\u2019s three match, and nitrous oxide\u2019s dipole came down from 0.8 D to 0.1 D (measured 0.16).'],
@@ -23027,7 +23099,8 @@ function frameBody(now){
     /* the 3D bench's own speed, 0.1x to 3x; at 3x a frame is cut into more steps so it stays steady */
     /* step through slows it further, and holds it still after each reaction step */
     stepTick(now);
-    if(!paused && !STEP.hold && !learnHeld() && !(ANA.on && ANA.held)){ const sp = (L3.speed || 1)*stepRate(now), n = sp > 1.5 ? 2 : 1; for(let i=0;i<n;i++) l3Step(dt*sp/n); l3Pins(); }
+    if(!paused && !STEP.hold && !learnHeld() && !(ANA.on && ANA.held)){ const sp = (L3.speed || 1)*stepRate(now), n = sp > 1.5 ? 2 : 1; for(let i=0;i<n;i++) l3Step(dt*sp/n); l3Pins(); } l3FocusTidy();
+    if(L3.spin && !L3.drag){ L3.yaw += Math.min(dt, 0.05)*0.35; L3.dirty = true; }
     if(LEARN.on && now - (renderLearnDock._t||0) > 1000){ renderLearnDock._t = now; renderLearnDock(); }
     l3Draw();
     if(dirty && now - lastPanel > 140){ dirty=false; lastPanel = now; renderPanel(); }
