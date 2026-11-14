@@ -663,6 +663,24 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .l3-read > span.l3-read3{flex:1 1 0;flex-basis:0;display:flex;flex-direction:column;gap:1px;background:var(--sunk);border-radius:8px;padding:6px 8px}
 .l3-read3 i{font-style:normal;font-family:var(--font-mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .l3-read3 b{font-family:var(--font-mono);font-size:14px;font-weight:500;color:var(--ink)}
+/* Build it!, the game */
+.play-btn{color:#B5651D!important;font-weight:600}
+#gameCard{position:fixed;right:18px;top:160px;z-index:71;width:min(330px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-l);padding:13px 15px 13px;animation:sheetIn .3s var(--ease) both}
+#gameCard .gm-top{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+#gameCard .gm-top button{border:0;background:none;color:var(--muted);font:500 12px var(--font-ui);cursor:pointer;text-transform:none;letter-spacing:0}
+#gameCard h3{margin:6px 0 2px;font-family:var(--font-display);font-weight:500;font-size:26px;line-height:1.1}
+#gameCard .gm-f{font-family:var(--font-mono);font-size:14px;color:var(--ink-2)}
+#gameCard .gm-hint{margin:8px 0 0;font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+#gameCard .gm-row{display:flex;align-items:center;gap:8px;margin-top:11px}
+#gameCard .gm-clock{font-family:var(--font-mono);font-size:22px;font-weight:500;margin-right:auto}
+#gameCard .gm-stars{font-size:16px;letter-spacing:2px;color:#E0A526}
+#gameCard .gm-btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 12px;font:500 12.5px var(--font-ui);cursor:pointer}
+#gameCard .gm-go{background:#B5651D;border-color:#B5651D;color:#fff;font-weight:600}
+#gameCard .gm-dots{display:flex;gap:4px;margin-top:10px}
+#gameCard .gm-dots i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+#gameCard .gm-dots i.d1{background:#E8C26A}#gameCard .gm-dots i.d2{background:#E0A526}#gameCard .gm-dots i.d3{background:#C98A10}#gameCard .gm-dots i.sk{background:#C9CDD2}#gameCard .gm-dots i.cur{background:#B5651D}
+#gameCard .gm-win{margin-top:8px;padding:8px 10px;border-radius:9px;background:#FBF3E2;color:#8A5A12;font-size:13px;font-weight:600}
+#gameCard .gm-sum{margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--ink-2)}
 /* presenting: the bench alone, for a projector */
 body.presenting .bar{display:none}
 body.presenting .workspace{grid-template-columns:minmax(0,1fr)}
@@ -721,7 +739,7 @@ body.analysing #demoCard{right:auto;left:18px}
 #demoCard .dc-nav .dc-next:hover:not(:disabled){background:var(--accent);color:#fff}
 @media (max-width:640px){#demoCard{left:10px;right:10px;width:auto;top:auto;bottom:10px;max-height:44vh;overflow:auto}}
 /* room in the top bar for the Showcase button: the RT chip goes first on narrower screens */
-@media (max-width:1100px){#benchRT{display:none}}
+@media (max-width:1460px){#benchRT{display:none}}
 #crash .sheet{width:min(94vw,470px)}
 .sheet-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:15px}
 .sheet-head h3{margin:0;font-family:var(--font-display);font-weight:500;font-size:20px;line-height:1.1}
@@ -1451,6 +1469,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
     <span class="chip" id="benchRT">RT 2.48 kJ/mol</span>
     <button class="ghost-btn help-btn" id="helpBtn" type="button" title="Find any feature: type what you want to do (press /)">How do I&hellip;?</button>
     <button class="ghost-btn show-btn" id="showBtn" type="button" title="One-click demonstrations of everything the bench can do">Showcase</button>
+    <button class="ghost-btn play-btn" id="playBtn" type="button" title="A game: build molecules from atoms against the clock">Build it!</button>
     <button class="ghost-btn course-btn" id="courseBtn" type="button" title="A whole chemistry course taught on the bench: lessons, guided bench time and free bench time">Course</button>
     <button class="ghost-btn ana-btn" id="anaBtn" type="button" title="Look at one to four compounds in depth: structure, bonds, shape, electrons, polarity, acids and bases, spectra, and how they react together">Analyse</button>
     <button class="ghost-btn learn-btn" id="learnBtn" type="button" title="A quieter view for watching one reaction at a time">Learn mode</button>
@@ -1964,6 +1983,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
   </div>
 </div>
 <div id="demoCard" hidden role="region" aria-label="Showcase demonstration"></div>
+<div id="gameCard" hidden role="region" aria-label="Build it! game"></div>
 <div id="library" hidden role="dialog" aria-modal="true" aria-label="Molecule library">
   <div class="sheet">
     <div class="sheet-head">
@@ -12468,6 +12488,7 @@ const SHOWC = {i:-1};
 const showK = K => setSlider('temp', crsK(K));
 /* a clean 3D bench: no stirring, field, equipment, stepping or leftover box size */
 function showFresh3D(K){
+  if(GAME.on && !GAME._inRound){ GAME.on = false; clearInterval(GAME.timer); const gc = el('gameCard'); if(gc) gc.hidden = true; }
   if(ANA.on) anaExit(); if(LEARN.on) learnMode(false); if(CRS.on) courseExit();
   if(!L3.on) set3D(true);
   stepMode(false, true);
@@ -12628,6 +12649,7 @@ const WELCOME = [
   ['⚗', '#C2402F', 'Watch a reaction', 'Acid meets base, sodium in water, golden rain: one click each.', ()=>showDemo(0)],
   ['◇', '#2A7A78', 'See molecule shapes', 'Why water is bent and methane is not, with the real angles.', ()=>showDemo(SHOWCASE.findIndex(x=>x.t === 'The basic shapes'))],
   ['≋', '#8A5BB0', 'Forces between molecules', 'Why water boils at 100 °C and methane at −162.', ()=>showDemo(SHOWCASE.findIndex(x=>x.t.startsWith('Why water boils')))],
+  ['\u2605', '#B5651D', 'Play Build it!', 'Ten molecules to build from atoms against the clock. How many stars can you get?', ()=>gameStart()],
   ['✎', '#2F5BEA', 'Build your own', 'Type a name like caffeine, or click atoms together.', ()=>{ if(!L3.on) set3D(true); setTimeout(()=>{ const f = el('l3Formula'); if(f) f.focus(); }, 60); say('Type a name, a formula or click an element on the left, then press Build.', 'bench'); }],
   ['▤', '#A98411', 'Take the course', 'Thirteen units of chemistry with things to do on the bench.', ()=>{ const b = el('courseBtn'); if(b) b.click(); }],
   ['★', '#6B7A8A', 'Everything it can do', 'The full Showcase: 33 demonstrations, with a guided tour.', ()=>openShowcase()]
@@ -12645,10 +12667,108 @@ function welcomeInit(){
   let seen = false; try{ seen = !!localStorage.getItem('bondingbench.welcomed') || !!localStorage.getItem('bondingbench.showseen'); }catch(e){ seen = true; }
   /* a shared link or a lesson in progress is not a first visit */
   let toured = false; try{ toured = !!localStorage.getItem('bondingbench.tour'); }catch(e){ toured = true; }
-  walkInit(); finderInit();
+  walkInit(); finderInit(); gameInit();
   if(location.hash || (typeof CRS !== 'undefined' && CRS.on) || (typeof LEARN !== 'undefined' && LEARN.on)) return;
   if(!toured) setTimeout(walkOpen, 500);
   else if(!seen) setTimeout(openWelcome, 350);
+}
+/* ---------- Build it! ----------
+   Ten molecules to make from atoms against the clock. The Build box does not count:
+   the atoms have to be put together on the bench (Bond, Add H and the rest all help).
+   A molecule is recognised by its structure, not its formula, so ethanol is not
+   dimethyl ether. Three stars under 40 s, two under 90 s. */
+const GAME_ROUNDS = [
+  ['water', 'H₂O', 'Click O in the table, then use Add H on it.'],
+  ['ammonia', 'NH₃', 'Nitrogen makes three bonds.'],
+  ['methane', 'CH₄', 'Carbon makes four bonds.'],
+  ['carbon dioxide', 'CO₂', 'O=C=O: click a bond twice with the Bond tool to make it double.'],
+  ['hydrogen peroxide', 'H₂O₂', 'Two oxygens joined, each with one H.'],
+  ['ethene', 'C₂H₄', 'A C=C double bond, then fill the rest with H.'],
+  ['ethanol', 'C₂H₅OH', 'C–C–O in a chain, then double-click with Add H.'],
+  ['hydrogen cyanide', 'HCN', 'H–C≡N: a triple bond. Bond the C and N three times.'],
+  ['formaldehyde', 'CH₂O', 'C=O with two hydrogens on the carbon.'],
+  ['acetic acid', 'CH₃COOH', 'A carbon with C=O and O–H on it, joined to a CH₃.']
+];
+const GAME_SMILES = ['O','N','C','O=C=O','OO','C=C','CCO','C#N','C=O','CC(=O)O'];
+const GAME = {on:false, i:0, t0:0, res:[], won:false, timer:null};
+try{ GAME.best = +localStorage.getItem('bondingbench.gamebest') || 0; }catch(e){ GAME.best = 0; }
+function gameKey3(mol){
+  const idx = new Map(mol.map((a, i)=>[a.id, i])), bl = [];
+  for(const b of L3.bonds){ if(b.type !== 'covalent' && b.type !== 'dative') continue; if(!idx.has(b.a) || !idx.has(b.b)) continue; bl.push({a:idx.get(b.a), b:idx.get(b.b), o:b.arom ? 1.5 : (b.order||1)}); }
+  return graphKey(mol.map(a=>EL[a.e].sym), mol.map(a=>(a.fq||0) + (a.ion||0)), bl);
+}
+const gameStars = s => s < 40 ? 3 : s < 90 ? 2 : 1;
+function gameRound(){
+  const r = GAME_ROUNDS[GAME.i]; if(!r){ gameEnd(); return; }
+  GAME._inRound = true; showEmpty3D(298, 380); GAME._inRound = false; L3.showGroups = false; l3SetTool('move');
+  GAME.key = smilesKey(GAME_SMILES[GAME.i]); GAME.t0 = performance.now(); GAME.won = false; GAME.hint = false;
+  try{ renderLeft3D(); l3Build(); }catch(e){}
+  say('Build '+r[0]+' from atoms: click elements in the table, join them, fill with Add H.', 'bench');
+  gameRender();
+}
+function gameStart(){
+  if(CRS.on || LEARN.on || ANA.on){ say('Leave '+(CRS.on ? 'the course' : ANA.on ? 'Analyse' : 'Learn mode')+' first, then press Build it! again.', 'bench'); return; }
+  try{ closeShowcase(); closeWelcome(true); closeFinder(); }catch(e){}
+  try{ SHOWC.i = -1; renderDemoCard(); }catch(e){}
+  GAME.on = true; GAME.i = 0; GAME.res = [];
+  if(!L3.on) set3D(true);
+  gameRound();
+  clearInterval(GAME.timer); GAME.timer = setInterval(gameTick, 400);
+}
+function gameStop(){ GAME.on = false; clearInterval(GAME.timer); el('gameCard').hidden = true; L3.shiftX = 0; try{ l3FitView(true); }catch(e){} }
+function gameTick(){
+  if(!GAME.on){ clearInterval(GAME.timer); return; }
+  if(GAME.won || !GAME.key){ return; }
+  const sec = (performance.now() - GAME.t0)/1000;
+  const ck = el('gmClock'); if(ck) ck.textContent = Math.floor(sec)+' s';
+  const sk = el('gmStars'); if(sk){ const n = gameStars(sec); const t = '★'.repeat(n)+'☆'.repeat(3-n); if(sk.textContent !== t) sk.textContent = t; }
+  for(const m of l3Molecules()){
+    if(m.length < 2 || m.some(a=>a.libId)) continue;          /* made with the Build box: does not count */
+    let k; try{ k = gameKey3(m); }catch(e){ continue; }
+    if(k === GAME.key){ gameWin(m, sec); return; }
+  }
+}
+function gameWin(mol, sec){
+  GAME.won = true; const st = gameStars(sec);
+  GAME.res[GAME.i] = {s:Math.round(sec), st};
+  mol.forEach(a=>L3.flashes.push({x:a.x, y:a.y, z:a.z, t:0, hot:true}));
+  say('Built it! '+GAME_ROUNDS[GAME.i][0]+' in '+Math.round(sec)+' s: '+'★'.repeat(st), 'discovery');
+  gameRender();
+}
+function gameEnd(){
+  const stars = GAME.res.reduce((t, r)=>t + (r ? r.st : 0), 0), made = GAME.res.filter(Boolean).length;
+  if(stars > GAME.best){ GAME.best = stars; try{ localStorage.setItem('bondingbench.gamebest', String(stars)); }catch(e){} GAME.newBest = true; } else GAME.newBest = false;
+  GAME.i = GAME_ROUNDS.length; GAME.won = true; gameRender(true, stars, made);
+}
+function gameRender(end, stars, made){
+  const c = el('gameCard'); if(!c) return; c.hidden = false;
+  const dots = '<div class="gm-dots">'+GAME_ROUNDS.map((_, k)=>{ const r = GAME.res[k]; return '<i class="'+(r ? 'd'+r.st : k < GAME.i ? 'sk' : k === GAME.i && !end ? 'cur' : '')+'"></i>'; }).join('')+'</div>';
+  if(end){
+    c.innerHTML = '<div class="gm-top"><span>Build it! · finished</span><button type="button" data-gm="close">Close ✕</button></div>'+
+      '<h3>'+stars+' ★ of 30</h3><p class="gm-sum">'+made+' of '+GAME_ROUNDS.length+' molecules built.'+(GAME.newBest ? ' <b>A new best!</b>' : ' Your best is '+GAME.best+' ★.')+
+      (made < GAME_ROUNDS.length ? ' Skipped ones are grey on the bar below.' : '')+'</p>'+dots+
+      '<div class="gm-row"><button type="button" class="gm-btn gm-go" data-gm="again">Play again</button><button type="button" class="gm-btn" data-gm="close">Back to the bench</button></div>';
+  } else {
+    const r = GAME_ROUNDS[GAME.i];
+    c.innerHTML = '<div class="gm-top"><span>Build it! · '+(GAME.i+1)+' of '+GAME_ROUNDS.length+'</span><button type="button" data-gm="close">Quit ✕</button></div>'+
+      '<h3>'+capFirst(r[0])+'</h3><span class="gm-f">'+r[1]+'</span>'+
+      (GAME.hint || GAME.won ? '<p class="gm-hint">'+r[2]+'</p>' : '<p class="gm-hint"><button type="button" class="gm-btn" data-gm="hint">Show a hint</button></p>')+
+      (GAME.won ? '<div class="gm-win">Built in '+GAME.res[GAME.i].s+' s! '+'★'.repeat(GAME.res[GAME.i].st)+'</div>' : '')+
+      '<div class="gm-row">'+(GAME.won ? '<span class="gm-clock">'+GAME.res[GAME.i].s+' s</span>' : '<span class="gm-clock" id="gmClock">0 s</span><span class="gm-stars" id="gmStars">★★★</span>')+
+      (GAME.won ? '<button type="button" class="gm-btn gm-go" data-gm="next">'+(GAME.i + 1 < GAME_ROUNDS.length ? 'Next molecule →' : 'See your score')+'</button>'
+                : '<button type="button" class="gm-btn" data-gm="skip">Skip</button>')+'</div>'+dots;
+  }
+  /* the bench moves over so the card does not cover the atoms */
+  try{ const rc = l3Canvas().getBoundingClientRect(), rd = c.getBoundingClientRect(); const ov = Math.max(0, Math.min(rc.right, rd.right) - Math.max(rc.left, rd.left)); L3.shiftX = rc.width - ov < 280 ? 0 : Math.round(ov/2); }catch(e){}
+}
+function gameInit(){
+  const b = el('playBtn'); if(b) b.onclick = gameStart;
+  el('gameCard').addEventListener('click', ev=>{ const t = ev.target.closest('[data-gm]'); if(!t) return; const k = t.dataset.gm;
+    if(k === 'close'){ gameStop(); }
+    else if(k === 'again'){ gameStart(); }
+    else if(k === 'hint'){ GAME.hint = true; gameRender(); }
+    else if(k === 'skip'){ GAME.res[GAME.i] = null; GAME.i++; gameRound(); }
+    else if(k === 'next'){ GAME.i++; gameRound(); } });
 }
 /* ---------- How do I…? ----------
    Every feature in one searchable list. Picking a row does the thing (or takes you to
@@ -12728,6 +12848,7 @@ const FINDER = [
   ]],
   ['Learn', [
     ['Watch demonstrations', 'Thirty-three one-click demos with explanations.', 'showcase demo demonstration example watch', 'Top bar → Showcase', ()=>openShowcase()],
+    ['Play Build it!', 'A game: ten molecules to build from atoms against the clock, for stars.', 'game play challenge build fun score stars quiz', 'Top bar \u2192 Build it!', ()=>gameStart()],
     ['Take the course', 'Thirteen units with tasks and questions.', 'course lesson unit teach class curriculum quiz', 'Top bar → Course', ()=>el('courseBtn').click()],
     ['Compare compounds in depth', 'Analyse up to four compounds: structure, polarity, spectra, reactions.', 'analyse analyze compare spectra ir nmr acid base pka', 'Top bar → Analyse', ()=>el('anaBtn').click()],
     ['Quiet view of one reaction', 'Learn mode: one reaction at a time, with practice questions.', 'learn mode practice questions quiz quiet', 'Top bar → Learn mode', ()=>el('learnBtn').click()],
@@ -22949,8 +23070,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 163;
+const VERSION = 164;
 const CHANGELOG = [
+  [164, 'Build it!, a game. A new button in the top bar starts ten rounds: water, ammonia, methane, carbon dioxide, hydrogen peroxide, ethene, ethanol, hydrogen cyanide, formaldehyde and acetic acid. Each has to be put together from atoms on the bench (typing its name into Build does not count), and it is recognised by its structure, so the right atoms joined the wrong way are not enough. The clock gives three stars under 40 seconds and two under 90; there is a hint for every round, a skip, and your best score is remembered. It is also on the welcome card and in How do I\u2026?.'],
   [163, 'Three more labels under Show on the molecules. Hybridisation names each central atom sp, sp\u00b2, sp\u00b3, sp\u00b3d or sp\u00b3d\u00b2 from the atoms around it and its lone pairs. Bond lengths labels every bond with its length in picometres, steadied over a moment so the vibration does not blur it. Scale bar shows how long 100 pm (one \u00e5ngstr\u00f6m) is at the current zoom.'],
   [162, 'Oxidation numbers can be shown on every atom (under Show on the molecules): each bond\u2019s electrons go to the more electronegative atom, so the carbon in methane reads \u22124 and in carbon dioxide +4. The Delete tool removes a whole molecule on a double-click. Three new Showcase demonstrations: Boil and condense (a burner, a condenser and a thermometer on a box of water), Mass is conserved (a balance under acid meeting base) and Functional groups (six organic molecules with their groups named). Every demonstration now starts with gravity off and the new labels cleared.'],
   [161, 'Three additions to the 3D bench. Focus (a new tool, under Look) fades everything except the molecule you click and brings the camera to it; click empty space to see everything again. Functional groups (under Show on the molecules) names each group where it sits: alcohol, phenol, ether, aldehyde, ketone, carboxylic acid, carboxylate, ester, amide, amine, nitrile, nitro, thiol, halide, alkene, alkyne and benzene ring. Turn the view slowly (in the \u22ef menu) rotates the bench by itself for a projector, and stops as soon as you drag.'],
