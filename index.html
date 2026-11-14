@@ -12471,7 +12471,7 @@ function showFresh3D(K){
   if(ANA.on) anaExit(); if(LEARN.on) learnMode(false); if(CRS.on) courseExit();
   if(!L3.on) set3D(true);
   stepMode(false, true);
-  L3.mix = false; L3.field = null; L3.gear = []; L3.photons && (L3.photons.length = 0); L3.showShape = false; L3.showQ = false; L3.showDip = false; L3.showGroups = false; L3.showOx = false; L3.focus = null;
+  L3.mix = false; L3.field = null; L3.gear = []; L3.photons && (L3.photons.length = 0); L3.showShape = false; L3.showQ = false; L3.showDip = false; L3.showGroups = false; L3.showOx = false; L3.showHyb = false; L3.showBL = false; L3.focus = null;
   try{ if(P.gravity) setSlider('gravity', 0); }catch(e){}
   if(L3.solvent){ try{ toggleMode('solvent', false); }catch(e){} }
   showK(K || 298);
@@ -12713,6 +12713,9 @@ const FINDER = [
     ['Turn the view slowly', 'The bench rotates by itself: good on a projector.', 'spin rotate turn auto turntable present', '\u22ef menu \u2192 Turn the view slowly', ()=>{ if(find3D()){ L3.spin = true; l3Build(); } }],
     ['Show oxidation numbers', 'The oxidation state of every atom, worked out from its bonds.', 'oxidation number state redox electron counting', 'Left panel \u2192 Show on the molecules', ()=>findShow('ox'), 'ox'],
     ['Delete a whole molecule', 'With the Delete tool, double-click any atom of it.', 'delete remove whole molecule erase', 'Tool rail \u2192 Delete, double-click', ()=>findTool('remove')],
+    ['Show hybridisation', 'sp, sp\u00b2 or sp\u00b3 on every central atom.', 'hybridisation hybridization orbital sp sp2 sp3', 'Left panel \u2192 Show on the molecules', ()=>findShow('hyb'), 'hyb'],
+    ['Show bond lengths', 'Every bond labelled with its length in picometres.', 'bond length distance pm picometre label', 'Left panel \u2192 Show on the molecules', ()=>findShow('blen'), 'blen'],
+    ['Show a scale bar', 'How long 100 pm is at the current zoom.', 'scale bar size ruler picometre nanometre angstrom how big', 'Left panel \u2192 Show on the molecules', ()=>findShow('scale'), 'scale'],
     ['Fire a neutron', 'Nuclear reactions: hit a nucleus with a neutron.', 'neutron nuclear fission isotope radioactive', 'Tool rail → neutron', ()=>findTool('neutron')]
   ]],
   ['Measure and look', [
@@ -21337,6 +21340,38 @@ function l3Draw(){
       g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.95)'; g.strokeText(txt, pp.x - r*0.9, pp.y - r*0.9);
       g.fillStyle = n > 0 ? '#B0442F' : n < 0 ? '#2A5FB5' : '#5B6168'; g.fillText(txt, pp.x - r*0.9, pp.y - r*0.9); g.restore(); shown++; }
   }
+  /* Hybridisation from the steric number: atoms bonded plus lone pairs */
+  if(L3.showHyb && L3.atoms.length){
+    const HY = {2:'sp', 3:'sp²', 4:'sp³', 5:'sp³d', 6:'sp³d²'}, placed = []; let shown = 0;
+    for(const a of L3.atoms){ if(shown > 80) break; if(a.ion || l3Metal(a) || EL[a.e].sym === 'H') continue; if(L3.focus && !L3.focus.has(a.id)) continue;
+      const nb = l3Bonds(a).filter(b=>b.type === 'covalent' || b.type === 'dative').length; if(nb < 1) continue;
+      let lp = 0; try{ lp = l3Lone(a); }catch(e){}
+      const sn = nb + lp; if(nb === 1 && lp === 0) continue; const h = HY[sn]; if(!h) continue;
+      const pp = l3Project(a, W3, H3); if((L3.dist + pp.z)/L3.dist < 0.5) continue;
+      nameTag(g, pp.x, pp.y + l3R(a, pp.s) + 16, h, 0.9, placed, '#5B4FA8'); shown++; }
+  }
+  /* Bond lengths: the distance between the two nuclei right now, in picometres */
+  if(L3.showBL && L3.bonds.length){
+    let shown = 0;
+    g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.95)';
+    for(const b of L3.bonds){ if(shown > 120) break; if(b.type !== 'covalent' && b.type !== 'dative') continue;
+      const p = l3Find(b.a), q = l3Find(b.b); if(!p || !q) continue; if(L3.focus && !L3.focus.has(p.id)) continue;
+      const pp = l3Project(p, W3, H3), qq = l3Project(q, W3, H3); if(Math.hypot(pp.x-qq.x, pp.y-qq.y) < 26) continue; if((L3.dist + pp.z)/L3.dist < 0.5) continue;
+      if(!b._blm) b._blm = 0; const d = Math.hypot(p.x-q.x, p.y-q.y, p.z-q.z); b._blm = b._blm ? b._blm + (d - b._blm)*0.08 : d;
+      const fs = Math.round(clamp(9*pp.s*2.4, 9, 12)); g.font = '600 '+fs+'px "IBM Plex Mono", monospace'; const t = Math.round(b._blm)+'';
+      const mx = (pp.x+qq.x)/2, my = (pp.y+qq.y)/2; g.strokeText(t, mx, my - 7); g.fillStyle = '#3B4048'; g.fillText(t, mx, my - 7); shown++; }
+    g.restore();
+  }
+  /* Scale bar: 100 pm at the depth the camera is looking at */
+  if(L3.showScale){
+    const c0 = l3Project(L3.target || {x:0, y:0, z:0}, W3, H3), len = 100*c0.s;
+    let n = 100, L = len; while(L < 50){ n *= 2; L *= 2; } while(L > 220){ n /= 2; L /= 2; }
+    const x0 = W3 - L - 30, y0 = H3 - 34;
+    g.save(); g.strokeStyle = '#14161A'; g.lineWidth = 2.5; g.lineCap = 'butt';
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + L, y0); g.moveTo(x0, y0 - 6); g.lineTo(x0, y0 + 6); g.moveTo(x0 + L, y0 - 6); g.lineTo(x0 + L, y0 + 6); g.stroke();
+    g.font = '600 12px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.fillStyle = '#14161A';
+    g.fillText(n+' pm'+(n === 100 ? ' = 1 Å' : '')+' = '+(n/1000).toFixed(n < 1000 ? (n < 100 ? 3 : 1) : 0)+' nm', x0 + L/2, y0 - 10); g.restore();
+  }
   if(L3.showDip && L3.atoms.length){
     if(L3._dmv !== L3.tv || !L3._dm){ L3._dm = l3Molecules().filter(m=>m.length >= 2 && m.length <= 80 && !m.some(a=>a.ion || l3Metal(a)) && Math.abs(m.reduce((t, a)=>t + (a.fq||0), 0)) < 0.01).slice(0, 60); L3._dmv = L3.tv; }
     const placed = [];
@@ -21811,6 +21846,9 @@ const L3_SHOWS = [
   ['molnames', 'Molecule names', 'a name tag on each molecule', ()=>!!SHOW.molnames, v=>{ SHOW.molnames = v; }],
   ['groups', 'Functional groups', 'alcohol, acid, ester, amine\u2026 labelled', ()=>!!L3.showGroups, v=>{ L3.showGroups = v; }],
   ['ox', 'Oxidation numbers', 'the charge each atom would have if bonds were ionic', ()=>!!L3.showOx, v=>{ L3.showOx = v; }],
+  ['hyb', 'Hybridisation', 'sp, sp\u00b2, sp\u00b3 on each central atom', ()=>!!L3.showHyb, v=>{ L3.showHyb = v; }],
+  ['blen', 'Bond lengths', 'each bond\u2019s length in picometres', ()=>!!L3.showBL, v=>{ L3.showBL = v; }],
+  ['scale', 'Scale bar', 'how long 100 pm is at this zoom', ()=>!!L3.showScale, v=>{ L3.showScale = v; }],
   ['names', 'Atom names', 'element names on the atoms', ()=>!!L3.names, v=>{ L3.names = v; }]
 ];
 function l3ShowSet(k, v){
@@ -22210,7 +22248,7 @@ function l3Build(){
   const dispMenu = L3.menu === 'disp' ? '<div class="l3-pop" data-pop="disp">'+
       '<span class="eyebrow">Style</span><div class="l3-seg">'+Object.keys(L3_VIEWS).map(k=>'<button type="button" data-l3view="'+k+'"'+((L3.view||'ball') === k ? ' class="on"' : '')+'>'+L3_VIEWS[k]+'</button>').join('')+'</div>'+
       '<span class="eyebrow">Show</span>'+
-      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+tg('groups', L3.showGroups, 'Functional groups')+tg('ox', L3.showOx, 'Oxidation numbers')+tg('hb', !L3.hideHB, 'Hydrogen bonds')+
+      tg('q', L3.showQ, 'δ charges')+tg('lp', L3.showLP, 'Lone pairs')+tg('names', L3.names, 'Atom names')+tg('molnames', SHOW.molnames, 'Molecule names')+tg('shape', L3.showShape, 'Shapes & angles')+tg('dip', L3.showDip, 'Dipole arrows')+tg('groups', L3.showGroups, 'Functional groups')+tg('ox', L3.showOx, 'Oxidation numbers')+tg('hyb', L3.showHyb, 'Hybridisation')+tg('blen', L3.showBL, 'Bond lengths')+tg('scale', L3.showScale, 'Scale bar')+tg('hb', !L3.hideHB, 'Hydrogen bonds')+
     '</div>' : '';
   const moreMenu = L3.menu === 'more' ? '<div class="l3-pop right" data-pop="more">'+
       '<button type="button" class="l3-item" data-l3="water">Add 12 waters</button>'+
@@ -22257,6 +22295,9 @@ function l3Build(){
     else if(b.dataset.l3 === 'hb'){ l3ShowSet('hb'); }
     else if(b.dataset.l3 === 'groups'){ l3ShowSet('groups'); }
     else if(b.dataset.l3 === 'ox'){ l3ShowSet('ox'); }
+    else if(b.dataset.l3 === 'hyb'){ l3ShowSet('hyb'); }
+    else if(b.dataset.l3 === 'blen'){ l3ShowSet('blen'); }
+    else if(b.dataset.l3 === 'scale'){ l3ShowSet('scale'); }
     else if(b.dataset.l3 === 'spin'){ L3.menu = null; L3.spin = !L3.spin; l3Build(); say(L3.spin ? 'Turning slowly. Drag the view, or choose Stop turning, to stop.' : 'Stopped turning.', 'bench'); }
     else if(b.dataset.l3 === 'present'){ L3.menu = null; l3Build(); presentToggle(); }
     else if(b.dataset.l3 === 'fit'){ L3.menu = null; l3Build(); l3FitView(true); }
@@ -22908,8 +22949,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 162;
+const VERSION = 163;
 const CHANGELOG = [
+  [163, 'Three more labels under Show on the molecules. Hybridisation names each central atom sp, sp\u00b2, sp\u00b3, sp\u00b3d or sp\u00b3d\u00b2 from the atoms around it and its lone pairs. Bond lengths labels every bond with its length in picometres, steadied over a moment so the vibration does not blur it. Scale bar shows how long 100 pm (one \u00e5ngstr\u00f6m) is at the current zoom.'],
   [162, 'Oxidation numbers can be shown on every atom (under Show on the molecules): each bond\u2019s electrons go to the more electronegative atom, so the carbon in methane reads \u22124 and in carbon dioxide +4. The Delete tool removes a whole molecule on a double-click. Three new Showcase demonstrations: Boil and condense (a burner, a condenser and a thermometer on a box of water), Mass is conserved (a balance under acid meeting base) and Functional groups (six organic molecules with their groups named). Every demonstration now starts with gravity off and the new labels cleared.'],
   [161, 'Three additions to the 3D bench. Focus (a new tool, under Look) fades everything except the molecule you click and brings the camera to it; click empty space to see everything again. Functional groups (under Show on the molecules) names each group where it sits: alcohol, phenol, ether, aldehyde, ketone, carboxylic acid, carboxylate, ester, amide, amine, nitrile, nitro, thiol, halide, alkene, alkyne and benzene ring. Turn the view slowly (in the \u22ef menu) rotates the bench by itself for a projector, and stops as soon as you drag.'],
   [160, 'The descriptions of the 3D tools were cut off at the edge of the tool rail; they now float beside it in full.'],
