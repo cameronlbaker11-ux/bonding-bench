@@ -509,8 +509,15 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1.5px solid va
 .l3-table button{aspect-ratio:1;padding:0;min-width:0;border:1px solid var(--hair);border-radius:8px;background:var(--surface);font-weight:600;font-size:13px;transition:transform .15s var(--ease),border-color .15s}
 .l3-table button:hover{border-color:var(--ink);transform:translateY(-2px)}
 .l3-table button.empty{visibility:hidden}
+.l3-thead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 8px}
+.l3-thead .seg{flex:none}
+.l3-table.l3-common{grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
+.l3-table.l3-common button{font-size:clamp(11px,4.4cqw,15px);border-radius:7px;background:color-mix(in srgb,var(--cc,#9AA0A8) 12%,var(--surface));border-color:color-mix(in srgb,var(--cc,#9AA0A8) 30%,transparent)}
+.l3-table.l3-common button:hover{background:color-mix(in srgb,var(--cc,#9AA0A8) 26%,#fff);border-color:var(--cc,#9AA0A8);transform:translateY(-1px);box-shadow:var(--shadow-s)}
+.l3-tsub{font-family:var(--font-mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:7px 1px 1px}
+#left3d{container-type:inline-size}
 .l3-table.l3-full{grid-template-columns:repeat(18,minmax(0,1fr));gap:1.5px;margin:0 -6px}
-.l3-table.l3-full button{font-size:8.5px;border-radius:3px;font-weight:600}
+.l3-table.l3-full button{font-size:clamp(6.5px,2.9cqw,12px);border-radius:3px;font-weight:600;letter-spacing:-.02em}
 .l3-table.l3-full button:hover{transform:scale(1.5);z-index:3;position:relative}
 .l3-pres{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
 .l3-pres button{padding:6px 4px;border-radius:8px;background:var(--sunk);font-size:12px;font-weight:600}
@@ -1100,6 +1107,8 @@ input[type=range].temp-range::-moz-range-track{height:5px;border-radius:3px;back
 /* the 3D periodic table: tiles tinted by family */
 .l3-table.l3-full button{background:color-mix(in srgb,var(--cc,#9AA0A8) 12%,var(--surface));border-color:color-mix(in srgb,var(--cc,#9AA0A8) 26%,transparent)}
 .l3-table.l3-full button:hover{background:color-mix(in srgb,var(--cc,#9AA0A8) 24%,#fff);border-color:var(--cc,#9AA0A8);transform:translateY(-1px) scale(1.12);z-index:2;box-shadow:var(--shadow-s)}
+/* small cells grow under the pointer, so the one about to be clicked can be read */
+@container (max-width:340px){ .l3-table.l3-full button:hover{transform:scale(1.9);position:relative;z-index:3;border-radius:5px} }
 /* switching benches: the new one fades in */
 #lab3d:not([hidden]){animation:benchIn .34s var(--ease) both}
 #bench.bench-in{animation:benchIn .34s var(--ease) both}
@@ -21625,6 +21634,9 @@ function l3ShowSet(k, v){
 }
 const L3_SEC_HINT = {show:'arrows, charges, shapes and labels', rx:'ready-made reactions to watch', air:'a sample of real air', mol:'common molecules and the library',
   vault:'compounds you have kept', crys:'salt crystals and metal lattices', box:'box size, piston and pressure', gear:'lab equipment for the bench', nuc:'isotopes, decay and fission'};
+try{ const tm = localStorage.getItem('bondingbench.l3table'); if(tm === 'common' || tm === 'all') L3.tmode = tm; }catch(e){}
+/* dragging the panel narrower or wider swaps the table over, unless a view has been chosen */
+function l3TableAuto(){ try{ if(!L3.on || L3.tmode) return; const h = el('left3d'), w = h && h.clientWidth; if(w && (w < 300) !== !!L3._tnarrow) renderLeft3D(); }catch(e){} }
 function renderLeft3D(){
   const host = el('left3d'); if(!host) return;
   /* every element, laid out as the periodic table */
@@ -21649,8 +21661,20 @@ function renderLeft3D(){
   const grouped = new Set(), groups = SCENE_GROUPS.map(([t, ks])=>{ ks.forEach(k=>grouped.add(k)); return [t, ks.map(k=>SCENES.find(x=>x.k === k)).filter(Boolean)]; });
   const rest = SCENES.filter(x=>!grouped.has(x.k)); if(rest.length) groups.push(['Other', rest]);
   const rx = groups.map(([t, list], gi)=>'<span class="l3-grp rg'+gi+'">'+t+'</span><div class="l3-pres sm rg'+gi+'">'+list.map(sc=>'<button type="button" data-l3scene="'+sc.k+'" title="'+sc.note+'">'+sc.label+'</button>').join('')+'</div>').join('');
-  host.innerHTML = '<span class="eyebrow">3D bench · every element</span>'+
-    '<div class="l3-table l3-full" style="margin-top:10px">'+table+'</div>'+
+  /* a narrow panel cannot fit eighteen columns at a readable size: it gets the common
+     elements at full size instead, with the whole table one click away */
+  const pw = host.clientWidth || (el('left3d').parentElement||{}).clientWidth || 330, tnarrow = pw < 300;
+  L3._tnarrow = tnarrow;
+  const tmode = L3.tmode || (tnarrow ? 'common' : 'all');
+  const cell = (e, col, row) => '<button type="button" data-l3add="'+e.sym+'" style="color:'+e.col+';grid-column:'+col+';grid-row:'+row+';--cc:'+(CAT_COL[e.cat]||'#9AA0A8')+'" aria-label="'+e.name+'" title="'+e.name+'">'+e.sym+'</button>';
+  const common = EL.filter(e=>e.row <= 6 && (e.gcol <= 2 || e.gcol >= 13)).map(e=>cell(e, e.gcol <= 2 ? e.gcol : e.gcol - 10, e.row)).join('')+
+    '<span class="l3-tsub" style="grid-column:1 / -1;grid-row:7">Common metals</span>'+
+    ['Ti','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ag','Pt','Au','Hg','W','Pd','Cd','U'].map((sy, i)=>BY_SYM[sy] ? cell(BY_SYM[sy], i%8 + 1, 8 + Math.floor(i/8)) : '').join('');
+  host.innerHTML = '<div class="l3-thead"><span class="eyebrow">Elements</span><div class="seg mini" role="group" aria-label="How many elements to show">'+
+      '<button type="button" data-l3tmode="common"'+(tmode === 'common' ? ' class="on"' : '')+' title="The main-group elements and the common metals, at a size you can read">Common</button>'+
+      '<button type="button" data-l3tmode="all"'+(tmode === 'all' ? ' class="on"' : '')+' title="The whole periodic table">All 118</button></div></div>'+
+    (tmode === 'common' ? '<div class="l3-table l3-common" style="margin-top:8px">'+common+'</div>'
+                        : '<div class="l3-table l3-full" style="margin-top:8px">'+table+'</div>')+
     '<div class="l3-build" style="margin-top:10px"><input id="l3Formula" type="text" placeholder="Build: caffeine, H2SO4, H+, SO4 2-…" spellcheck="false" autocomplete="off"><button type="button" data-l3build="1">Build</button><button type="button" class="ghost-sm" data-l3undo="1" title="Undo (Ctrl/Cmd + Z)">Undo</button></div>'+
     '<div class="slider" style="margin-top:14px"><label>Temperature</label><span class="val" id="l3TempVal">'+kelvin()+' K \u00b7 '+(kelvin()-273)+' \u00b0C</span>'+
       '<input type="range" class="temp-range" id="l3Temp" min="'+T_MIN+'" max="'+T_MAX+'" value="'+P.temp+'"><span class="note">far left is nearly absolute zero: atoms keep still while you build</span></div>'+
@@ -21693,6 +21717,7 @@ function renderLeft3D(){
     if(b.dataset.l3air){ l3Push(); l3Air(+b.dataset.l3air, L3.airHumid); return; }
     if(b.dataset.l3trace){ l3Push(); l3AirTrace(); return; }
     if(b.dataset.l3humid){ L3.airHumid = !L3.airHumid; renderLeft3D(); return; }
+    if(b.dataset.l3tmode){ L3.tmode = b.dataset.l3tmode; try{ localStorage.setItem('bondingbench.l3table', L3.tmode); }catch(e){} renderLeft3D(); return; }
     if(b.dataset.l3show){ l3ShowSet(b.dataset.l3show); return; }
     if(b.dataset.l3scene){ l3Scene(b.dataset.l3scene); return; }
     if(b.dataset.l3vault){ const v = vault.find(x=>x.id === b.dataset.l3vault); if(v) specTo3D(v.spec, v.n); return; }
@@ -22573,8 +22598,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 155;
+const VERSION = 156;
 const CHANGELOG = [
+  [156, 'A periodic table that works in a narrow panel. When the left panel is squeezed, the 3D bench now shows the common elements (the main groups and sixteen everyday metals) in large, readable buttons instead of all 118 in cells too small to read; All 118 is one click away, and the choice is remembered. In the full table the symbols now scale with the panel instead of overflowing their cells, and a small cell grows under the pointer so the one about to be clicked can be read.'],
   [155, 'The Study tab, tidied. Each of its pages (Atom, Light, Lab, Rates, Nuclear, Physics) now says in a line what it is for. The Atom page is no longer a stack of empty cards when nothing is selected: it shows the first atom on the bench and says which, and clicking any atom switches to that one. Empty charts say why they are empty in readable type. The catalyst patch tool is gone from the tool rails on both benches; the course lesson on catalysts still has its own.'],
   [154, 'Easier to find your way round on a computer. Every tool on the 3D bench now has its name under its icon. The left panel reads as a menu: each section has a plain title and a line saying what is in it (Reactions: ready-made reactions to watch; Box and pressure; Equipment\u2026), and on a first visit they start folded so the whole list fits on one screen. Send to 2D has moved off the row above the bench into the \u22ef menu, and the buttons along the top are set in three groups: help, things to learn from, and Share and Clear.'],
   [153, 'On a phone, a Showcase demonstration now lifts the molecules clear of its explanation card instead of leaving them behind it, and the card is shorter. The force-strength sliders in the Forces tab read against the calibrated setting, so the bench as it comes says 1.00\u00d7 \u00b7 as measured, where it used to say 1.20\u00d7 and look as if something had been turned up.'],
@@ -22874,7 +22900,7 @@ function initGutters(){
       localStorage.setItem('bondingbench.rightw', Math.round(rw));
     }catch(e){}
   }
-  function settle(){ put(); resize(); fitTable(); sizeCharts(); }
+  function settle(){ put(); resize(); fitTable(); sizeCharts(); l3TableAuto(); }
   put();
   [['gutL',1],['gutR',-1]].forEach(pair=>{
     const node = el(pair[0]), sign = pair[1];
@@ -22917,7 +22943,7 @@ function initGutters(){
     });
   });
   /* a window made narrow squeezes the panels; made wide again, they go back to the width that was chosen */
-  window.addEventListener('resize', ()=>{ lw = rd('bondingbench.leftw', tableMode==='all' ? 330 : 262); rw = rd('bondingbench.rightw',322); put(); fitTable(); });
+  window.addEventListener('resize', ()=>{ lw = rd('bondingbench.leftw', tableMode==='all' ? 330 : 262); rw = rd('bondingbench.rightw',322); put(); fitTable(); l3TableAuto(); });
 }
 
 /* ============================== a library of your own compounds ============================== */
