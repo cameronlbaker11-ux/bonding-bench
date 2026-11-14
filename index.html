@@ -682,7 +682,7 @@ body.analysing #demoCard{right:auto;left:18px}
 #demoCard .dc-nav button:disabled{opacity:.35}
 #demoCard .dc-nav .dc-next{margin-left:auto;background:var(--ink);color:#fff}
 #demoCard .dc-nav .dc-next:hover:not(:disabled){background:var(--accent);color:#fff}
-@media (max-width:640px){#demoCard{left:16px;right:16px;width:auto;top:auto;bottom:12px}}
+@media (max-width:640px){#demoCard{left:10px;right:10px;width:auto;top:auto;bottom:10px;max-height:44vh;overflow:auto}}
 /* room in the top bar for the Showcase button: the RT chip goes first on narrower screens */
 @media (max-width:1100px){#benchRT{display:none}}
 #crash .sheet{width:min(94vw,470px)}
@@ -4643,11 +4643,14 @@ const ENV_SLIDERS=[
   {k:'gravity', label:'Gravity',     fmt:v=>(v/100*9.8).toFixed(1)+' m/s²', note:'downward pull'},
   {k:'heat',    label:'Heat flow',   fmt:v=>(v/50).toFixed(2)+'×', note:'how fast heat moves between things'}
 ];
+/* the strengths read against the calibrated setting, so the bench as it comes says 1.00x */
+const P_DEF = {stiff:58, es:60, hb:60, vdw:55};
+const forceFmt = k => v => (v/P_DEF[k]).toFixed(2)+'×'+(+v === P_DEF[k] ? ' · as measured' : '');
 const FORCE_SLIDERS=[
-  {k:'stiff', label:'Bond stiffness',   fmt:v=>(v/50).toFixed(2)+'×', note:'covalent & ionic springs'},
-  {k:'es',    label:'Electrostatic',    fmt:v=>(v/50).toFixed(2)+'×', note:'ionic, ion–dipole, dipole–dipole'},
-  {k:'hb',    label:'Hydrogen bonding', fmt:v=>(v/50).toFixed(2)+'×', note:'D–H⋯A, N O F only'},
-  {k:'vdw',   label:'Van der Waals',    fmt:v=>(v/50).toFixed(2)+'×', note:'London dispersion & approach'}
+  {k:'stiff', label:'Bond stiffness',   fmt:forceFmt('stiff'), note:'covalent & ionic springs'},
+  {k:'es',    label:'Electrostatic',    fmt:forceFmt('es'), note:'ionic, ion–dipole, dipole–dipole'},
+  {k:'hb',    label:'Hydrogen bonding', fmt:forceFmt('hb'), note:'D–H⋯A, N O F only'},
+  {k:'vdw',   label:'Van der Waals',    fmt:forceFmt('vdw'), note:'London dispersion & approach'}
 ];
 function buildSliderGroup(host, defs){
   defs.forEach(s=>{
@@ -12541,7 +12544,7 @@ function showDemo(i){
 }
 function renderDemoCard(){
   const c = el('demoCard'); if(!c) return;
-  if(SHOWC.i < 0){ c.hidden = true; if(!ANA.on && !CRS.on && !LEARN.on) L3.shiftX = 0; return; }
+  if(SHOWC.i < 0){ c.hidden = true; L3.shiftY = 0; if(!ANA.on && !CRS.on && !LEARN.on) L3.shiftX = 0; return; }
   const x = SHOWCASE[SHOWC.i], n = SHOWCASE.length;
   c.innerHTML = '<div class="dc-top"><span class="eyebrow">Showcase · '+(SHOWC.i+1)+' of '+n+' · '+x.g+'</span><button type="button" class="close-x" data-dc="x" aria-label="Close the showcase card"><svg width="11" height="11" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 2l9 9M11 2l-9 9"/></svg></button></div>'+
     '<b class="dc-t">'+x.t+'</b><p>'+x.watch+'</p>'+
@@ -12550,7 +12553,9 @@ function renderDemoCard(){
   c.hidden = false;
   /* the 3D view moves over so the card does not sit on the molecules */
   if(L3.on && !ANA.on && !CRS.on && !LEARN.on){ let ov = 0; try{ const rc = l3Canvas().getBoundingClientRect(), rd = c.getBoundingClientRect(); ov = Math.max(0, Math.min(rc.right, rd.right) - Math.max(rc.left, rd.left)); if(rc.width - ov < 280) ov = 0; }catch(e){}
-    L3.shiftX = Math.round(ov/2); try{ l3FitView(true); }catch(e){} }
+    /* on a phone the card lies across the bottom of the bench instead: the view moves up */
+    let ovy = 0; if(!ov){ try{ const rc = l3Canvas().getBoundingClientRect(), rd = c.getBoundingClientRect(); ovy = Math.max(0, rc.bottom - Math.max(rc.top, rd.top)); if(rd.top > rc.bottom || rc.height - ovy < 160) ovy = 0; }catch(e){} }
+    L3.shiftX = Math.round(ov/2); L3.shiftY = Math.round(ovy/2); try{ l3FitView(true); }catch(e){} }
 }
 /* ---------- the welcome card ----------
    A first visit opens on five plain choices instead of a bare bench and a periodic
@@ -20484,7 +20489,7 @@ function l3Project(p, W3, H3){
   const x1 = px*cy - pz*sy, z1 = px*sy + pz*cy;
   const y2 = py*cp - z1*sp, z2 = py*sp + z1*cp;
   const f = Math.min(W3, H3)*1.25, s = f/(L3.dist + z2);
-  return {x: W3/2 - (L3.shiftX||0) + x1*s, y: H3/2 + y2*s, s, z: z2};
+  return {x: W3/2 - (L3.shiftX||0) + x1*s, y: H3/2 - (L3.shiftY||0) + y2*s, s, z: z2};
 }
 /* Framing the camera. It glides (about two thirds of a second, eased) to a
    distance where everything asked for fits the view, with room round it, and
@@ -20506,7 +20511,7 @@ function l3FitView(anim, only){
     c = {x:(x0+x1)/2, y:(y0+y1)/2, z:(z0+z1)/2};
     R = Math.max(160, ...A.map(a=>Math.hypot(a.x-c.x, a.y-c.y, a.z-c.z))) + 90;
   }
-  const m = Math.max(200, Math.min(W3 - 2*(L3.shiftX||0), H3)), f = Math.min(W3, H3)*1.25;
+  const m = Math.max(200, Math.min(W3 - 2*(L3.shiftX||0), H3 - 2*(L3.shiftY||0))), f = Math.min(W3, H3)*1.25;
   l3CamTo(c, R + R*f/(0.42*m), anim);
 }
 function l3Unproject(dx, dy, s){
@@ -21137,7 +21142,7 @@ function l3Draw(){
     g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1; g.beginPath(); g.arc(pp.x, pp.y, rr + 1.6, 0, TAU); g.stroke(); g.restore(); }
   if(!L3.atoms.length){
     /* an empty box says what to do, rather than sitting blank */
-    const cx = W3/2 - (L3.shiftX||0), cy = H3/2, tt = performance.now()/1000;
+    const cx = W3/2 - (L3.shiftX||0), cy = H3/2 - (L3.shiftY||0), tt = performance.now()/1000;
     g.save(); g.strokeStyle = 'rgba(47,91,234,.22)'; g.lineWidth = 1.2; g.setLineDash([3, 6]); g.lineDashOffset = -tt*8;
     [30, 50].forEach(r=>{ g.beginPath(); g.ellipse(cx, cy-40, r, r*0.42, -0.35, 0, TAU); g.stroke(); g.beginPath(); g.ellipse(cx, cy-40, r, r*0.42, 0.9, 0, TAU); g.stroke(); });
     g.setLineDash([]); g.fillStyle = 'rgba(47,91,234,.14)'; g.beginPath(); g.arc(cx, cy-40, 12, 0, TAU); g.fill();
@@ -22530,8 +22535,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 152;
+const VERSION = 153;
 const CHANGELOG = [
+  [153, 'On a phone, a Showcase demonstration now lifts the molecules clear of its explanation card instead of leaving them behind it, and the card is shorter. The force-strength sliders in the Forces tab read against the calibrated setting, so the bench as it comes says 1.00\u00d7 \u00b7 as measured, where it used to say 1.20\u00d7 and look as if something had been turned up.'],
   [152, 'Picking a tool on the 3D bench now says what it does and how to get back to moving, since the icons alone do not.'],
   [151, 'Small things put right. On a phone, messages now sit along the bottom of the bench instead of across the tool rail. A window made narrow and then wide again gives the side panels back their chosen width. An empty bench says the right thing for where you are: in Analyse it points to the panel on the right, in Learn mode to the topic list, and on the open bench to How do I\u2026?. Asking How do I\u2026? for something that lives on the open bench while in the course, Analyse or Learn mode now says so instead of doing nothing.'],
   [150, 'More polish, mostly for phones and small windows. On a phone the bench now comes first with the controls under it; before, the molecules sat two screens down, below the whole left panel. The row of controls above the 3D bench wraps on a narrow screen, so Speed and the \u22ef menu are no longer cut off. Pressing / opens How do I\u2026? from anywhere.'],
