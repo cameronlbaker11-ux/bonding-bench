@@ -163,6 +163,9 @@ button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:p
 .legend-dots{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px}
 .legend-dots span{font-family:var(--font-mono);font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px}
 .legend-dots i{width:10px;height:2px;border-radius:2px;display:inline-block;flex:none}
+.pane-about{flex-basis:100%;margin:7px 2px 0;font-size:12px;line-height:1.45;color:var(--ink-2)}
+.pane-about #studyPick{display:block;margin-top:3px;color:var(--accent)}
+.empty-note{font-size:12.5px;line-height:1.5;color:var(--ink-2);padding:6px 2px}
 .mode-note{font-family:var(--font-mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:6px 0 0;line-height:1.6}
 .btn-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .empty{
@@ -1723,7 +1726,7 @@ abbr.gl{text-decoration:none;border-bottom:1px dotted currentColor;cursor:help}
           <div class="chart-card">
             <div class="chart-head"><b>Reaction coordinate</b><span id="shiftNow"></span></div>
             <canvas id="chartProfile"></canvas>
-            <div class="legend-dots"><span>the barrier drops inside a catalyst patch</span></div>
+            <div class="legend-dots"><span>the height of the hill is the activation energy</span></div>
           </div>
           <div class="chart-card">
             <div class="chart-head"><b>Concentrations</b><span id="rateNow"></span></div>
@@ -4177,6 +4180,7 @@ const TOOLS=[
 function buildTools(){
   const wrap=el('tools');
   TOOLS.forEach(t=>{
+    if(t.k === 'catalyst') return;          /* kept for the course's catalyst lesson, off the rail */
     const b=document.createElement('button');
     b.type='button'; b.className='tool'; b.dataset.k=t.k; b.setAttribute('aria-label',t.label);
     b.innerHTML='<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">'+
@@ -4616,7 +4620,7 @@ document.addEventListener('keydown', ev=>{
     }
     return;
   }
-  const t=TOOLS.filter(x=>x.key===ev.key)[0];
+  const t=TOOLS.filter(x=>x.key===ev.key && x.k !== 'catalyst')[0];
   if(t){ setTool(t.k); return; }
   if(ev.code==='Space'){ ev.preventDefault(); togglePause(); }
   if(ev.key==='[' || ev.key===']'){
@@ -5591,12 +5595,23 @@ function setGroup(k){
   const g = TAB_GROUPS.filter(x=>x.k===k)[0];
   if(g) setTab(g.last || g.panes[0][0]);
 }
+const PANE_ABOUT = {
+  atom:'One atom up close: its electrons, how strongly the nucleus holds them, the light it gives off, and what it costs to remove an electron.',
+  light:'Flame tests and energy levels: why each element burns with its own colour.',
+  lab:'What instruments would read for the molecules on the bench (infrared, NMR, mass and UV spectra), and a mystery molecule to identify.',
+  rates:'How fast the reactions on the bench are going: the energy hill, concentrations over time, and equilibrium.',
+  nuclear:'Isotopes and radioactive decay for the atom you pick.',
+  physics:'The bench as a physicist sees it: energy, molecular speeds, pressure and how the molecules are arranged.',
+  guide:'Short explanations of every idea the bench uses. Search, or open one that has come up.',
+  log:'A running record of every reaction that has happened on the bench.'
+};
 function renderSubtabs(){
   const g = groupOf(activeTab), host = el('subtabs');
   if(!g || g.panes.length < 2){ host.hidden = true; host.innerHTML=''; return; }
   host.hidden = false;
   host.innerHTML = g.panes.map(x=>
-    '<button type="button" data-p="'+x[0]+'"'+(x[0]===activeTab?' class="on"':'')+'>'+x[1]+'</button>').join('');
+    '<button type="button" data-p="'+x[0]+'" title="'+(PANE_ABOUT[x[0]]||'').replace(/"/g, '&quot;')+'"'+(x[0]===activeTab?' class="on"':'')+'>'+x[1]+'</button>').join('')+
+    (PANE_ABOUT[activeTab] ? '<p class="pane-about">'+PANE_ABOUT[activeTab]+(activeTab === 'atom' ? ' <span id="studyPick"></span>' : '')+'</p>' : '');
   host.querySelectorAll('button').forEach(b=>{ b.onclick=()=>setTab(b.dataset.p); });
 }
 function setTab(k){
@@ -5910,7 +5925,7 @@ const CONCEPTS = {
     one:'A catalyst offers a lower hill to climb and comes out unchanged.',
     what:['A catalyst provides a different route with a lower activation energy. It takes part in the reaction but is given back at the end, so a little goes a long way. It speeds the forward and reverse reactions equally, so it changes how fast equilibrium is reached, not where it lies.',
           'Acid catalysis is common in organic chemistry: H⁺ activates a C=O group, as in esterification.'],
-    sim:'Esterification and ester hydrolysis only run when an acid catalyst (H₃O⁺ or sulfuric acid) is on the bench. The catalyst tool on the flat bench lowers activation energies near it.',
+    sim:'Esterification and ester hydrolysis only run when an acid catalyst (H₃O⁺ or sulfuric acid) is on the bench.',
     look:'Try the Esterification scene, then build the same mixture without the H₃O⁺.',
     nums:[],
     tr:{scene:'ester'}, rel:['activation','ester','equilibrium']},
@@ -6174,7 +6189,7 @@ function wireCardToggles(host, rerender){
 /* ---------- keyboard shortcuts ----------
    Press ? for the sheet (or open it from either bench's more menu). */
 const KEYS = [
-  ['Both benches', [['1 \u2013 0','the tools: move, bond, break, remove, energy, measure, light, field, neutron, catalyst'],['Space','pause or play'],['\u2318/Ctrl Z','undo'],['N','next step, while stepping through'],['Esc','leave Learn mode, close this'],['?','this sheet']]],
+  ['Both benches', [['1 \u2013 0','the tools: move, bond, break, remove, energy, measure, light, field, neutron'],['Space','pause or play'],['\u2318/Ctrl Z','undo'],['N','next step, while stepping through'],['Esc','leave Learn mode, close this'],['?','this sheet']]],
   ['3D bench', [['Drag','turn the view (on an atom: move it)'],['Scroll','zoom'],['Double-click','look at an atom (empty space: see everything)'],['F','fit everything in view'],['M','mix: stir the box without breaking anything'],['Delete','remove the selected atom'],['Shift-click','add five of an element']]],
   ['Flat bench', [['[ and ]','turn the selection'],['+ and \u2212','give or take an electron (selected atom)'],['\u2318/Ctrl C, X, V, D','copy, cut, paste, duplicate'],['\u2318/Ctrl A','select everything'],['Delete','remove the selection']]]
 ];
@@ -12646,7 +12661,6 @@ const FINDER = [
     ['Add energy to one spot', 'A spark: heats the atoms where you click.', 'spark energy heat ignite activate', 'Tool rail → spark', ()=>findTool('spark')],
     ['Shine light on a molecule', 'Fire a photon: it can break a bond.', 'light photon uv lamp photochemistry radical', 'Tool rail → light', ()=>findTool('photon')],
     ['Apply an electric field', 'Polar molecules turn to line up; ions drift.', 'electric field voltage polar align ions', 'Tool rail → field', ()=>findTool('field')],
-    ['Use a catalyst', 'Place a catalyst patch: reactions on it need less energy.', 'catalyst surface activation energy', 'Tool rail → catalyst', ()=>findTool('catalyst')],
     ['Fire a neutron', 'Nuclear reactions: hit a nucleus with a neutron.', 'neutron nuclear fission isotope radioactive', 'Tool rail → neutron', ()=>findTool('neutron')]
   ]],
   ['Measure and look', [
@@ -13030,8 +13044,10 @@ function drawLabCharts(){
   drawTLC();
 }
 function axisLabel(c,x,y,txt,align){
-  c.fillStyle='#B4B9C0'; c.font='7.5px "IBM Plex Mono", monospace';
-  c.textAlign=align||'center'; c.fillText(txt,x,y);
+  /* a sentence in the middle of an empty chart is a message, not an axis label: larger and darker */
+  const msg = !align && /[a-z]{3,} [a-z]{2,} [a-z]{2,}/.test(txt);
+  c.fillStyle = msg ? '#7C828B' : '#B4B9C0'; c.font = msg ? '11px Archivo, system-ui, sans-serif' : '7.5px "IBM Plex Mono", monospace';
+  c.textAlign=align||'center'; c.fillText(msg ? txt.charAt(0).toUpperCase()+txt.slice(1) : txt,x,y);
 }
 function drawNMR(g){
   const {g:c,w,h} = fitCanvas(el('chartNMR'));
@@ -14545,16 +14561,22 @@ function renderZeff(a){
 function setHTML(node, html){ if(node && node._html !== html){ node.innerHTML = html; node._html = html; } }
 /* the electron buttons act on whatever atom is picked when they are clicked */
 function electronClick(dir){
-  const go = ()=>{ const a = selectedId ? findAtom(selectedId) : null; if(a) changeElectrons(a, dir); };
+  const go = ()=>{ const a = studyAtom(); if(a) changeElectrons(a, dir); };
   if(L3.on && typeof in3DWorld === 'function') in3DWorld(go); else go();
   renderAtomPanel();
 }
+/* the atom the Study pages look at: the one picked, or failing that the first
+   atom on the bench that is not a hydrogen, so the pages are never blank */
+function studyAtom(){
+  const s = selectedId ? findAtom(selectedId) : null; if(s) return s;
+  const live = atoms.filter(x=>!x.dying); return live.find(x=>EL[x.e].sym !== 'H') || live[0] || null;
+}
 function renderAtomPanel(){
-  const a = selectedId ? findAtom(selectedId) : null;
+  const a = studyAtom(), picked = !!(selectedId && findAtom(selectedId));
   const host = el('ionRow');
   if(!host.onclick) host.onclick = ev=>{ const b = ev.target.closest('.ion-btn'); if(b) electronClick(b.id === 'ePlus' ? +1 : -1); };
   if(!a){
-    setHTML(host, '<div class="mode-note">select an atom on the bench</div>');
+    setHTML(host, '<div class="empty-note">The bench is empty. Build a molecule, then click one of its atoms to study it here.</div>');
     setHTML(el('qnList'), '');
     el('atomSample').textContent = 'nothing selected';
     if(el('zeffBody')){ setHTML(el('zeffBody'), '<div class="mode-note">select an atom to see what its electrons feel</div>'); el('zeffNote').textContent = ''; }
@@ -14562,6 +14584,7 @@ function renderAtomPanel(){
   }
   const e = EL[a.e], q = a.charge||0;
   el('atomSample').textContent = e.sym+(q?(q>0?' '+q+'+':' '+(-q)+'−'):'')+' · '+a.shells.join(',');
+  { const pn = el('studyPick'); if(pn){ const t = picked ? 'Studying the '+e.name.toLowerCase()+' atom you clicked.' : 'Showing '+e.name.toLowerCase()+' from the bench. Click any atom to study that one instead.'; if(pn.textContent !== t) pn.textContent = t; } }
   const cost = ionisationCost({e:a.e, charge:q}), gain = affinityGain(a);
   setHTML(host,
     '<div class="ion-edit">'+
@@ -14578,7 +14601,7 @@ function renderAtomPanel(){
     ', '+r.e+' electron'+(r.e>1?'s':'')+'</span></div>').join(''));
 }
 function drawAtomCharts(){
-  const a = selectedId ? findAtom(selectedId) : null;
+  const a = studyAtom();
   /* emission spectrum */
   const S = fitCanvas(el('chartSpec')), c=S.g, w=S.w, h=S.h;
   c.clearRect(0,0,w,h);
@@ -21733,7 +21756,7 @@ function l3PanelMode(on){
 }
 /* ---------- the tool rail for the 3D bench ----------
    The same tools as the flat bench where they make sense in three dimensions. */
-const L3_TOOLS = ['move','bond','break','remove','spark','measure','photon','field','neutron','catalyst'];
+const L3_TOOLS = ['move','bond','break','remove','spark','measure','photon','field','neutron'];
 const L3_TOOL_NAMES = {move:'Move', bond:'Bond', break:'Break', remove:'Delete', spark:'Spark', measure:'Measure', photon:'Light', field:'Electric field', neutron:'Neutron', catalyst:'Catalyst'};
 const L3_TIPS = {move:'Move atoms, turn the view', bond:'Force a bond: click two atoms', break:'Break a bond: click it',
   remove:'Remove an atom', spark:'Add energy where you click', measure:'Measure: two atoms for a distance, three for an angle',
@@ -22002,7 +22025,7 @@ function l3Build(){
   });
   cv3.addEventListener('pointerleave', ()=>{ L3.hover = null; atomTip(null); });
   window.addEventListener('keydown', ev=>{
-    if(L3.on && /^[0-9]$/.test(ev.key) && !/INPUT|TEXTAREA/.test((ev.target||{}).tagName||'')){ l3SetTool(L3_TOOLS[(+ev.key+9)%10]); ev.preventDefault(); ev.stopImmediatePropagation(); return; }
+    if(L3.on && /^[0-9]$/.test(ev.key) && !/INPUT|TEXTAREA/.test((ev.target||{}).tagName||'')){ { const tk = L3_TOOLS[(+ev.key+9)%10]; if(tk) l3SetTool(tk); } ev.preventDefault(); ev.stopImmediatePropagation(); return; }
     if(L3.on && (ev.key === 'm' || ev.key === 'M') && !ev.metaKey && !ev.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test((ev.target||{}).tagName||'')){ l3MixToggle(); ev.preventDefault(); return; }
     if(!L3.on || !L3.sel) return;
     if(ev.key === 'Delete' || ev.key === 'Backspace'){
@@ -22550,8 +22573,9 @@ function energyPanel(){
 }
 
 /* ============================== versions & recovery ============================== */
-const VERSION = 154;
+const VERSION = 155;
 const CHANGELOG = [
+  [155, 'The Study tab, tidied. Each of its pages (Atom, Light, Lab, Rates, Nuclear, Physics) now says in a line what it is for. The Atom page is no longer a stack of empty cards when nothing is selected: it shows the first atom on the bench and says which, and clicking any atom switches to that one. Empty charts say why they are empty in readable type. The catalyst patch tool is gone from the tool rails on both benches; the course lesson on catalysts still has its own.'],
   [154, 'Easier to find your way round on a computer. Every tool on the 3D bench now has its name under its icon. The left panel reads as a menu: each section has a plain title and a line saying what is in it (Reactions: ready-made reactions to watch; Box and pressure; Equipment\u2026), and on a first visit they start folded so the whole list fits on one screen. Send to 2D has moved off the row above the bench into the \u22ef menu, and the buttons along the top are set in three groups: help, things to learn from, and Share and Clear.'],
   [153, 'On a phone, a Showcase demonstration now lifts the molecules clear of its explanation card instead of leaving them behind it, and the card is shorter. The force-strength sliders in the Forces tab read against the calibrated setting, so the bench as it comes says 1.00\u00d7 \u00b7 as measured, where it used to say 1.20\u00d7 and look as if something had been turned up.'],
   [152, 'Picking a tool on the 3D bench now says what it does and how to get back to moving, since the icons alone do not.'],
